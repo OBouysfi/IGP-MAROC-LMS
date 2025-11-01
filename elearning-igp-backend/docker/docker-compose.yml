@@ -1,0 +1,73 @@
+version: '3.8'
+
+volumes:
+  vendor:
+  mysql_data:
+  redis_data:
+  elasticsearch_data:
+
+services:
+  app:
+    container_name: igp_backend_app
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - "87:80"
+    env_file:
+      - ./configs/laravel.env
+    networks:
+      - igp_network
+    volumes:
+      - ../src:/var/www/html:rw
+      - vendor:/var/www/html/vendor
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+
+  mysql:
+    container_name: igp_backend_mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3311:3306" 
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: igp
+      MYSQL_USER: igp_user
+      MYSQL_PASSWORD: igp_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - igp_network
+
+  phpmyadmin:
+    container_name: igp_backend_phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
+    restart: unless-stopped
+    ports:
+      - "8087:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpass
+    networks:
+      - igp_network
+    depends_on:
+      - mysql
+
+  redis:
+    container_name: igp_backend_redis
+    image: redis:7-alpine
+    ports:
+      - "6385:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - igp_network
+    restart: unless-stopped
+
+networks:
+  igp_network:
+    driver: bridge
