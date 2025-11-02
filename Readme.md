@@ -69,3 +69,36 @@ Admin Panel API (gérer users, courses, programs)
 Professor Panel API (créer sessions Jitsi, attendance)
 Student Panel API (voir cours, rejoindre sessions)
 Intégration Next.js (consommer l'API)
+
+
+************************************************
+src/
+├── app/
+│   ├── layout.tsx              # Root layout
+│   ├── page.tsx                # Landing page
+│   │
+│   ├── login/                  # Student/Professor login
+│   │   └── page.tsx
+│   │
+│   ├── register/               # Student/Professor register
+│   │   └── page.tsx
+│   │
+│   ├── verify-2fa/             # 2FA verification
+│   │   └── page.tsx
+│   │
+│   ├── forgot-password/        # Password reset
+│   │   └── page.tsx
+│   │
+│   ├── admin/
+│   │   ├── login/              # Admin login séparé
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx          # Admin layout
+│   │   └── dashboard/
+│   │
+│   ├── professor/
+│   │   ├── layout.tsx
+│   │   └── dashboard/
+│   │
+│   └── student/
+│       ├── layout.tsx
+│       └── dashboard/

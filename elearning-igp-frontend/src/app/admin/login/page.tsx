@@ -104,11 +104,9 @@ export default function AdminLoginPage() {
 
             <div className="text-center">
               
-                href={ROUTES.FORGOT_PASSWORD}
-                className="text-gray-600 hover:text-gray-700 text-sm font-medium"
-              >
-                Mot de passe oublié ?
-              </a>
+                <a href={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+  Mot de passe oublié ?
+</a>
             </div>
           </form>
         </div>

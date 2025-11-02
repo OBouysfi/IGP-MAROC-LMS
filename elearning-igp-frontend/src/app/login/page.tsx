@@ -1,3 +1,4 @@
+// src/app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -8,6 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { authApi } from '@/lib/api/auth';
 import { ROUTES } from '@/lib/constants/routes';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -51,12 +53,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat relative"
+      style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/50"></div>
+      
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
           </div>
@@ -142,12 +151,9 @@ export default function LoginPage() {
               </Button>
 
               <div className="text-center">
-                
-                  href={ROUTES.FORGOT_PASSWORD}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
+                <Link href={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                   Mot de passe oublié ?
-                </a>
+                </Link>
               </div>
             </form>
           )}
