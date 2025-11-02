@@ -20,15 +20,19 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <button
       className={clsx(
-        'w-full rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ring-offset-background transition-all duration-300',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+        'disabled:pointer-events-none disabled:opacity-50',
+        'rounded-lg shadow-lg',
         {
-          'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg': variant === 'primary',
+          'bg-gradient-to-r from-[hsl(211,85%,33%)] to-[hsl(211,85%,45%)] text-white hover:shadow-glow': variant === 'primary',
           'bg-gray-200 hover:bg-gray-300 text-gray-800': variant === 'secondary',
-          'border-2 border-blue-600 text-blue-600 hover:bg-blue-50': variant === 'outline',
-          'px-4 py-2 text-sm': size === 'sm',
-          'px-6 py-3 text-base': size === 'md',
-          'px-8 py-4 text-lg': size === 'lg',
+          'border-2 border-[hsl(211,85%,33%)] text-[hsl(211,85%,33%)] hover:bg-blue-50': variant === 'outline',
+          'px-4 py-2 text-sm h-10': size === 'sm',
+          'px-8 py-3 text-base h-12': size === 'md',
+          'px-10 py-4 text-lg h-14': size === 'lg',
         },
+        'w-full',
         className
       )}
       disabled={disabled || isLoading}

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { authApi } from '@/lib/api/auth';
 import { ROUTES } from '@/lib/constants/routes';
+import Image from 'next/image';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -52,18 +53,21 @@ export default function AdminLoginPage() {
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="w-20 h-20 relative">
+              <Image 
+                src="/images/logo_igp.png"
+                alt="IGP Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
 
           {/* Title */}
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
-            Bienvenue sur LMS
-          </h1>
-          <p className="text-sm text-center text-gray-500 mb-2">
             Espace Administration
-          </p>
+          </h1>
           <p className="text-center text-gray-600 mb-8">
             Accédez à votre plateforme d'administration IGP
           </p>

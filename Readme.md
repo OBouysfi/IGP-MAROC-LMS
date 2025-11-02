@@ -102,3 +102,16 @@ src/
 │   └── student/
 │       ├── layout.tsx
 │       └── dashboard/
+
+
+======
+
+docker stop igp_lms_frontend
+docker rm igp_lms_frontend
+docker build -t igp_frontend .
+docker run -p 3002:3000 --name igp_lms_frontend igp_frontend
+
+
+# 2. Clear tout
+Remove-Item -Recurse -Force .next
+Remove-Item -Recurse -Force node_modules/.cache

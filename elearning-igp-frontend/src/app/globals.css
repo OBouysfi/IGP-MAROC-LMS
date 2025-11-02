@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --primary: 211 85% 33%;
+    --primary-light: 211 85% 45%;
+    --primary-foreground: 0 0% 100%;
+  }
+}
+
 @layer utilities {
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
@@ -11,5 +19,9 @@
   
   .animate-shake {
     animation: shake 0.5s ease-in-out;
+  }
+
+  .shadow-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
   }
 }
