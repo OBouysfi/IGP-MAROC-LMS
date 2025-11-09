@@ -1,11 +1,10 @@
-export default function AdminLayout({
+import AdminLayout from '@/components/layouts/AdminLayout';
+import { ReactNode } from 'react';
+
+export default function AdminRootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {children}
-    </div>
-  );
+  return <AdminLayout>{children}</AdminLayout>;
 }
