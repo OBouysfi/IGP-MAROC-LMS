@@ -1,15 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Users, BookOpen, GraduationCap, TrendingUp, SquarePen, Trash2, Plus } from 'lucide-react';
+import { usersApi, User } from '@/lib/api/users';
+import { dashboardApi } from '@/lib/api/dashboard';
+
+interface DashboardStats {
+  total_students: number;
+  active_students: number;
+  total_professors: number;
+  total_courses: number;
+  completion_rate: number;
+}
 
 export default function DashboardPage() {
-  const [users] = useState([
-    { id: 1, name: 'Ahmed Benali', email: 'ahmed.benali@igp.ma', role: 'Étudiant', status: 'Actif' },
-    { id: 2, name: 'Dr. Fatima Zahra', email: 'f.zahra@igp.ma', role: 'Professeur', status: 'Actif' },
-    { id: 3, name: 'Youssef El Amrani', email: 'y.elamrani@igp.ma', role: 'Étudiant', status: 'Actif' },
-    { id: 4, name: 'Prof. Mohammed Idrissi', email: 'm.idrissi@igp.ma', role: 'Professeur', status: 'Actif' }
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    total_students: 0,
+    active_students: 0,
+    total_professors: 0,
+    total_courses: 0,
+    completion_rate: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [usersResponse, statsResponse] = await Promise.all([
+        usersApi.getAll(),
+        dashboardApi.getStats()
+      ]);
+      
+      setUsers(usersResponse.data);
+      setStats(statsResponse.data);
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRoleName = (user: User) => {
+    if (!user.roles || user.roles.length === 0) return 'Étudiant';
+    const role = user.roles[0].name;
+    if (role === 'admin') return 'Admin';
+    if (role === 'professor') return 'Professeur';
+    return 'Étudiant';
+  };
 
   return (
     <div className="p-8">
@@ -24,13 +65,13 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Total Étudiants</p>
-              <p className="text-3xl font-bold text-[#0D529C]">1,245</p>
+              <p className="text-3xl font-bold text-[#0D529C]">{stats.total_students}</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
               <Users className="w-6 h-6 text-[#0D529C]" />
             </div>
           </div>
-          <p className="text-xs text-gray-400">Étudiants actifs</p>
+          <p className="text-xs text-gray-400">{stats.active_students} étudiants actifs</p>
           <p className="text-xs text-orange-500 mt-1">+12% depuis le mois dernier</p>
         </div>
 
@@ -38,7 +79,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Total Cours</p>
-              <p className="text-3xl font-bold text-[#0D529C]">87</p>
+              <p className="text-3xl font-bold text-[#0D529C]">{stats.total_courses}</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-[#0D529C]" />
@@ -52,7 +93,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Professeurs</p>
-              <p className="text-3xl font-bold text-[#0D529C]">52</p>
+              <p className="text-3xl font-bold text-[#0D529C]">{stats.total_professors}</p>
             </div>
             <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-6 h-6 text-red-500" />
@@ -66,7 +107,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-sm text-gray-500 mb-1">Taux de Complétion</p>
-              <p className="text-3xl font-bold text-[#0D529C]">87%</p>
+              <p className="text-3xl font-bold text-[#0D529C]">{stats.completion_rate}%</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-[#0D529C]" />
@@ -78,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Users Table */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-[#0D529C]">Utilisateurs Récents</h2>
@@ -90,49 +131,61 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-y border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Rôle</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-4 px-4 font-medium text-gray-900">{user.name}</td>
-                  <td className="py-4 px-4 text-gray-600">{user.email}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'Professeur' 
-                        ? 'bg-[#0D529C] text-white' 
-                        : 'bg-orange-500 text-white'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full border border-gray-300 text-gray-700">
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                      <SquarePen className="w-4 h-4" />
-                    </button>
-                    <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-2">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+        {loading ? (
+          <div className="text-center py-8 text-gray-500">Chargement...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Rôle</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="py-4 px-4 font-medium text-gray-900 text-sm">
+                      {user.first_name} {user.last_name}
+                    </td>
+                    <td className="py-4 px-4 text-gray-800 text-sm">{user.email}</td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                        getRoleName(user) === 'Professeur' 
+                          ? 'bg-[#0D529C] text-white'
+                          : getRoleName(user) === 'Admin'
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-orange-500 text-white'
+                      }`}>
+                        {getRoleName(user)}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                        user.is_active 
+                          ? 'bg-[#257035] text-white' 
+                          : 'bg-red-500 text-white'
+                      }`}>
+                        {user.is_active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
+                        <SquarePen className="w-4 h-4" />
+                      </button>
+                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-2">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

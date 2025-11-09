@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Auth\TwoFactorController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\MeController;
+use App\Http\Controllers\Api\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -25,4 +26,10 @@ Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
     Route::post('/logout', LogoutController::class);
     Route::post('/logout-all', [LogoutController::class, 'logoutAll']);
     Route::get('/me', MeController::class);
+});
+
+// Admin routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/admin/users', [App\Http\Controllers\Api\Admin\UserController::class, 'index']);
+    Route::get('/admin/dashboard/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'stats']);
 });
