@@ -13,7 +13,7 @@ services:
       context: ..
       dockerfile: ./docker/Dockerfile
     ports:
-      - "87:80"
+      - "88:80"
     env_file:
       - ./configs/laravel.env
     networks:

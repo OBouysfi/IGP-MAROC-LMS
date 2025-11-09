@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { authApi } from '@/lib/api/auth';
@@ -30,11 +30,29 @@ export default function AdminLoginPage() {
         password: formData.password,
       });
 
+      // Vérifier si l'utilisateur est un admin
+      if (response.user && response.user.role !== 'admin') {
+        setError('Accès refusé. Cet espace est réservé aux administrateurs.');
+        return;
+      }
+
+      // Si 2FA est requis, rediriger vers la page de vérification
       if (response.requires_2fa) {
-        router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}`);
+        router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}&redirect=admin`);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
+      const errorMessage = err.response?.data?.message || 'Erreur de connexion';
+      
+      // Messages d'erreur personnalisés
+      if (errorMessage.includes('incorrect') || errorMessage.includes('invalide')) {
+        setError('Email ou mot de passe incorrect.');
+      } else if (errorMessage.includes('désactivé')) {
+        setError('Votre compte est désactivé. Contactez un administrateur.');
+      } else if (errorMessage.includes('verrouillé')) {
+        setError('Votre compte est verrouillé. Contactez un administrateur.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +107,7 @@ export default function AdminLoginPage() {
               value={formData.email}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
 
             <Input
@@ -100,19 +119,48 @@ export default function AdminLoginPage() {
               value={formData.password}
               onChange={handleChange}
               required
+              disabled={isLoading}
             />
 
-            <Button type="submit" isLoading={isLoading}>
-              Se connecter
-            </Button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Connexion...' : 'Se connecter'}
+            </button>
 
             <div className="text-center">
-              
-                <a href={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-  Mot de passe oublié ?
-</a>
+              <a 
+                href={ROUTES.FORGOT_PASSWORD} 
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Mot de passe oublié ?
+              </a>
             </div>
           </form>
+
+          {/* Footer - Autres espaces */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <p className="text-center text-sm text-gray-500 mb-3">
+              Vous n'êtes pas administrateur ?
+            </p>
+            <div className="flex justify-center gap-2 text-sm">
+              <a 
+                href={ROUTES.PROFESSOR_LOGIN || '/professor/login'} 
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Espace Professeur
+              </a>
+              <span className="text-gray-400">|</span>
+              <a 
+                href={ROUTES.LOGIN} 
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Espace Étudiant
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>

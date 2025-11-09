@@ -14,7 +14,7 @@ Containerisation : Docker / docker-compose
 
 Ports utilisés (locaux) :
 
-Backend Laravel : 87
+Backend Laravel : 88
 
 Frontend Next.js : 3002
 
@@ -28,7 +28,7 @@ Objectif :
 Offrir un LMS moderne, rapide et scalable, accessible aux étudiants et professeurs, avec gestion d’utilisateurs, accès aux cours et suivi des formations live.
 
 Frontend → http://localhost:3002
-Backend → http://localhost:87/api/login
+Backend → http://localhost:88/api/login
 
 docker run -p 3001:3000 --name igp_frontend_container igp_frontend
 

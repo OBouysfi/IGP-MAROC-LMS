@@ -56,10 +56,23 @@ class TwoFactorController extends Controller
             'status' => 'success',
         ]);
 
+        // Récupérer le rôle de l'utilisateur
+        $role = $user->getRoleNames()->first();
+
         return response()->json([
             'message' => 'Connexion réussie',
             'token' => $token,
-            'user' => $user->load('roles', 'permissions'),
+            'user' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $role,
+                'is_active' => $user->is_active,
+                'email_verified_at' => $user->email_verified_at,
+            ],
+            'requires_2fa' => false,
         ]);
     }
 

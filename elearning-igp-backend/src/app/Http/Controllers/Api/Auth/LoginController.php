@@ -63,10 +63,20 @@ class LoginController extends Controller
             'status' => '2fa_sent',
         ]);
 
+        // Récupérer le rôle de l'utilisateur
+        $role = $user->getRoleNames()->first();
+
         return response()->json([
             'message' => 'Code de vérification envoyé',
             'email' => $user->email,
             'requires_2fa' => true,
+            'user' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'role' => $role,
+            ],
         ]);
     }
 }

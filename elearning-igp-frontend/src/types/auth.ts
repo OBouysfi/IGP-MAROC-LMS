@@ -1,38 +1,25 @@
+
 export interface User {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
   phone?: string;
-  avatar?: string;
+  role: string; // Ajout du rôle
   is_active: boolean;
-  roles: Role[];
-  permissions: Permission[];
-}
-
-export interface Role {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-export interface Permission {
-  id: number;
-  name: string;
-  slug: string;
+  email_verified_at?: string;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
-  role?: 'student' | 'professor';
 }
 
 export interface LoginResponse {
-  success: boolean;
   message: string;
-  requires_2fa?: boolean;
-  email?: string;
+  email: string;
+  requires_2fa: boolean;
+  user?: User; 
 }
 
 export interface VerifyTwoFactorRequest {
@@ -41,10 +28,10 @@ export interface VerifyTwoFactorRequest {
 }
 
 export interface VerifyTwoFactorResponse {
-  success: boolean;
   message: string;
-  token?: string;
-  user?: User;
+  token: string;
+  user: User;
+  requires_2fa: boolean;
 }
 
 export interface RegisterRequest {
@@ -54,5 +41,4 @@ export interface RegisterRequest {
   password: string;
   password_confirmation: string;
   phone?: string;
-  role: 'student' | 'professor';
 }

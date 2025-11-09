@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { authApi } from '@/lib/api/auth';
-import { useAuthStore } from '@/store/authStore';
 import { ROUTES } from '@/lib/constants/routes';
 
 function VerifyTwoFactorContent() {
@@ -13,7 +12,6 @@ function VerifyTwoFactorContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email') || '';
   
-  const { login } = useAuthStore();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -86,18 +84,19 @@ function VerifyTwoFactorContent() {
         code: codeString,
       });
 
-      if (response.success && response.token && response.user) {
-        login(response.token, response.user);
-        
-        // Redirect based on role
-        const userRole = response.user.roles[0]?.slug;
-        if (userRole === 'admin') {
-          router.push(ROUTES.ADMIN_DASHBOARD);
-        } else if (userRole === 'professor') {
-          router.push(ROUTES.PROFESSOR_DASHBOARD);
-        } else {
-          router.push(ROUTES.STUDENT_DASHBOARD);
-        }
+      // Le token et user sont déjà stockés dans localStorage par authApi.verifyTwoFactor
+      
+      // Rediriger selon le rôle
+      const userRole = response.user.role;
+      
+      if (userRole === 'admin') {
+        router.push(ROUTES.ADMIN_DASHBOARD);
+      } else if (userRole === 'professor') {
+        router.push(ROUTES.PROFESSOR_DASHBOARD);
+      } else if (userRole === 'student') {
+        router.push(ROUTES.STUDENT_DASHBOARD);
+      } else {
+        router.push(ROUTES.HOME);
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Code invalide');
@@ -126,7 +125,7 @@ function VerifyTwoFactorContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           {/* Back Button */}
@@ -164,22 +163,22 @@ function VerifyTwoFactorContent() {
           {/* Code Inputs */}
           <div className="flex justify-center gap-3 mb-6">
             {code.map((digit, index) => (
-          <input
-            key={index}
-            ref={(el) => {
-              if (el) inputRefs.current[index] = el;
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={handlePaste}
-                  className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                  disabled={isLoading}
-                />
-              ))}
+              <input
+                key={index}
+                ref={(el) => {
+                  if (el) inputRefs.current[index] = el;
+                }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={handlePaste}
+                className="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                disabled={isLoading}
+              />
+            ))}
           </div>
 
           {/* Timer */}
