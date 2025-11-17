@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, BookOpen, GraduationCap, TrendingUp, SquarePen, Trash2, Plus } from 'lucide-react';
 import { usersApi, User } from '@/lib/api/users';
 import { dashboardApi } from '@/lib/api/dashboard';
+import AdminLayout from '@/components/layouts/AdminLayout';
 
 interface DashboardStats {
   total_students: number;
@@ -53,6 +54,7 @@ export default function DashboardPage() {
   };
 
   return (
+    <AdminLayout>
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Tableau de Bord Admin</h1>
@@ -188,5 +190,6 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+    </AdminLayout>
   );
 }
