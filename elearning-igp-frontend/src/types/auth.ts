@@ -1,11 +1,10 @@
-
 export interface User {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
   phone?: string;
-  role: string; // Ajout du rôle
+  role: string;
   is_active: boolean;
   email_verified_at?: string;
 }
@@ -13,13 +12,15 @@ export interface User {
 export interface LoginRequest {
   email: string;
   password: string;
+  redirect?: string;
 }
 
 export interface LoginResponse {
   message: string;
   email: string;
   requires_2fa: boolean;
-  user?: User; 
+  user?: User;
+  token?: string;
 }
 
 export interface VerifyTwoFactorRequest {

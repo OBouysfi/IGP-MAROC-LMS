@@ -1,4 +1,3 @@
-
 export const ROUTES = {
   // Public Routes
   HOME: '/',
@@ -20,8 +19,10 @@ export const ROUTES = {
   // Student Routes
   STUDENT_DASHBOARD: '/student/dashboard',
   STUDENT_COURSES: '/student/courses',
+  
+  // Assistant Routes
+  ASSISTANT_DASHBOARD: '/assistant/dashboard',
 } as const;
 
-// Type helper pour avoir l'autocomplétion
 export type RouteKey = keyof typeof ROUTES;
 export type RouteValue = typeof ROUTES[RouteKey];

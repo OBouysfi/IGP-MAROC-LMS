@@ -1,4 +1,4 @@
-// src/app/login/page.tsx - CODE COMPLET
+// src/app/login/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -33,7 +33,7 @@ export default function LoginPage() {
       const response = await authApi.login({
         email: formData.email,
         password: formData.password,
-        role: formData.role as 'student' | 'professor',
+        role: formData.role as 'student' | 'professor' | 'assistant',
       });
 
       if (response.requires_2fa) {
@@ -60,10 +60,8 @@ export default function LoginPage() {
     >    
 
    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/60 via-blue-700/60 to-blue-800/60"></div>
-    {/* Content  */}
     <div className="relative z-10 w-full max-w-md">
       <div className="bg-white rounded-2xl shadow-2xl p-8">
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 relative">
             <Image 
@@ -76,7 +74,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Title */}
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
           Bienvenue sur LMS
         </h1>
@@ -84,33 +81,6 @@ export default function LoginPage() {
           Accédez à votre plateforme d'apprentissage IGP
         </p>
 
-        {/* Tabs */}
-        {/* <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('login')}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-              activeTab === 'login'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <LogIn size={18} />
-            Connexion
-          </button>
-          <button
-            onClick={() => setActiveTab('signup')}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-              activeTab === 'signup'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-800'
-            }`}
-          >
-            <UserPlus size={18} />
-            Inscription
-          </button>
-        </div> */}
-
-        {/* Login Form */}
         {activeTab === 'login' && (
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
@@ -149,26 +119,26 @@ export default function LoginPage() {
               options={[
                 { value: 'student', label: 'Étudiant' },
                 { value: 'professor', label: 'Professeur' },
+                { value: 'assistant', label: 'Assistant' },
               ]}
             />
 
             <Button 
               type="submit" 
               isLoading={isLoading}
-              className="bg-gradient-to-r from-[#1e5ba8] to-[#3d7fc4] hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+              className="bg-gradient-to-r from-[#1e5ba8] to-[#3d7fc4] hover:from-red-600 hover:to-red-700 hover:shadow-[0_0_20px_rgba(239,68,68,0.5)] transition-all duration-300"
             >
               Se connecter
             </Button>
 
             <div className="text-center">
-              <Link href={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              <Link href={ROUTES.FORGOT_PASSWORD} className="text-blue-600 hover:text-red-600 text-sm font-medium transition-colors">
                 Mot de passe oublié ?
               </Link>
             </div>
           </form>
         )}
 
-        {/* Register Form */}
         {activeTab === 'signup' && (
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">

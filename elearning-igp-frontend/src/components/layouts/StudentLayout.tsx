@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -55,8 +56,15 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           <div className="flex items-center justify-between">
             {sidebarOpen ? (
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-[#257035] font-bold text-lg">IGP</span>
+                <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center relative overflow-hidden flex-shrink-0">
+                  <Image 
+                    src="/images/logo_igp.png"
+                    alt="IGP Logo"
+                    fill
+                    sizes="40px"
+                    className="object-contain p-1"
+                    priority
+                  />
                 </div>
                 <div>
                   <h1 className="font-bold text-lg">IGP Maroc</h1>
@@ -64,8 +72,15 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
                 </div>
               </div>
             ) : (
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mx-auto">
-                <span className="text-[#257035] font-bold text-lg">IGP</span>
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center mx-auto relative overflow-hidden flex-shrink-0">
+                <Image 
+                  src="/images/logo_igp.png"
+                  alt="IGP Logo"
+                  fill
+                  sizes="40px"
+                  className="object-contain p-1"
+                  priority
+                />
               </div>
             )}
           </div>

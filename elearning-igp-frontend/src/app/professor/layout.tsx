@@ -1,11 +1,9 @@
-export default function ProfessorLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+import ProtectedRoute from '@/components/ProtectedRoute';
+
+export default function ProfessorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <ProtectedRoute allowedRole="professor">
       {children}
-    </div>
+    </ProtectedRoute>
   );
 }

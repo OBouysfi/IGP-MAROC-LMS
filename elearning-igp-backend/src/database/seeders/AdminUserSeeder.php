@@ -42,5 +42,16 @@ class AdminUserSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
         $student->assignRole('student');
+
+        $assistant = User::create([
+            'first_name' => 'Othman',
+            'last_name' => 'Assistant',
+            'email' => 'assistant@igp.edu',
+            'password' => Hash::make('Bouy1021@'),
+            'phone' => '+212637208455',
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+        $assistant->assignRole('assistant');
     }
 }

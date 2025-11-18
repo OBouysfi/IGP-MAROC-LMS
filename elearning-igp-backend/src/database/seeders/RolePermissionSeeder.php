@@ -80,5 +80,21 @@ class RolePermissionSeeder extends Seeder
             'sessions.join',
             'grades.view-own',
         ])->get());
+
+        $assistantWeb = Role::firstOrCreate(['name' => 'assistant', 'guard_name' => 'web']);
+        $assistantWeb->syncPermissions(Permission::where('guard_name', 'web')->whereIn('name', [
+            'attendance.view', 'attendance.mark', 'attendance.export',
+            'reports.view', 'reports.export',
+            'enrollments.view',
+            'users.view',
+        ])->get());
+
+        $assistantApi = Role::firstOrCreate(['name' => 'assistant', 'guard_name' => 'api']);
+        $assistantApi->syncPermissions(Permission::where('guard_name', 'api')->whereIn('name', [
+            'attendance.view', 'attendance.mark', 'attendance.export',
+            'reports.view', 'reports.export',
+            'enrollments.view',
+            'users.view',
+        ])->get());
     }
 }
