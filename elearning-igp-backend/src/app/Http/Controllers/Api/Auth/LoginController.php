@@ -44,39 +44,76 @@ class LoginController extends Controller
             ], 403);
         }
 
-        // Generate 2FA code
-        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        
+        // Récupérer le rôle de l'utilisateur
+        $role = $user->getRoleNames()->first();
+
+        // Check if 2FA is enabled
+        if ($user->two_factor_enabled) {
+            // Generate 2FA code
+            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            $user->update([
+                'two_factor_code' => $code,
+                'two_factor_expires_at' => now()->addMinutes(10),
+            ]);
+
+            // Send email
+            $user->notify(new TwoFactorCodeNotification($code));
+
+            // Log
+            LoginLog::create([
+                'user_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'status' => '2fa_sent',
+            ]);
+
+            return response()->json([
+                'message' => 'Code de vérification envoyé',
+                'email' => $user->email,
+                'requires_2fa' => true,
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'role' => $role,
+                ],
+            ]);
+        }
+
+        // If 2FA is disabled, login directly
         $user->update([
-            'two_factor_code' => $code,
-            'two_factor_expires_at' => now()->addMinutes(10),
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+            'failed_login_attempts' => 0,
         ]);
 
-        // Send email
-        $user->notify(new TwoFactorCodeNotification($code));
+        // Create token
+        $token = $user->createToken('auth_token', ['*'], now()->addMinutes(60))->plainTextToken;
 
-        // Log
+        // Log success
         LoginLog::create([
             'user_id' => $user->id,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'status' => '2fa_sent',
+            'status' => 'success',
         ]);
 
-        // Récupérer le rôle de l'utilisateur
-        $role = $user->getRoleNames()->first();
-
         return response()->json([
-            'message' => 'Code de vérification envoyé',
-            'email' => $user->email,
-            'requires_2fa' => true,
+            'message' => 'Connexion réussie',
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'email' => $user->email,
+                'phone' => $user->phone,
                 'role' => $role,
+                'is_active' => $user->is_active,
+                'email_verified_at' => $user->email_verified_at,
             ],
+            'requires_2fa' => false,
         ]);
     }
 }

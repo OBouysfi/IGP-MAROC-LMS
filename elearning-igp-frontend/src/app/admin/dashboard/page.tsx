@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Users, BookOpen, GraduationCap, TrendingUp, SquarePen, Trash2, Plus } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, TrendingUp } from 'lucide-react';
 import { usersApi, User } from '@/lib/api/users';
 import { dashboardApi } from '@/lib/api/dashboard';
 import AdminLayout from '@/components/layouts/AdminLayout';
@@ -48,9 +48,17 @@ export default function DashboardPage() {
   const getRoleName = (user: User) => {
     if (!user.roles || user.roles.length === 0) return 'Étudiant';
     const role = user.roles[0].name;
-    if (role === 'admin') return 'Admin';
+    if (role === 'admin' || role === 'super-admin') return 'Admin';
     if (role === 'professor') return 'Professeur';
     return 'Étudiant';
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   return (
@@ -127,10 +135,6 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-[#0D529C]">Utilisateurs Récents</h2>
             <p className="text-sm text-gray-500 mt-1">Derniers utilisateurs inscrits dans le système</p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
-            <Plus className="w-4 h-4" />
-            Ajouter Utilisateur
-          </button>
         </div>
 
         {loading ? (
@@ -139,21 +143,24 @@ export default function DashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Rôle</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Nom</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Email</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Date d'inscription</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Rôle</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Statut</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <tr key={user.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4 font-medium text-gray-900 text-sm">
                       {user.first_name} {user.last_name}
                     </td>
-                    <td className="py-4 px-4 text-gray-800 text-sm">{user.email}</td>
+                    <td className="py-4 px-4 text-gray-600 text-sm">{user.email}</td>
+                    <td className="py-4 px-4 text-gray-600 text-sm">
+                      {formatDate(user.created_at)}
+                    </td>
                     <td className="py-4 px-4">
                       <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
                         getRoleName(user) === 'Professeur' 
@@ -173,14 +180,6 @@ export default function DashboardPage() {
                       }`}>
                         {user.is_active ? 'Actif' : 'Inactif'}
                       </span>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                        <SquarePen className="w-4 h-4" />
-                      </button>
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-2">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </td>
                   </tr>
                 ))}

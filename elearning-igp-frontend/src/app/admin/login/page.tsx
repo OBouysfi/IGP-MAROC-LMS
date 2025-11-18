@@ -31,14 +31,20 @@ export default function AdminLoginPage() {
       });
 
       // Vérifier si l'utilisateur est un admin
-      if (response.user && response.user.role !== 'admin') {
+      if (response.user && response.user.role !== 'admin' && response.user.role !== 'super-admin') {
         setError('Accès refusé. Cet espace est réservé aux administrateurs.');
+        setIsLoading(false);
         return;
       }
 
       // Si 2FA est requis, rediriger vers la page de vérification
       if (response.requires_2fa) {
         router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}&redirect=admin`);
+      } else {
+        // Si 2FA désactivé, connexion directe
+        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        router.push('/admin/dashboard');
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Erreur de connexion';
@@ -53,7 +59,6 @@ export default function AdminLoginPage() {
       } else {
         setError(errorMessage);
       }
-    } finally {
       setIsLoading(false);
     }
   };
