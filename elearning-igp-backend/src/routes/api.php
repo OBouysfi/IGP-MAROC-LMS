@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Auth\LogoutController;
 use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\ProfileController;
+use App\Http\Controllers\Api\Admin\StudentController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -34,8 +35,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/admin/users', [UserController::class, 'index']);
     Route::get('/admin/dashboard/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'stats']);
     
-    // Profile routes - juste auth:sanctum, pas de role
     Route::prefix('admin')->group(function () {
+        // admin - student
+        Route::get('students', [StudentController::class, 'index']);
+        Route::get('students/stats', [StudentController::class, 'stats']);
+        Route::post('students', [StudentController::class, 'store']);
+        Route::get('students/{id}', [StudentController::class, 'show']);
+        Route::put('students/{id}', [StudentController::class, 'update']);
+        Route::delete('students/{id}', [StudentController::class, 'destroy']);
+        Route::post('students/{id}/toggle-active', [StudentController::class, 'toggleActive']);
+        // admin - profile
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
