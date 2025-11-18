@@ -17,7 +17,6 @@ class LoginController extends Controller
     {
         $user = User::where('email', $request->email)->first();
 
-        // Log attempt
         LoginAttempt::create([
             'email' => $request->email,
             'ip_address' => $request->ip(),
@@ -44,6 +43,16 @@ class LoginController extends Controller
             ], 403);
         }
 
+        // Récupérer le rôle de l'utilisateur
+        $role = $user->getRoleNames()->first();
+
+        // Vérifier si le rôle sélectionné correspond au rôle de l'utilisateur
+        if ($request->has('role') && $request->role !== $role) {
+            return response()->json([
+                'message' => 'Accès refusé. Veuillez sélectionner votre espace correct.',
+            ], 403);
+        }
+
         // Generate 2FA code
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         
@@ -52,19 +61,14 @@ class LoginController extends Controller
             'two_factor_expires_at' => now()->addMinutes(10),
         ]);
 
-        // Send email
         $user->notify(new TwoFactorCodeNotification($code));
 
-        // Log
         LoginLog::create([
             'user_id' => $user->id,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'status' => '2fa_sent',
         ]);
-
-        // Récupérer le rôle de l'utilisateur
-        $role = $user->getRoleNames()->first();
 
         return response()->json([
             'message' => 'Code de vérification envoyé',

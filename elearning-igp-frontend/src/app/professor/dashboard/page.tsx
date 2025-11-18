@@ -1,11 +1,32 @@
 // src/app/professor/dashboard/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { BookOpen, Users, ClipboardList, Video, Calendar, Clock, TrendingUp, AlertTriangle, CheckCircle, PlayCircle } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
 
 export default function ProfessorDashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    const userStr = localStorage.getItem('user');
+
+    if (!token || !userStr) {
+      router.replace('/login');
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userStr);
+      if (user.role !== 'professor') {
+        router.replace('/login');
+      }
+    } catch (e) {
+      router.replace('/login');
+    }
+  }, [router]);
   const stats = {
     total_courses: 5,
     total_students: 125,

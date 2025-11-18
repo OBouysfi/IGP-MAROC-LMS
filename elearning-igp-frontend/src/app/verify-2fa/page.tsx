@@ -67,46 +67,57 @@ function VerifyTwoFactorContent() {
     }
   };
 
-  const handleVerify = async () => {
-    const codeString = code.join('');
+  // src/app/verify-2fa/page.tsx - Remplacer handleVerify complètement
+// src/app/verify-2fa/page.tsx - Modifier handleVerify
+const handleVerify = async () => {
+  const codeString = code.join('');
+  
+  if (codeString.length !== 6) {
+    setError('Veuillez entrer le code complet');
+    return;
+  }
+
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const response = await authApi.verifyTwoFactor({
+      email,
+      code: codeString,
+    });
+
+    console.log('✅ Response complete:', response);
+
+    // Attendre un peu plus pour s'assurer que localStorage est écrit
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const userRole = response.user?.role;
     
-    if (codeString.length !== 6) {
-      setError('Veuillez entrer le code complet');
-      return;
+    let redirectPath = '/login';
+    
+    if (userRole === 'admin') {
+      redirectPath = '/admin/dashboard';
+    } else if (userRole === 'professor') {
+      redirectPath = '/professor/dashboard';
+    } else if (userRole === 'student') {
+      redirectPath = '/student/dashboard';
+    } else if (userRole === 'assistant') {
+      redirectPath = '/assistant/dashboard';
     }
-
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const response = await authApi.verifyTwoFactor({
-        email,
-        code: codeString,
-      });
-
-      // Le token et user sont déjà stockés dans localStorage par authApi.verifyTwoFactor
-      
-      // Rediriger selon le rôle
-      const userRole = response.user.role;
-      
-      if (userRole === 'admin') {
-        router.push(ROUTES.ADMIN_DASHBOARD);
-      } else if (userRole === 'professor') {
-        router.push(ROUTES.PROFESSOR_DASHBOARD);
-      } else if (userRole === 'student') {
-        router.push(ROUTES.STUDENT_DASHBOARD);
-      } else {
-        router.push(ROUTES.HOME);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Code invalide');
-      setCode(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+    
+    console.log('✅ Redirection vers:', redirectPath);
+    
+    // Utiliser window.location pour forcer un rechargement complet
+    window.location.href = redirectPath;
+    
+  } catch (err: any) {
+    console.error('❌ Erreur 2FA:', err);
+    setError(err.response?.data?.message || 'Code invalide');
+    setCode(['', '', '', '', '', '']);
+    inputRefs.current[0]?.focus();
+    setIsLoading(false);
+  }
+};
   const handleResend = async () => {
     setIsResending(true);
     setError('');
@@ -128,7 +139,6 @@ function VerifyTwoFactorContent() {
     <div className="min-h-screen bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Back Button */}
           <button
             onClick={() => router.push(ROUTES.LOGIN)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6 transition-colors"
@@ -137,14 +147,12 @@ function VerifyTwoFactorContent() {
             <span className="text-sm font-medium">Retour</span>
           </button>
 
-          {/* Logo */}
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
               <Shield className="w-8 h-8 text-white" />
             </div>
           </div>
 
-          {/* Title */}
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-2">
             Vérification 2FA
           </h1>
@@ -153,14 +161,12 @@ function VerifyTwoFactorContent() {
             <span className="font-medium text-gray-800">{email}</span>
           </p>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-6 animate-shake">
               {error}
             </div>
           )}
 
-          {/* Code Inputs */}
           <div className="flex justify-center gap-3 mb-6">
             {code.map((digit, index) => (
               <input
@@ -181,7 +187,6 @@ function VerifyTwoFactorContent() {
             ))}
           </div>
 
-          {/* Timer */}
           <div className="text-center mb-6">
             {!canResend ? (
               <p className="text-sm text-gray-600">
@@ -200,7 +205,6 @@ function VerifyTwoFactorContent() {
             )}
           </div>
 
-          {/* Verify Button */}
           <Button
             onClick={handleVerify}
             isLoading={isLoading}
@@ -209,7 +213,6 @@ function VerifyTwoFactorContent() {
             Vérifier le code
           </Button>
 
-          {/* Help Text */}
           <p className="text-center text-sm text-gray-500 mt-6">
             Vous n'avez pas reçu le code ? Vérifiez vos spams ou{' '}
             <button

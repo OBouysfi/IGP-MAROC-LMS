@@ -3,7 +3,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { LogOut } from 'lucide-react';
+import { authApi } from '@/lib/api/auth';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -16,7 +19,6 @@ import {
   Bell,
   Menu,
   X,
-  LogOut,
   User,
   Settings,
   ChevronDown
@@ -31,6 +33,7 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const router = useRouter();
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/professor/dashboard' },
@@ -42,12 +45,24 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
     { name: 'Mes Documents', icon: FileText, path: '/professor/documents' },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      router.push('/login');
+    } catch (error) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      router.push('/login');
+    }
+  };
+
   const notifications = [
     { id: 1, message: 'Nouvelle session planifiée pour React.js', time: 'Il y a 10 min', read: false },
     { id: 2, message: '5 étudiants ont soumis leurs devoirs', time: 'Il y a 1h', read: false },
     { id: 3, message: 'Rappel: Saisie des notes avant le 20/11', time: 'Il y a 3h', read: true },
   ];
 
+  
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
@@ -118,7 +133,10 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
             <Settings className="w-5 h-5" />
             {sidebarOpen && <span>Paramètres</span>}
           </Link>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-red-600 transition-colors w-full mt-2">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-red-600 transition-colors w-full mt-2"
+          >
             <LogOut className="w-5 h-5" />
             {sidebarOpen && <span>Déconnexion</span>}
           </button>
