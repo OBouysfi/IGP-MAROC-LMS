@@ -166,7 +166,7 @@ export default function DashboardPage() {
                         getRoleName(user) === 'Professeur' 
                           ? 'bg-[#0D529C] text-white'
                           : getRoleName(user) === 'Admin'
-                          ? 'bg-purple-500 text-white'
+                          ? 'bg-[#000] text-white'
                           : 'bg-orange-500 text-white'
                       }`}>
                         {getRoleName(user)}
