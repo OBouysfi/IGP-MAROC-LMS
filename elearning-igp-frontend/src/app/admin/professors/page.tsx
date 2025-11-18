@@ -493,7 +493,7 @@ export default function ProfessorsPage() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Département</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contrat</th>
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
-                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Toggle</th>
+                    <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Activer/désactiver</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
@@ -508,7 +508,7 @@ export default function ProfessorsPage() {
                         <td className="py-4 px-4 text-gray-600 text-sm">{professor.user.phone || '-'}</td>
                         <td className="py-4 px-4 text-gray-600 text-sm">{professor.user.email}</td>
                         <td className="py-4 px-4">
-                          <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
+                          <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">
                             {professor.department || '-'}
                           </span>
                         </td>
@@ -516,7 +516,7 @@ export default function ProfessorsPage() {
                           <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
                             professor.contract_type === 'CDI' ? 'bg-[#0D529C] text-white' :
                             professor.contract_type === 'CDD' ? 'bg-orange-500 text-white' :
-                            'bg-gray-500 text-white'
+                            'bg-[#160e11] text-white' 
                           }`}>
                             {professor.contract_type}
                           </span>
