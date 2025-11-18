@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\Admin\StudentController;
+use App\Http\Controllers\Api\Admin\ProfessorController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -50,5 +51,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
         Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
         Route::post('/profile/2fa/toggle', [ProfileController::class, 'toggle2FA']);
+         // Professors
+        Route::get('professors', [ProfessorController::class, 'index']);
+        Route::get('professors/stats', [ProfessorController::class, 'stats']);
+        Route::post('professors', [ProfessorController::class, 'store']);
+        Route::get('professors/{id}', [ProfessorController::class, 'show']);
+        Route::put('professors/{id}', [ProfessorController::class, 'update']);
+        Route::delete('professors/{id}', [ProfessorController::class, 'destroy']);
+        Route::post('professors/{id}/toggle-active', [ProfessorController::class, 'toggleActive']);
     });
 });
