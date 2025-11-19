@@ -11,62 +11,43 @@ class Course extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'year_id',
         'name',
         'code',
         'description',
+        'program',
+        'level',
+        'filiere',
+        'professor_id',
+        'students_count',
+        'max_students',
+        'hours_total',
+        'hours_completed',
+        'start_date',
+        'end_date',
+        'schedule',
+        'status',
+        'materials',
+        'completion_rate',
         'credits',
         'is_active',
     ];
 
     protected $casts = [
+        'schedule' => 'array',
+        'materials' => 'array',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'is_active' => 'boolean',
-        'credits' => 'integer',
     ];
 
-    public function year()
+    public function professor()
     {
-        return $this->belongsTo(Year::class);
-    }
-
-    public function program()
-    {
-        return $this->hasOneThrough(Program::class, Year::class, 'id', 'id', 'year_id', 'program_id');
-    }
-
-    public function professors()
-    {
-        return $this->belongsToMany(User::class, 'course_professor', 'course_id', 'professor_id')
-            ->withTimestamps();
+        return $this->belongsTo(Professor::class);
     }
 
     public function students()
     {
-        return $this->belongsToMany(User::class, 'enrollments', 'course_id', 'student_id')
-            ->withPivot('enrolled_at', 'status')
-            ->withTimestamps();
-    }
-
-    public function enrollments()
-    {
-        return $this->hasMany(Enrollment::class);
-    }
-
-    public function sessions()
-    {
-        return $this->hasMany(JitsiSession::class);
-    }
-
-    public function activeEnrollments()
-    {
-        return $this->hasMany(Enrollment::class)->where('status', 'active');
-    }
-
-    public function upcomingSessions()
-    {
-        return $this->hasMany(JitsiSession::class)
-            ->where('status', 'scheduled')
-            ->where('scheduled_at', '>', now())
-            ->orderBy('scheduled_at');
+        return $this->belongsToMany(Student::class, 'course_student')
+                    ->withTimestamps();
     }
 }

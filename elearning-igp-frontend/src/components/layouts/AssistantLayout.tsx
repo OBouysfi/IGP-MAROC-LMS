@@ -4,6 +4,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { authApi } from '@/lib/api/auth';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -31,6 +33,18 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+        try {
+          await authApi.logout();
+          router.push('/login');
+        } catch (error) {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+          router.push('/login');
+        }
+      };
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/assistant/dashboard' },
@@ -117,10 +131,13 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
             <Settings className="w-5 h-5" />
             {sidebarOpen && <span>Paramètres</span>}
           </Link>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-800 transition-colors w-full mt-2">
-            <LogOut className="w-5 h-5" />
-            {sidebarOpen && <span>Déconnexion</span>}
-          </button>
+          <button 
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-red-600 transition-colors w-full mt-2"
+            >
+              <LogOut className="w-5 h-5" />
+              {sidebarOpen && <span>Déconnexion</span>}
+            </button>
         </div>
       </aside>
 
@@ -217,7 +234,10 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
                       Paramètres
                     </Link>
                     <hr className="my-1" />
-                    <button className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full"
+                    >
                       <LogOut className="w-4 h-4" />
                       Déconnexion
                     </button>

@@ -1,146 +1,321 @@
-// src/app/admin/programs/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { GraduationCap, BookOpen, Layers, DollarSign, Plus, Search, SquarePen, Trash2, Eye, X, Users, Calendar, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { programsApi, filieresApi, Program, Filiere, ProgramStats, FiliereStats } from '@/lib/api/admin/programs';
+import { GraduationCap, BookOpen, Layers, DollarSign, Plus, Search, Edit2, Trash2, Eye, X, Users, Calendar, Clock } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface Filiere {
-  id: number;
-  name: string;
-  code: string;
-  description: string;
-  programs: string[];
-  total_students: number;
-  total_courses: number;
-  is_active: boolean;
-  created_at: string;
-}
-
-interface Program {
-  id: number;
-  name: string;
-  code: string;
-  duration_years: number;
-  levels: string[];
-  inscription_fee: number;
-  monthly_fee: number;
-  total_students: number;
-  total_groups: number;
-  requirements: string[];
-  is_active: boolean;
-}
+import Swal from 'sweetalert2';
 
 export default function ProgramsPage() {
   const [activeTab, setActiveTab] = useState<'filieres' | 'programs'>('filieres');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedFiliere, setSelectedFiliere] = useState<Filiere | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [showFiliereModal, setShowFiliereModal] = useState(false);
+  const [showProgramModal, setShowProgramModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const stats = {
-    total_filieres: 6,
-    total_programs: 2,
-    total_students: 1250,
-    total_revenue: 2850000,
+  const [stats, setStats] = useState({
+    total_filieres: 0,
+    total_programs: 0,
+    total_students: 0,
+    total_revenue: 0,
+  });
+
+  const [filiereForm, setFiliereForm] = useState({
+    name: '',
+    code: '',
+    description: '',
+    program_ids: [] as number[],
+    is_active: true,
+  });
+
+  const [programForm, setProgramForm] = useState({
+    name: '',
+    code: '',
+    description: '',
+    duration_years: 3,
+    levels: [] as string[],
+    inscription_fee: 0,
+    monthly_fee: 0,
+    requirements: [] as string[],
+    is_active: true,
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, [activeTab, searchTerm]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      if (activeTab === 'filieres') {
+        const [filieresRes, filiereStatsRes, programStatsRes] = await Promise.all([
+          filieresApi.getAll({ search: searchTerm }),
+          filieresApi.getStats(),
+          programsApi.getStats()
+        ]);
+        setFilieres(filieresRes.data.data);
+        setStats({
+          total_filieres: filiereStatsRes.data.total_filieres,
+          total_programs: programStatsRes.data.total_programs,
+          total_students: programStatsRes.data.total_students,
+          total_revenue: programStatsRes.data.total_revenue,
+        });
+      } else {
+        const [programsRes, programStatsRes, filiereStatsRes] = await Promise.all([
+          programsApi.getAll({ search: searchTerm }),
+          programsApi.getStats(),
+          filieresApi.getStats()
+        ]);
+        setPrograms(programsRes.data.data);
+        setStats({
+          total_filieres: filiereStatsRes.data.total_filieres,
+          total_programs: programStatsRes.data.total_programs,
+          total_students: programStatsRes.data.total_students,
+          total_revenue: programStatsRes.data.total_revenue,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filieres: Filiere[] = [
-    {
-      id: 1,
-      name: 'Développement Informatique',
-      code: 'DEV',
-      description: 'Formation complète en développement web, mobile et logiciel. Maîtrise des langages modernes et des frameworks populaires.',
-      programs: ['Master', 'Licence'],
-      total_students: 285,
-      total_courses: 12,
-      is_active: true,
-      created_at: '2020-09-01',
-    },
-    {
-      id: 2,
-      name: 'Commerce International',
-      code: 'COM',
-      description: 'Formation en commerce international, négociation, import/export et gestion des échanges commerciaux.',
-      programs: ['Master', 'Licence'],
-      total_students: 320,
-      total_courses: 10,
-      is_active: true,
-      created_at: '2020-09-01',
-    },
-    {
-      id: 3,
-      name: 'Marketing Digital',
-      code: 'MKT',
-      description: 'Stratégies marketing digitales, SEO, réseaux sociaux, publicité en ligne et analyse de données.',
-      programs: ['Master', 'Licence'],
-      total_students: 195,
-      total_courses: 8,
-      is_active: true,
-      created_at: '2021-09-01',
-    },
-    {
-      id: 4,
-      name: 'Finance et Comptabilité',
-      code: 'FIN',
-      description: 'Gestion financière, analyse comptable, audit, contrôle de gestion et fiscalité.',
-      programs: ['Master', 'Licence'],
-      total_students: 245,
-      total_courses: 11,
-      is_active: true,
-      created_at: '2020-09-01',
-    },
-    {
-      id: 5,
-      name: 'Ressources Humaines',
-      code: 'RH',
-      description: 'Management des ressources humaines, recrutement, formation, droit du travail et gestion des talents.',
-      programs: ['Master'],
-      total_students: 125,
-      total_courses: 7,
-      is_active: true,
-      created_at: '2022-09-01',
-    },
-    {
-      id: 6,
-      name: 'Gestion des Entreprises',
-      code: 'GES',
-      description: 'Management général, stratégie d\'entreprise, gestion de projet et entrepreneuriat.',
-      programs: ['Licence'],
-      total_students: 80,
-      total_courses: 9,
-      is_active: false,
-      created_at: '2021-09-01',
-    },
-  ];
+  const handleFiliereSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (selectedFiliere) {
+        await filieresApi.update(selectedFiliere.id, filiereForm);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Filière modifiée avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      } else {
+        await filieresApi.create(filiereForm);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Filière créée avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      }
+      setShowFiliereModal(false);
+      resetFiliereForm();
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving filiere:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de sauvegarder la filière',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
 
-  const programs: Program[] = [
-    {
-      id: 1,
-      name: 'Master',
-      code: 'M',
-      duration_years: 2,
-      levels: ['1ère année', '2ème année'],
-      inscription_fee: 5000,
-      monthly_fee: 2500,
-      total_students: 520,
-      total_groups: 18,
-      requirements: ['Licence ou équivalent (Bac+3)', 'Dossier de candidature', 'Entretien de motivation', 'Test de niveau'],
+  const handleProgramSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (selectedProgram) {
+        await programsApi.update(selectedProgram.id, programForm);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Programme modifié avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      } else {
+        await programsApi.create(programForm);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Programme créé avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      }
+      setShowProgramModal(false);
+      resetProgramForm();
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving program:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de sauvegarder le programme',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDeleteFiliere = async (filiere: Filiere) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `Êtes-vous sûr de vouloir supprimer la filière <strong>${filiere.name}</strong> ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await filieresApi.delete(filiere.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprimé',
+          text: 'Filière supprimée avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting filiere:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Impossible de supprimer la filière',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const handleDeleteProgram = async (program: Program) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `Êtes-vous sûr de vouloir supprimer le programme <strong>${program.name}</strong> ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await programsApi.delete(program.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprimé',
+          text: 'Programme supprimé avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting program:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Impossible de supprimer le programme',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const handleViewFiliere = async (filiere: Filiere) => {
+    try {
+      const response = await filieresApi.show(filiere.id);
+      setSelectedFiliere(response.data.data);
+    } catch (error) {
+      console.error('Error fetching filiere details:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les détails de la filière',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleViewProgram = async (program: Program) => {
+    try {
+      const response = await programsApi.show(program.id);
+      setSelectedProgram(response.data.data);
+    } catch (error) {
+      console.error('Error fetching program details:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les détails du programme',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const openEditFiliereModal = (filiere: Filiere) => {
+    setSelectedFiliere(filiere);
+    setFiliereForm({
+      name: filiere.name,
+      code: filiere.code,
+      description: filiere.description || '',
+      program_ids: filiere.program_ids || [],
+      is_active: filiere.is_active,
+    });
+    setShowFiliereModal(true);
+  };
+
+  const openEditProgramModal = (program: Program) => {
+    setSelectedProgram(program);
+    setProgramForm({
+      name: program.name,
+      code: program.code,
+      description: program.description || '',
+      duration_years: program.duration_years,
+      levels: program.levels || [],
+      inscription_fee: program.inscription_fee,
+      monthly_fee: program.monthly_fee,
+      requirements: program.requirements || [],
+      is_active: program.is_active,
+    });
+    setShowProgramModal(true);
+  };
+
+  const resetFiliereForm = () => {
+    setFiliereForm({
+      name: '',
+      code: '',
+      description: '',
+      program_ids: [],
       is_active: true,
-    },
-    {
-      id: 2,
-      name: 'Licence',
-      code: 'L',
+    });
+    setSelectedFiliere(null);
+  };
+
+  const resetProgramForm = () => {
+    setProgramForm({
+      name: '',
+      code: '',
+      description: '',
       duration_years: 3,
-      levels: ['1ère année', '2ème année', '3ème année'],
-      inscription_fee: 4500,
-      monthly_fee: 2000,
-      total_students: 730,
-      total_groups: 24,
-      requirements: ['Baccalauréat ou équivalent', 'Dossier de candidature', 'Test d\'admission'],
+      levels: [],
+      inscription_fee: 0,
+      monthly_fee: 0,
+      requirements: [],
       is_active: true,
-    },
-  ];
+    });
+    setSelectedProgram(null);
+  };
 
   return (
     <AdminLayout>
@@ -251,7 +426,18 @@ export default function ProgramsPage() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+              <button
+                onClick={() => {
+                  if (activeTab === 'filieres') {
+                    resetFiliereForm();
+                    setShowFiliereModal(true);
+                  } else {
+                    resetProgramForm();
+                    setShowProgramModal(true);
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+              >
                 <Plus className="w-4 h-4" />
                 Ajouter {activeTab === 'filieres' ? 'Filière' : 'Programme'}
               </button>
@@ -308,15 +494,21 @@ export default function ProgramsPage() {
 
                     <div className="flex items-center justify-end gap-1 pt-4 border-t border-gray-100">
                       <button
-                        onClick={() => setSelectedFiliere(filiere)}
+                        onClick={() => handleViewFiliere(filiere)}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                        <SquarePen className="w-4 h-4" />
+                      <button
+                        onClick={() => openEditFiliereModal(filiere)}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
+                      <button
+                        onClick={() => handleDeleteFiliere(filiere)}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -399,15 +591,21 @@ export default function ProgramsPage() {
 
                     <div className="flex items-center justify-end gap-1 pt-4 border-t border-gray-100">
                       <button
-                        onClick={() => setSelectedProgram(program)}
+                        onClick={() => handleViewProgram(program)}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                        <SquarePen className="w-4 h-4" />
+                      <button
+                        onClick={() => openEditProgramModal(program)}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
+                      <button
+                        onClick={() => handleDeleteProgram(program)}
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -419,8 +617,8 @@ export default function ProgramsPage() {
         </div>
       </div>
 
-      {/* Filiere Detail Modal */}
-      {selectedFiliere && (
+      {/* Filiere Detail Modal - KEEPING EXACT SAME DESIGN */}
+      {selectedFiliere && !showFiliereModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
@@ -468,7 +666,7 @@ export default function ProgramsPage() {
                   <div className="bg-white rounded-lg p-4 text-center">
                     <Calendar className="w-6 h-6 text-orange-500 mx-auto mb-2" />
                     <p className="text-sm font-bold text-orange-500">
-                      {new Date(selectedFiliere.created_at).toLocaleDateString('fr-FR')}
+                      {selectedFiliere.created_at ? new Date(selectedFiliere.created_at).toLocaleDateString('fr-FR') : '-'}
                     </p>
                     <p className="text-xs text-gray-500">Créée le</p>
                   </div>
@@ -498,8 +696,8 @@ export default function ProgramsPage() {
         </div>
       )}
 
-      {/* Program Detail Modal */}
-      {selectedProgram && (
+      {/* Program Detail Modal - KEEPING EXACT SAME DESIGN */}
+      {selectedProgram && !showProgramModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-[#257035] text-white p-6 rounded-t-2xl flex items-center justify-between">
@@ -584,6 +782,396 @@ export default function ProgramsPage() {
           </div>
         </div>
       )}
+
+      {/* Filiere Add/Edit Modal */}
+      {/* Filiere Add/Edit Modal - UPDATE */}
+{showFiliereModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
+        <h2 className="text-xl font-bold">{selectedFiliere ? 'Modifier Filière' : 'Ajouter Filière'}</h2>
+        <button onClick={() => { setShowFiliereModal(false); resetFiliereForm(); }} className="p-2 hover:bg-white/20 rounded-lg">
+          <X className="w-6 h-6" />
+        </button>
+      </div>
+
+      <form onSubmit={handleFiliereSubmit} className="p-6 space-y-6">
+        <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-[#0D529C] mb-4">Informations Générales</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+              <input
+                type="text"
+                required
+                value={filiereForm.name}
+                onChange={(e) => setFiliereForm({ ...filiereForm, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+              <input
+                type="text"
+                required
+                value={filiereForm.code}
+                onChange={(e) => setFiliereForm({ ...filiereForm, code: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              rows={4}
+              value={filiereForm.description}
+              onChange={(e) => setFiliereForm({ ...filiereForm, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* NOUVELLE SECTION - Programmes */}
+        <div className="bg-purple-50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-purple-600 mb-4">Programmes Associés</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sélectionner les programmes *
+            </label>
+            <div className="space-y-2">
+              {programs.map((program) => (
+                <label
+                  key={program.id}
+                  className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-purple-500 cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={filiereForm.program_ids.includes(program.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFiliereForm({
+                          ...filiereForm,
+                          program_ids: [...filiereForm.program_ids, program.id]
+                        });
+                      } else {
+                        setFiliereForm({
+                          ...filiereForm,
+                          program_ids: filiereForm.program_ids.filter(id => id !== program.id)
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  />
+                  <div className="ml-3 flex-1">
+                    <span className="font-medium text-gray-900">{program.name}</span>
+                    <span className="ml-2 text-xs text-gray-500">({program.code})</span>
+                  </div>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                    {program.duration_years} ans
+                  </span>
+                </label>
+              ))}
+            </div>
+            {filiereForm.program_ids.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">Vous devez sélectionner au moins un programme</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-blue-50 rounded-xl p-6 space-y-4">
+          <h3 className="text-lg font-bold text-[#0D529C] mb-4">Statut</h3>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="filiere_is_active"
+              checked={filiereForm.is_active}
+              onChange={(e) => setFiliereForm({ ...filiereForm, is_active: e.target.checked })}
+              className="w-4 h-4 text-[#0D529C] border-gray-300 rounded focus:ring-[#0D529C]"
+            />
+            <label htmlFor="filiere_is_active" className="ml-2 text-sm text-gray-700">
+              Filière active
+            </label>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          <button
+            type="button"
+            onClick={() => { setShowFiliereModal(false); resetFiliereForm(); }}
+            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={filiereForm.program_ids.length === 0}
+            className="px-6 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {selectedFiliere ? 'Mettre à jour' : 'Créer'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+  {/* Program Add/Edit Modal */}
+  {showProgramModal && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-[#257035] text-white p-6 rounded-t-2xl flex items-center justify-between">
+          <h2 className="text-xl font-bold">{selectedProgram ? 'Modifier Programme' : 'Ajouter Programme'}</h2>
+          <button onClick={() => { setShowProgramModal(false); resetProgramForm(); }} className="p-2 hover:bg-white/20 rounded-lg">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleProgramSubmit} className="p-6 space-y-6">
+          <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#257035] mb-4">Informations Générales</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+                <input
+                  type="text"
+                  required
+                  value={programForm.name}
+                  onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                <input
+                  type="text"
+                  required
+                  value={programForm.code}
+                  onChange={(e) => setProgramForm({ ...programForm, code: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Durée (années) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="10"
+                  value={programForm.duration_years}
+                  onChange={(e) => setProgramForm({ ...programForm, duration_years: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={programForm.description}
+                onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#0D529C] mb-4">Frais de Scolarité</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Frais d'Inscription (MAD) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={programForm.inscription_fee}
+                  onChange={(e) => setProgramForm({ ...programForm, inscription_fee: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mensualité (MAD) *</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={programForm.monthly_fee}
+                  onChange={(e) => setProgramForm({ ...programForm, monthly_fee: parseFloat(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-orange-600 mb-4">Niveaux</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ajouter des niveaux</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  id="level_input"
+                  placeholder="Ex: 1ère année"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const input = e.target as HTMLInputElement;
+                      if (input.value.trim()) {
+                        setProgramForm({
+                          ...programForm,
+                          levels: [...programForm.levels, input.value.trim()]
+                        });
+                        input.value = '';
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('level_input') as HTMLInputElement;
+                    if (input.value.trim()) {
+                      setProgramForm({
+                        ...programForm,
+                        levels: [...programForm.levels, input.value.trim()]
+                      });
+                      input.value = '';
+                    }
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {programForm.levels.map((level, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-lg text-sm"
+                  >
+                    {level}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProgramForm({
+                          ...programForm,
+                          levels: programForm.levels.filter((_, i) => i !== index)
+                        });
+                      }}
+                      className="hover:text-orange-900"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-purple-600 mb-4">Conditions d'Admission</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ajouter une condition</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  id="requirement_input"
+                  placeholder="Ex: Baccalauréat ou équivalent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const input = e.target as HTMLInputElement;
+                      if (input.value.trim()) {
+                        setProgramForm({
+                          ...programForm,
+                          requirements: [...programForm.requirements, input.value.trim()]
+                        });
+                        input.value = '';
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('requirement_input') as HTMLInputElement;
+                    if (input.value.trim()) {
+                      setProgramForm({
+                        ...programForm,
+                        requirements: [...programForm.requirements, input.value.trim()]
+                      });
+                      input.value = '';
+                    }
+                  }}
+                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {programForm.requirements.map((req, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-3 bg-white rounded-lg"
+                  >
+                    <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
+                    <span className="flex-1 text-sm text-gray-700">{req}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProgramForm({
+                          ...programForm,
+                          requirements: programForm.requirements.filter((_, i) => i !== index)
+                        });
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#257035] mb-4">Statut</h3>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="program_is_active"
+                checked={programForm.is_active}
+                onChange={(e) => setProgramForm({ ...programForm, is_active: e.target.checked })}
+                className="w-4 h-4 text-[#257035] border-gray-300 rounded focus:ring-[#257035]"
+              />
+              <label htmlFor="program_is_active" className="ml-2 text-sm text-gray-700">
+                Programme actif
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => { setShowProgramModal(false); resetProgramForm(); }}
+              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              {selectedProgram ? 'Mettre à jour' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
     </AdminLayout>
   );
 }

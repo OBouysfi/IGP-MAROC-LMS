@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\ProfileController;
 use App\Http\Controllers\Api\Admin\StudentController;
 use App\Http\Controllers\Api\Admin\ProfessorController;
+use App\Http\Controllers\Api\Admin\CourseController;
+use App\Http\Controllers\Api\Admin\GroupController;
+use App\Http\Controllers\Api\Admin\ProgramController;
+use App\Http\Controllers\Api\Admin\FiliereController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -59,5 +63,34 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('professors/{id}', [ProfessorController::class, 'update']);
         Route::delete('professors/{id}', [ProfessorController::class, 'destroy']);
         Route::post('professors/{id}/toggle-active', [ProfessorController::class, 'toggleActive']);
+        // Courses
+        Route::get('courses', [CourseController::class, 'index']);
+        Route::get('courses/stats', [CourseController::class, 'stats']);
+        Route::post('courses', [CourseController::class, 'store']);
+        Route::get('courses/{id}', [CourseController::class, 'show']);
+        Route::put('courses/{id}', [CourseController::class, 'update']);
+        Route::delete('courses/{id}', [CourseController::class, 'destroy']);
+        // Groups
+        Route::get('groups', [GroupController::class, 'index']);
+        Route::get('groups/stats', [GroupController::class, 'stats']);
+        Route::post('groups', [GroupController::class, 'store']);
+        Route::get('groups/{id}', [GroupController::class, 'show']);
+        Route::put('groups/{id}', [GroupController::class, 'update']);
+        Route::delete('groups/{id}', [GroupController::class, 'destroy']);
+        // Programs
+        Route::get('programs', [ProgramController::class, 'index']);
+        Route::get('programs/stats', [ProgramController::class, 'stats']);
+        Route::post('programs', [ProgramController::class, 'store']);
+        Route::get('programs/{id}', [ProgramController::class, 'show']);
+        Route::put('programs/{id}', [ProgramController::class, 'update']);
+        Route::delete('programs/{id}', [ProgramController::class, 'destroy']);
+
+        // Filieres
+        Route::get('filieres', [FiliereController::class, 'index']);
+        Route::get('filieres/stats', [FiliereController::class, 'stats']);
+        Route::post('filieres', [FiliereController::class, 'store']);
+        Route::get('filieres/{id}', [FiliereController::class, 'show']);
+        Route::put('filieres/{id}', [FiliereController::class, 'update']);
+        Route::delete('filieres/{id}', [FiliereController::class, 'destroy']);
     });
 });

@@ -236,7 +236,10 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
                       Paramètres
                     </Link>
                     <hr className="my-1" />
-                    <button className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full"
+                    >
                       <LogOut className="w-4 h-4" />
                       Déconnexion
                     </button>
