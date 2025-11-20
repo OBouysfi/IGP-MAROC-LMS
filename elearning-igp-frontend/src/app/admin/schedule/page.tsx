@@ -1,76 +1,243 @@
-// src/app/admin/schedule/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Calendar, Clock, Users, GraduationCap, MapPin, Filter, Download, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { schedulesApi, ScheduleSlot, ScheduleStats } from '@/lib/api/admin/schedules';
+import { coursesApi } from '@/lib/api/admin/courses';
+import { Calendar, Clock, Users, GraduationCap, MapPin, Download, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit2 } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface ScheduleSlot {
-  id: number;
-  day: string;
-  start_time: string;
-  end_time: string;
-  course: string;
-  course_code: string;
-  professor: string;
-  group: string;
-  room: string;
-  type: 'cours' | 'td' | 'tp' | 'examen';
-}
+import Swal from 'sweetalert2';
 
 export default function SchedulePage() {
   const [viewType, setViewType] = useState<'group' | 'professor' | 'room'>('group');
-  const [selectedGroup, setSelectedGroup] = useState('DEV-M2-A');
-  const [selectedProfessor, setSelectedProfessor] = useState('Karim Benjelloun');
-  const [selectedRoom, setSelectedRoom] = useState('Lab Info 2');
+  const [schedules, setSchedules] = useState<ScheduleSlot[]>([]);
+  const [stats, setStats] = useState<ScheduleStats | null>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [professors, setProfessors] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<string[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
+  const [selectedProfessor, setSelectedProfessor] = useState<number | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [currentWeek, setCurrentWeek] = useState('11-15 Nov 2024');
+  
+  const [showModal, setShowModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleSlot | null>(null);
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
-  const groups = ['DEV-M2-A', 'DEV-M2-B', 'COM-L3-A', 'COM-L3-B', 'MKT-M1-A', 'FIN-L2-A'];
-  const professors = ['Karim Benjelloun', 'Amina El Fassi', 'Omar Tazi', 'Hassan Alami', 'Nadia Fassi'];
-  const rooms = ['Lab Info 1', 'Lab Info 2', 'Salle A12', 'Salle B5', 'Salle C5', 'Amphi A', 'Amphi B'];
+  const [formData, setFormData] = useState({
+    course_id: 0,
+    group_id: 0,
+    professor_id: 0,
+    room: '',
+    day: 'Lundi',
+    start_time: '09:00',
+    end_time: '12:00',
+    type: 'cours' as 'cours' | 'td' | 'tp' | 'examen',
+    is_recurring: true,
+    notes: '',
+  });
 
-  const scheduleByGroup: ScheduleSlot[] = [
-    { id: 1, day: 'Lundi', start_time: '09:00', end_time: '12:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 2, day: 'Lundi', start_time: '14:00', end_time: '17:00', course: 'DevOps & CI/CD', course_code: 'DEV-DEVOPS', professor: 'Hassan Alami', group: 'DEV-M2-A', room: 'Salle A12', type: 'cours' },
-    { id: 3, day: 'Mardi', start_time: '09:00', end_time: '12:00', course: 'Node.js & Express', course_code: 'DEV-NODE', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 1', type: 'tp' },
-    { id: 4, day: 'Mercredi', start_time: '14:00', end_time: '17:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'td' },
-    { id: 5, day: 'Jeudi', start_time: '09:00', end_time: '12:00', course: 'Base de données NoSQL', course_code: 'DEV-NOSQL', professor: 'Nadia Fassi', group: 'DEV-M2-A', room: 'Salle B5', type: 'cours' },
-    { id: 6, day: 'Vendredi', start_time: '10:00', end_time: '12:00', course: 'Projet Tutoré', course_code: 'DEV-PROJET', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-  ];
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
 
-  const scheduleByProfessor: ScheduleSlot[] = [
-    { id: 1, day: 'Lundi', start_time: '09:00', end_time: '12:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 2, day: 'Mardi', start_time: '09:00', end_time: '12:00', course: 'Node.js & Express', course_code: 'DEV-NODE', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 1', type: 'tp' },
-    { id: 3, day: 'Mardi', start_time: '14:00', end_time: '16:00', course: 'Introduction Web', course_code: 'DEV-WEB', professor: 'Karim Benjelloun', group: 'DEV-L1-A', room: 'Amphi A', type: 'cours' },
-    { id: 4, day: 'Mercredi', start_time: '14:00', end_time: '17:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'td' },
-    { id: 5, day: 'Jeudi', start_time: '09:00', end_time: '11:00', course: 'Node.js & Express', course_code: 'DEV-NODE', professor: 'Karim Benjelloun', group: 'DEV-M2-B', room: 'Lab Info 1', type: 'tp' },
-    { id: 6, day: 'Vendredi', start_time: '10:00', end_time: '12:00', course: 'Projet Tutoré', course_code: 'DEV-PROJET', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-  ];
+  useEffect(() => {
+    fetchSchedules();
+  }, [viewType, selectedGroup, selectedProfessor, selectedRoom]);
 
-  const scheduleByRoom: ScheduleSlot[] = [
-    { id: 1, day: 'Lundi', start_time: '09:00', end_time: '12:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 2, day: 'Lundi', start_time: '14:00', end_time: '17:00', course: 'Python Avancé', course_code: 'DEV-PYTHON', professor: 'Hassan Alami', group: 'DEV-M1-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 3, day: 'Mercredi', start_time: '09:00', end_time: '12:00', course: 'JavaScript', course_code: 'DEV-JS', professor: 'Nadia Fassi', group: 'DEV-L2-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 4, day: 'Mercredi', start_time: '14:00', end_time: '17:00', course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'td' },
-    { id: 5, day: 'Vendredi', start_time: '10:00', end_time: '12:00', course: 'Projet Tutoré', course_code: 'DEV-PROJET', professor: 'Karim Benjelloun', group: 'DEV-M2-A', room: 'Lab Info 2', type: 'tp' },
-    { id: 6, day: 'Samedi', start_time: '09:00', end_time: '13:00', course: 'Rattrapage', course_code: 'DEV-RAT', professor: 'Hassan Alami', group: 'DEV-M1-B', room: 'Lab Info 2', type: 'examen' },
-  ];
-
-  const getCurrentSchedule = () => {
-    switch (viewType) {
-      case 'group': return scheduleByGroup;
-      case 'professor': return scheduleByProfessor;
-      case 'room': return scheduleByRoom;
-      default: return scheduleByGroup;
+  const fetchInitialData = async () => {
+    try {
+      const [groupsRes, professorsRes, roomsRes, coursesRes, statsRes] = await Promise.all([
+        schedulesApi.getGroups(),
+        schedulesApi.getProfessors(),
+        schedulesApi.getRooms(),
+        coursesApi.getAll(),
+        schedulesApi.getStats()
+      ]);
+      
+      setGroups(groupsRes.data.data);
+      setProfessors(professorsRes.data.data);
+      setRooms(roomsRes.data.data);
+      setCourses(coursesRes.data.data);
+      setStats(statsRes.data);
+      
+      if (groupsRes.data.data.length > 0) {
+        setSelectedGroup(groupsRes.data.data[0].id);
+      }
+      if (professorsRes.data.data.length > 0) {
+        setSelectedProfessor(professorsRes.data.data[0].id);
+      }
+      if (roomsRes.data.data.length > 0) {
+        setSelectedRoom(roomsRes.data.data[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+        confirmButtonColor: '#0D529C',
+      });
     }
   };
 
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      const filters: any = {};
+      
+      if (viewType === 'group' && selectedGroup) {
+        filters.group_id = selectedGroup;
+      } else if (viewType === 'professor' && selectedProfessor) {
+        filters.professor_id = selectedProfessor;
+      } else if (viewType === 'room' && selectedRoom) {
+        filters.room = selectedRoom;
+      }
+      
+      const response = await schedulesApi.getAll(filters);
+      setSchedules(response.data.data);
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      // Check conflicts
+      const conflictCheck = await schedulesApi.checkConflicts({
+        ...formData,
+        schedule_id: selectedSchedule?.id
+      });
+
+      if (conflictCheck.data.has_conflicts) {
+        const result = await Swal.fire({
+          icon: 'warning',
+          title: 'Conflits détectés',
+          html: conflictCheck.data.conflicts.map((c: any) => `<p>${c.message}</p>`).join(''),
+          showCancelButton: true,
+          confirmButtonColor: '#C1272D',
+          cancelButtonColor: '#6B7280',
+          confirmButtonText: 'Créer quand même',
+          cancelButtonText: 'Annuler',
+        });
+
+        if (!result.isConfirmed) return;
+      }
+
+      if (selectedSchedule) {
+        await schedulesApi.update(selectedSchedule.id, formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Créneau modifié avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      } else {
+        await schedulesApi.create(formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Créneau créé avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+      }
+      
+      setShowModal(false);
+      resetForm();
+      fetchSchedules();
+      fetchInitialData();
+    } catch (error: any) {
+      console.error('Error saving schedule:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de sauvegarder le créneau',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDelete = async (schedule: ScheduleSlot) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `Êtes-vous sûr de vouloir supprimer ce créneau ?<br/><strong>${schedule.course.name}</strong>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await schedulesApi.delete(schedule.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprimé',
+          text: 'Créneau supprimé avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchSchedules();
+        fetchInitialData();
+      } catch (error) {
+        console.error('Error deleting schedule:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Impossible de supprimer le créneau',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const openEditModal = (schedule: ScheduleSlot) => {
+    setSelectedSchedule(schedule);
+    setFormData({
+      course_id: schedule.course.id,
+      group_id: schedule.group.id,
+      professor_id: schedule.professor?.id || 0,
+      room: schedule.room,
+      day: schedule.day,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      type: schedule.type,
+      is_recurring: schedule.is_recurring,
+      notes: schedule.notes || '',
+    });
+    setShowModal(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      course_id: 0,
+      group_id: selectedGroup || 0,
+      professor_id: 0,
+      room: '',
+      day: 'Lundi',
+      start_time: '09:00',
+      end_time: '12:00',
+      type: 'cours',
+      is_recurring: true,
+      notes: '',
+    });
+    setSelectedSchedule(null);
+  };
+
   const getSlotForTime = (day: string, time: string) => {
-    const schedule = getCurrentSchedule();
-    return schedule.find(slot => 
+    return schedules.find(slot => 
       slot.day === day && 
       slot.start_time <= time && 
       slot.end_time > time
@@ -84,8 +251,7 @@ export default function SchedulePage() {
   };
 
   const isSlotStart = (day: string, time: string) => {
-    const schedule = getCurrentSchedule();
-    return schedule.some(slot => slot.day === day && slot.start_time === time);
+    return schedules.some(slot => slot.day === day && slot.start_time === time);
   };
 
   const getTypeColor = (type: string) => {
@@ -152,29 +318,29 @@ export default function SchedulePage() {
 
             {/* Filters */}
             <div className="flex items-center gap-4">
-              {viewType === 'group' && (
+              {viewType === 'group' && groups.length > 0 && (
                 <select
-                  value={selectedGroup}
-                  onChange={(e) => setSelectedGroup(e.target.value)}
+                  value={selectedGroup || ''}
+                  onChange={(e) => setSelectedGroup(parseInt(e.target.value))}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                 >
                   {groups.map((g) => (
-                    <option key={g} value={g}>{g}</option>
+                    <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
               )}
-              {viewType === 'professor' && (
+              {viewType === 'professor' && professors.length > 0 && (
                 <select
-                  value={selectedProfessor}
-                  onChange={(e) => setSelectedProfessor(e.target.value)}
+                  value={selectedProfessor || ''}
+                  onChange={(e) => setSelectedProfessor(parseInt(e.target.value))}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                 >
                   {professors.map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               )}
-              {viewType === 'room' && (
+              {viewType === 'room' && rooms.length > 0 && (
                 <select
                   value={selectedRoom}
                   onChange={(e) => setSelectedRoom(e.target.value)}
@@ -186,12 +352,10 @@ export default function SchedulePage() {
                 </select>
               )}
 
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
-                <Download className="w-4 h-4" />
-                Exporter PDF
-              </button>
-
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button
+                onClick={() => { resetForm(); setShowModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 <Plus className="w-4 h-4" />
                 Ajouter Créneau
               </button>
@@ -247,27 +411,41 @@ export default function SchedulePage() {
                             rowSpan={duration}
                             className="border border-gray-200 p-0 relative"
                           >
-                            <div className={`absolute inset-1 rounded-lg ${getTypeColor(slot.type)} text-white p-3 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer`}>
+                            <div className={`absolute inset-1 rounded-lg ${getTypeColor(slot.type)} text-white p-3 overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group`}>
                               <div className="flex items-start justify-between mb-1">
                                 <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded">
                                   {getTypeLabel(slot.type)}
                                 </span>
-                                <span className="text-xs opacity-80">
-                                  {slot.start_time} - {slot.end_time}
-                                </span>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => openEditModal(slot)}
+                                    className="p-1 bg-white/20 hover:bg-white/30 rounded"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(slot)}
+                                    className="p-1 bg-white/20 hover:bg-white/30 rounded"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
                               </div>
-                              <h4 className="font-bold text-sm mb-1 line-clamp-2">{slot.course}</h4>
-                              <p className="text-xs opacity-90 mb-1">{slot.course_code}</p>
-                              {viewType !== 'professor' && (
+                              <div className="text-xs opacity-80 mb-1">
+                                {slot.start_time} - {slot.end_time}
+                              </div>
+                              <h4 className="font-bold text-sm mb-1 line-clamp-2">{slot.course.name}</h4>
+                              <p className="text-xs opacity-90 mb-1">{slot.course.code}</p>
+                              {viewType !== 'professor' && slot.professor && (
                                 <p className="text-xs opacity-80 flex items-center gap-1">
                                   <GraduationCap className="w-3 h-3" />
-                                  {slot.professor}
+                                  {slot.professor.name}
                                 </p>
                               )}
                               {viewType !== 'group' && (
                                 <p className="text-xs opacity-80 flex items-center gap-1">
                                   <Users className="w-3 h-3" />
-                                  {slot.group}
+                                  {slot.group.name}
                                 </p>
                               )}
                               {viewType !== 'room' && (
@@ -323,42 +501,212 @@ export default function SchedulePage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-[#0D529C]" />
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-[#0D529C]" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Heures cette semaine</p>
+                  <p className="text-2xl font-bold text-[#0D529C]">{stats.total_hours_week}h</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Heures cette semaine</p>
-                <p className="text-2xl font-bold text-[#0D529C]">17h</p>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[#257035]" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Créneaux planifiés</p>
+                  <p className="text-2xl font-bold text-[#257035]">{stats.total_schedules}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Salles utilisées</p>
+                  <p className="text-2xl font-bold text-orange-500">{stats.rooms_used}</p>
+                </div>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-[#257035]" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Créneaux planifiés</p>
-                <p className="text-2xl font-bold text-[#257035]">{getCurrentSchedule().length}</p>
-              </div>
+        )}
+      </div>
+
+      {/* Add/Edit Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
+              <h2 className="text-xl font-bold">{selectedSchedule ? 'Modifier Créneau' : 'Ajouter Créneau'}</h2>
+              <button onClick={() => { setShowModal(false); resetForm(); }} className="p-2 hover:bg-white/20 rounded-lg">
+                <X className="w-6 h-6" />
+              </button>
             </div>
-          </div>
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-orange-500" />
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="bg-gray-50 rounded-xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-[#0D529C] mb-4">Informations du Cours</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cours *</label>
+                    <select
+                      required
+                      value={formData.course_id}
+                      onChange={(e) => setFormData({ ...formData, course_id: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value={0}>Sélectionner un cours</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Groupe *</label>
+                    <select
+                      required
+                      value={formData.group_id}
+                      onChange={(e) => setFormData({ ...formData, group_id: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value={0}>Sélectionner un groupe</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Professeur</label>
+                    <select
+                      value={formData.professor_id}
+                      onChange={(e) => setFormData({ ...formData, professor_id: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value={0}>Non assigné</option>
+                      {professors.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                    <select
+                      required
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value="cours">Cours Magistral</option>
+                      <option value="td">Travaux Dirigés (TD)</option>
+                      <option value="tp">Travaux Pratiques (TP)</option>
+                      <option value="examen">Examen</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Salles utilisées</p>
-                <p className="text-2xl font-bold text-orange-500">4</p>
+
+              <div className="bg-blue-50 rounded-xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-[#0D529C] mb-4">Horaire et Lieu</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Jour *</label>
+                    <select
+                      required
+                      value={formData.day}
+                      onChange={(e) => setFormData({ ...formData, day: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      {days.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Salle *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.room}
+                      onChange={(e) => setFormData({ ...formData, room: e.target.value })}
+                      placeholder="Ex: Lab Info 2"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Heure début *</label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.start_time}
+                      onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Heure fin *</label>
+                    <input
+                      type="time"
+                      required
+                      value={formData.end_time}
+                      onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+
+              <div className="bg-green-50 rounded-xl p-6 space-y-4">
+                <h3 className="text-lg font-bold text-[#257035] mb-4">Options</h3>
+                <div>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_recurring}
+                      onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
+                      className="w-4 h-4 text-[#257035] border-gray-300 rounded focus:ring-[#257035]"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Créneau récurrent (chaque semaine)</span>
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <textarea
+                    rows={3}
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Notes ou commentaires..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); resetForm(); }}
+                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  {selectedSchedule ? 'Mettre à jour' : 'Créer'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </AdminLayout>
   );
 }

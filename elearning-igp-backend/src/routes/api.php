@@ -92,5 +92,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('filieres/{id}', [FiliereController::class, 'show']);
         Route::put('filieres/{id}', [FiliereController::class, 'update']);
         Route::delete('filieres/{id}', [FiliereController::class, 'destroy']);
+        // Schedules
+        Route::get('schedules/stats', [ScheduleController::class, 'stats']);
+        Route::get('schedules/groups', [ScheduleController::class, 'getGroups']);
+        Route::get('schedules/professors', [ScheduleController::class, 'getProfessors']);
+        Route::get('schedules/rooms', [ScheduleController::class, 'getRooms']);
+        Route::post('schedules/check-conflicts', [ScheduleController::class, 'checkConflicts']);
+        Route::get('schedules', [ScheduleController::class, 'index']);
+        Route::post('schedules', [ScheduleController::class, 'store']);
+        Route::get('schedules/{id}', [ScheduleController::class, 'show']);
+        Route::put('schedules/{id}', [ScheduleController::class, 'update']);
+        Route::delete('schedules/{id}', [ScheduleController::class, 'destroy']);
     });
 });
