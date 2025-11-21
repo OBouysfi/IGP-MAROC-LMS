@@ -103,5 +103,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('schedules/{id}', [ScheduleController::class, 'show']);
         Route::put('schedules/{id}', [ScheduleController::class, 'update']);
         Route::delete('schedules/{id}', [ScheduleController::class, 'destroy']);
+        // Exams
+        Route::get('exams/stats', [ExamController::class, 'stats']);
+        Route::get('exams/stats-by-filiere', [ExamController::class, 'statsByFiliere']);
+        Route::post('exams/{id}/grades', [ExamController::class, 'saveGrades']);
+        Route::post('exams/{id}/validate', [ExamController::class, 'validateGrades']);
+        Route::get('exams', [ExamController::class, 'index']);
+        Route::post('exams', [ExamController::class, 'store']);
+        Route::get('exams/{id}', [ExamController::class, 'show']);
+        Route::put('exams/{id}', [ExamController::class, 'update']);
+        Route::delete('exams/{id}', [ExamController::class, 'destroy']);
     });
 });

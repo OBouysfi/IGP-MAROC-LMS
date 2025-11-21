@@ -1,184 +1,150 @@
-// src/app/admin/exams/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { FileText, CheckCircle, Clock, AlertTriangle, Search, Filter, Eye, Download, X, Users, Calendar, Award, TrendingUp, BarChart3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { examsApi, Exam, ExamStats } from '@/lib/api/admin/exams';
+import { FileText, CheckCircle, Clock, AlertTriangle, Search, Filter, Eye, Download, X, Users, Calendar, Award, TrendingUp, BarChart3, Plus, Edit2, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface Exam {
-  id: number;
-  course: string;
-  course_code: string;
-  professor: string;
-  group: string;
-  filiere: string;
-  program: string;
-  type: 'partiel' | 'final' | 'rattrapage' | 'controle';
-  date: string;
-  time: string;
-  duration: string;
-  room: string;
-  total_students: number;
-  graded_students: number;
-  average: number | null;
-  min_grade: number | null;
-  max_grade: number | null;
-  pass_rate: number | null;
-  status: 'planifié' | 'en_cours' | 'terminé' | 'notes_saisies' | 'validé';
-  grades: { student: string; grade: number; status: string }[];
-}
+import Swal from 'sweetalert2';
 
 export default function ExamsPage() {
   const [activeTab, setActiveTab] = useState<'exams' | 'grades'>('exams');
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [stats, setStats] = useState<ExamStats | null>(null);
+  const [filiereStats, setFiliereStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  
   const [filters, setFilters] = useState({
     status: '',
     filiere: '',
     type: '',
   });
 
-  const stats = {
-    total_exams: 156,
-    upcoming_exams: 23,
-    pending_grades: 12,
-    validated_grades: 121,
-    global_average: 13.8,
-    global_pass_rate: 78.5,
+  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
+  const examTypes = ['partiel', 'final', 'rattrapage', 'controle'];
+  const statuses = ['planifié', 'en_cours', 'terminé', 'notes_saisies', 'validé'];
+
+  useEffect(() => {
+    fetchData();
+  }, [filters, searchTerm]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [examsRes, statsRes, filiereStatsRes] = await Promise.all([
+        examsApi.getAll({ ...filters, search: searchTerm }),
+        examsApi.getStats(),
+        examsApi.getStatsByFiliere()
+      ]);
+      
+      setExams(examsRes.data.data);
+      setStats(statsRes.data);
+      setFiliereStats(filiereStatsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
-  const examTypes = ['Partiel', 'Final', 'Rattrapage', 'Contrôle Continu'];
-  const statuses = ['Planifié', 'En cours', 'Terminé', 'Notes saisies', 'Validé'];
+  const handleViewExam = async (exam: Exam) => {
+    try {
+      const response = await examsApi.show(exam.id);
+      setSelectedExam(response.data.data);
+    } catch (error) {
+      console.error('Error fetching exam details:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les détails',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
 
-  const exams: Exam[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      type: 'partiel',
-      date: '2024-11-20',
-      time: '09:00',
-      duration: '2h',
-      room: 'Salle A12',
-      total_students: 25,
-      graded_students: 25,
-      average: 14.2,
-      min_grade: 8.5,
-      max_grade: 18.5,
-      pass_rate: 88,
-      status: 'validé',
-      grades: [
-        { student: 'Ahmed Benali', grade: 16.5, status: 'Validé' },
-        { student: 'Youssef Mansouri', grade: 14.0, status: 'Validé' },
-        { student: 'Khadija Amrani', grade: 18.5, status: 'Validé' },
-        { student: 'Rachid Tazi', grade: 8.5, status: 'Rattrapage' },
-        { student: 'Salma Idrissi', grade: 15.0, status: 'Validé' },
-      ],
-    },
-    {
-      id: 2,
-      course: 'Marketing Digital',
-      course_code: 'MKT-DIG',
-      professor: 'Amina El Fassi',
-      group: 'COM-L3-B',
-      filiere: 'Commerce',
-      program: 'Licence',
-      type: 'final',
-      date: '2024-11-25',
-      time: '14:00',
-      duration: '3h',
-      room: 'Amphi B',
-      total_students: 40,
-      graded_students: 38,
-      average: 13.5,
-      min_grade: 7.0,
-      max_grade: 17.5,
-      pass_rate: 82,
-      status: 'notes_saisies',
-      grades: [
-        { student: 'Fatima Zahra', grade: 17.5, status: 'Validé' },
-        { student: 'Omar Benjelloun', grade: 14.0, status: 'Validé' },
-        { student: 'Laila Tazi', grade: 12.5, status: 'Validé' },
-        { student: 'Mehdi Alaoui', grade: 7.0, status: 'Rattrapage' },
-      ],
-    },
-    {
-      id: 3,
-      course: 'Analyse Financière',
-      course_code: 'FIN-ANA',
-      professor: 'Omar Tazi',
-      group: 'FIN-M1-A',
-      filiere: 'Finance',
-      program: 'Master',
-      type: 'partiel',
-      date: '2024-11-28',
-      time: '10:00',
-      duration: '2h30',
-      room: 'Salle F3',
-      total_students: 30,
-      graded_students: 0,
-      average: null,
-      min_grade: null,
-      max_grade: null,
-      pass_rate: null,
-      status: 'planifié',
-      grades: [],
-    },
-    {
-      id: 4,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      type: 'controle',
-      date: '2024-11-15',
-      time: '09:00',
-      duration: '1h30',
-      room: 'Lab Info 1',
-      total_students: 28,
-      graded_students: 28,
-      average: 15.1,
-      min_grade: 10.0,
-      max_grade: 19.0,
-      pass_rate: 100,
-      status: 'validé',
-      grades: [
-        { student: 'Ahmed Benali', grade: 17.0, status: 'Validé' },
-        { student: 'Youssef Mansouri', grade: 15.5, status: 'Validé' },
-        { student: 'Khadija Amrani', grade: 19.0, status: 'Validé' },
-      ],
-    },
-    {
-      id: 5,
-      course: 'Droit des Affaires',
-      course_code: 'COM-DROIT',
-      professor: 'Nadia Alami',
-      group: 'COM-L2-A',
-      filiere: 'Commerce',
-      program: 'Licence',
-      type: 'rattrapage',
-      date: '2024-12-10',
-      time: '14:00',
-      duration: '2h',
-      room: 'Amphi A',
-      total_students: 15,
-      graded_students: 0,
-      average: null,
-      min_grade: null,
-      max_grade: null,
-      pass_rate: null,
-      status: 'planifié',
-      grades: [],
-    },
-  ];
+  const handleValidateGrades = async (examId: number) => {
+    const result = await Swal.fire({
+      title: 'Valider les notes',
+      text: 'Êtes-vous sûr de vouloir valider ces notes ? Cette action est irréversible.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#257035',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Valider',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await examsApi.validateGrades(examId);
+        Swal.fire({
+          icon: 'success',
+          title: 'Validé',
+          text: 'Les notes ont été validées avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchData();
+        setSelectedExam(null);
+      } catch (error) {
+        console.error('Error validating grades:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Impossible de valider les notes',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const handleDelete = async (exam: Exam) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `Êtes-vous sûr de vouloir supprimer cet examen ?<br/><strong>${exam.course.name}</strong>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await examsApi.delete(exam.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Supprimé',
+          text: 'Examen supprimé avec succès',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting exam:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: 'Impossible de supprimer l\'examen',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({ status: '', filiere: '', type: '' });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -229,10 +195,6 @@ export default function ExamsPage() {
     return 'text-[#C1272D] bg-red-50';
   };
 
-  const resetFilters = () => {
-    setFilters({ status: '', filiere: '', type: '' });
-  };
-
   return (
     <AdminLayout>
       <div className="p-8">
@@ -242,79 +204,81 @@ export default function ExamsPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-[#0D529C]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Total Examens</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total_exams}</p>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-[#0D529C]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Total Examens</p>
+                  <p className="text-xl font-bold text-[#0D529C]">{stats.total_exams}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">À venir</p>
-                <p className="text-xl font-bold text-orange-500">{stats.upcoming_exams}</p>
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">À venir</p>
+                  <p className="text-xl font-bold text-orange-500">{stats.upcoming_exams}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">En attente</p>
-                <p className="text-xl font-bold text-purple-500">{stats.pending_grades}</p>
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">En attente</p>
+                  <p className="text-xl font-bold text-purple-500">{stats.pending_grades}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-[#257035]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Validés</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.validated_grades}</p>
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-[#257035]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Validés</p>
+                  <p className="text-xl font-bold text-[#257035]">{stats.validated_grades}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Award className="w-5 h-5 text-[#0D529C]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Moyenne Générale</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.global_average}/20</p>
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Award className="w-5 h-5 text-[#0D529C]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Moyenne Générale</p>
+                  <p className="text-xl font-bold text-[#0D529C]">{stats.global_average?.toFixed(1) || '-'}/20</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-[#257035]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Taux de Réussite</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.global_pass_rate}%</p>
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#257035]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Taux de Réussite</p>
+                  <p className="text-xl font-bold text-[#257035]">{stats.global_pass_rate?.toFixed(1) || '-'}%</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm">
@@ -374,9 +338,12 @@ export default function ExamsPage() {
                     <Filter className="w-4 h-4" />
                     Filtrer
                   </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <Download className="w-4 h-4" />
-                    Exporter
+                  <button
+                    onClick={() => setShowModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Ajouter
                   </button>
                 </div>
 
@@ -399,7 +366,7 @@ export default function ExamsPage() {
                         >
                           <option value="">Tous les statuts</option>
                           {statuses.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>{getStatusLabel(s)}</option>
                           ))}
                         </select>
                       </div>
@@ -425,7 +392,7 @@ export default function ExamsPage() {
                         >
                           <option value="">Tous les types</option>
                           {examTypes.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                            <option key={t} value={t}>{getTypeLabel(t)}</option>
                           ))}
                         </select>
                       </div>
@@ -454,14 +421,14 @@ export default function ExamsPage() {
                         <tr key={exam.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="py-4 px-4">
                             <div>
-                              <p className="font-medium text-gray-900 text-sm">{exam.course}</p>
-                              <p className="text-xs text-gray-500">{exam.course_code}</p>
+                              <p className="font-medium text-gray-900 text-sm">{exam.course.name}</p>
+                              <p className="text-xs text-gray-500">{exam.course.code}</p>
                             </div>
                           </td>
-                          <td className="py-4 px-4 text-gray-600 text-sm">{exam.professor}</td>
+                          <td className="py-4 px-4 text-gray-600 text-sm">{exam.professor?.name || '-'}</td>
                           <td className="py-4 px-4">
                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-700">
-                              {exam.group}
+                              {exam.group.name}
                             </span>
                           </td>
                           <td className="py-4 px-4">
@@ -491,7 +458,7 @@ export default function ExamsPage() {
                                 exam.pass_rate >= 60 ? 'text-orange-600 bg-orange-50' : 
                                 'text-[#C1272D] bg-red-50'
                               }`}>
-                                {exam.pass_rate}%
+                                {exam.pass_rate.toFixed(0)}%
                               </span>
                             ) : (
                               <span className="text-gray-400 text-sm">-</span>
@@ -504,16 +471,25 @@ export default function ExamsPage() {
                           </td>
                           <td className="py-4 px-4 text-right">
                             <button
-                              onClick={() => setSelectedExam(exam)}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
+                              onClick={() => handleViewExam(exam)}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#0D529C] hover:text-white transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             {exam.status === 'notes_saisies' && (
-                              <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#257035] hover:text-white transition-colors ml-1">
+                              <button
+                                onClick={() => handleValidateGrades(exam.id)}
+                                className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#257035] hover:text-white transition-colors ml-1"
+                              >
                                 <CheckCircle className="w-4 h-4" />
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDelete(exam)}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -526,58 +502,33 @@ export default function ExamsPage() {
             {activeTab === 'grades' && (
               <div className="space-y-6">
                 {/* Résultats par Filière */}
-                {filieres.slice(0, 4).map((filiere) => (
-                  <div key={filiere} className="bg-gray-50 rounded-xl p-6">
+                {filiereStats.map((filiere) => (
+                  <div key={filiere.filiere} className="bg-gray-50 rounded-xl p-6">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-[#0D529C]">{filiere}</h3>
-                      <button className="text-sm text-[#0D529C] hover:underline">Voir détails</button>
+                      <h3 className="text-lg font-bold text-[#0D529C]">{filiere.filiere}</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="bg-white rounded-lg p-4 text-center">
                         <p className="text-2xl font-bold text-[#0D529C]">
-                          {filiere === 'Développement' ? '14.8' : filiere === 'Commerce' ? '13.5' : filiere === 'Marketing' ? '14.2' : '13.9'}
+                          {filiere.avg_grade ? parseFloat(filiere.avg_grade).toFixed(1) : '-'}
                         </p>
                         <p className="text-xs text-gray-500">Moyenne Générale</p>
                       </div>
                       <div className="bg-white rounded-lg p-4 text-center">
                         <p className="text-2xl font-bold text-[#257035]">
-                          {filiere === 'Développement' ? '85%' : filiere === 'Commerce' ? '78%' : filiere === 'Marketing' ? '82%' : '76%'}
+                          {filiere.avg_pass_rate ? parseFloat(filiere.avg_pass_rate).toFixed(0) : '-'}%
                         </p>
                         <p className="text-xs text-gray-500">Taux de Réussite</p>
                       </div>
                       <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-purple-500">
-                          {filiere === 'Développement' ? '285' : filiere === 'Commerce' ? '320' : filiere === 'Marketing' ? '195' : '245'}
+                        <p className="text-2xl font-bold text-orange-500">
+                          {filiere.total_exams}
                         </p>
-                        <p className="text-xs text-gray-500">Étudiants</p>
+                        <p className="text-xs text-gray-500">Examens</p>
                       </div>
                       <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-orange-500">
-                          {filiere === 'Développement' ? '12' : filiere === 'Commerce' ? '10' : filiere === 'Marketing' ? '8' : '11'}
-                        </p>
-                        <p className="text-xs text-gray-500">Examens ce Semestre</p>
-                      </div>
-                    </div>
-                    {/* Mini Chart */}
-                    <div className="mt-4">
-                      <p className="text-xs text-gray-500 mb-2">Distribution des notes</p>
-                      <div className="flex items-end gap-1 h-16">
-                        {[5, 12, 25, 35, 18, 5].map((value, index) => (
-                          <div
-                            key={index}
-                            className="flex-1 bg-gradient-to-t from-[#0D529C] to-blue-400 rounded-t"
-                            style={{ height: `${value * 2}%` }}
-                            title={`${['0-6', '6-8', '8-10', '10-12', '12-14', '14-16', '16-20'][index]}: ${value}%`}
-                          />
-                        ))}
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-400 mt-1">
-                        <span>0-8</span>
-                        <span>8-10</span>
-                        <span>10-12</span>
-                        <span>12-14</span>
-                        <span>14-16</span>
-                        <span>16+</span>
+                        <p className="text-2xl font-bold text-purple-500">-</p>
+                        <p className="text-xs text-gray-500">Étudiants</p>
                       </div>
                     </div>
                   </div>
@@ -596,7 +547,7 @@ export default function ExamsPage() {
             <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-xl font-bold">{selectedExam.course}</h2>
+                  <h2 className="text-xl font-bold">{selectedExam.course.name}</h2>
                   <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getTypeColor(selectedExam.type)}`}>
                     {getTypeLabel(selectedExam.type)}
                   </span>
@@ -604,7 +555,7 @@ export default function ExamsPage() {
                     {getStatusLabel(selectedExam.status)}
                   </span>
                 </div>
-                <p className="text-blue-200">{selectedExam.course_code} • {selectedExam.group}</p>
+                <p className="text-blue-200">{selectedExam.course.code} • {selectedExam.group.name}</p>
               </div>
               <button
                 onClick={() => setSelectedExam(null)}
@@ -621,7 +572,7 @@ export default function ExamsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Professeur</p>
-                    <p className="font-medium">{selectedExam.professor}</p>
+                    <p className="font-medium">{selectedExam.professor?.name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date & Heure</p>
@@ -656,7 +607,7 @@ export default function ExamsPage() {
                       <p className="text-xs text-gray-500">Note Min</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-purple-500">{selectedExam.pass_rate}%</p>
+                      <p className="text-2xl font-bold text-purple-500">{selectedExam.pass_rate?.toFixed(0)}%</p>
                       <p className="text-xs text-gray-500">Réussite</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
@@ -668,7 +619,7 @@ export default function ExamsPage() {
               )}
 
               {/* Liste des Notes */}
-              {selectedExam.grades.length > 0 && (
+              {selectedExam.grades && selectedExam.grades.length > 0 && (
                 <div className="bg-green-50 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-[#257035]">Notes des Étudiants</h3>
@@ -697,7 +648,7 @@ export default function ExamsPage() {
                             </td>
                             <td className="py-2 px-3 text-center">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                grade.status === 'Validé' ? 'bg-[#257035] text-white' : 'bg-orange-500 text-white'
+                                grade.status === 'validé' ? 'bg-[#257035] text-white' : 'bg-orange-500 text-white'
                               }`}>
                                 {grade.status}
                               </span>
@@ -716,7 +667,10 @@ export default function ExamsPage() {
                   <button className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     Demander Correction
                   </button>
-                  <button className="flex items-center gap-2 px-6 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
+                  <button
+                    onClick={() => handleValidateGrades(selectedExam.id)}
+                    className="flex items-center gap-2 px-6 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
                     <CheckCircle className="w-4 h-4" />
                     Valider les Notes
                   </button>
