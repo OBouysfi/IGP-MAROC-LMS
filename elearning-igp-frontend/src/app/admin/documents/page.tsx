@@ -1,162 +1,217 @@
 // src/app/admin/documents/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { documentsApi, StudentDossier, DocumentStats, Document } from '@/lib/api/admin/documents';
 import { FileText, CheckCircle, AlertTriangle, Clock, Upload, Search, Filter, Eye, Download, X, User, FolderOpen, FileCheck, FileX, Plus } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface Document {
-  id: number;
-  name: string;
-  type: string;
-  status: 'validé' | 'en_attente' | 'rejeté' | 'manquant';
-  uploaded_at: string | null;
-  validated_at: string | null;
-  comment: string | null;
-}
-
-interface StudentDossier {
-  id: number;
-  student_name: string;
-  student_email: string;
-  program: string;
-  filiere: string;
-  group: string;
-  dossier_status: 'complet' | 'incomplet' | 'en_attente';
-  documents_required: number;
-  documents_provided: number;
-  documents_validated: number;
-  last_update: string;
-  documents: Document[];
-}
+import Swal from 'sweetalert2';
 
 export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDossier, setSelectedDossier] = useState<StudentDossier | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [dossiers, setDossiers] = useState<StudentDossier[]>([]);
+  const [stats, setStats] = useState<DocumentStats | null>(null);
+  const [requiredDocuments, setRequiredDocuments] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  
   const [filters, setFilters] = useState({
     status: '',
     filiere: '',
     program: '',
   });
 
-  const stats = {
-    total_dossiers: 1250,
-    complete_dossiers: 1050,
-    incomplete_dossiers: 142,
-    pending_validation: 58,
-  };
+  const [uploadForm, setUploadForm] = useState({
+    student_id: 0,
+    name: '',
+    type: '',
+    file: null as File | null,
+    comment: '',
+  });
 
   const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
   const programs = ['Master', 'Licence'];
   const dossierStatuses = ['Complet', 'Incomplet', 'En attente'];
 
-  const requiredDocuments = [
-    'CIN ou Passeport',
-    'Photo d\'identité',
-    'Diplôme ou Attestation de réussite',
-    'Relevé de notes',
-    'Certificat médical',
-    'Attestation d\'assurance',
-    'Justificatif de domicile',
-    'CV',
-  ];
+  useEffect(() => {
+    fetchData();
+  }, [filters, searchTerm]);
 
-  const dossiers: StudentDossier[] = [
-    {
-      id: 1,
-      student_name: 'Ahmed Benali',
-      student_email: 'ahmed.benali@igp.edu',
-      program: 'Master',
-      filiere: 'Développement',
-      group: 'DEV-M2-A',
-      dossier_status: 'complet',
-      documents_required: 8,
-      documents_provided: 8,
-      documents_validated: 8,
-      last_update: '2024-11-10',
-      documents: [
-        { id: 1, name: 'CIN', type: 'cin', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 2, name: 'Photo d\'identité', type: 'photo', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 3, name: 'Diplôme Licence', type: 'diplome', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 4, name: 'Relevé de notes', type: 'releve', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 5, name: 'Certificat médical', type: 'medical', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 6, name: 'Attestation assurance', type: 'assurance', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 7, name: 'Justificatif domicile', type: 'domicile', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 8, name: 'CV', type: 'cv', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-      ],
-    },
-    {
-      id: 2,
-      student_name: 'Fatima Zahra',
-      student_email: 'fatima.zahra@igp.edu',
-      program: 'Licence',
-      filiere: 'Commerce',
-      group: 'COM-L3-B',
-      dossier_status: 'en_attente',
-      documents_required: 8,
-      documents_provided: 8,
-      documents_validated: 6,
-      last_update: '2024-11-12',
-      documents: [
-        { id: 9, name: 'CIN', type: 'cin', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 10, name: 'Photo d\'identité', type: 'photo', status: 'en_attente', uploaded_at: '2024-11-12', validated_at: null, comment: null },
-        { id: 11, name: 'Baccalauréat', type: 'diplome', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 12, name: 'Relevé de notes', type: 'releve', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 13, name: 'Certificat médical', type: 'medical', status: 'en_attente', uploaded_at: '2024-11-10', validated_at: null, comment: null },
-        { id: 14, name: 'Attestation assurance', type: 'assurance', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 15, name: 'Justificatif domicile', type: 'domicile', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 16, name: 'CV', type: 'cv', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-      ],
-    },
-    {
-      id: 3,
-      student_name: 'Mohamed Alaoui',
-      student_email: 'mohamed.alaoui@igp.edu',
-      program: 'Master',
-      filiere: 'Marketing',
-      group: 'MKT-M1-A',
-      dossier_status: 'incomplet',
-      documents_required: 8,
-      documents_provided: 5,
-      documents_validated: 4,
-      last_update: '2024-11-08',
-      documents: [
-        { id: 17, name: 'Passeport', type: 'cin', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 18, name: 'Photo d\'identité', type: 'photo', status: 'rejeté', uploaded_at: '2024-09-01', validated_at: null, comment: 'Photo floue, veuillez en fournir une nouvelle' },
-        { id: 19, name: 'Diplôme Licence', type: 'diplome', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 20, name: 'Relevé de notes', type: 'releve', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 21, name: 'Certificat médical', type: 'medical', status: 'manquant', uploaded_at: null, validated_at: null, comment: null },
-        { id: 22, name: 'Attestation assurance', type: 'assurance', status: 'manquant', uploaded_at: null, validated_at: null, comment: null },
-        { id: 23, name: 'Justificatif domicile', type: 'domicile', status: 'manquant', uploaded_at: null, validated_at: null, comment: null },
-        { id: 24, name: 'CV', type: 'cv', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-      ],
-    },
-    {
-      id: 4,
-      student_name: 'Sara Idrissi',
-      student_email: 'sara.idrissi@igp.edu',
-      program: 'Licence',
-      filiere: 'Finance',
-      group: 'FIN-L2-A',
-      dossier_status: 'complet',
-      documents_required: 8,
-      documents_provided: 8,
-      documents_validated: 8,
-      last_update: '2024-10-15',
-      documents: [
-        { id: 25, name: 'CIN', type: 'cin', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 26, name: 'Photo d\'identité', type: 'photo', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-        { id: 27, name: 'Baccalauréat', type: 'diplome', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 28, name: 'Relevé de notes', type: 'releve', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-03', comment: null },
-        { id: 29, name: 'Certificat médical', type: 'medical', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 30, name: 'Attestation assurance', type: 'assurance', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 31, name: 'Justificatif domicile', type: 'domicile', status: 'validé', uploaded_at: '2024-09-02', validated_at: '2024-09-04', comment: null },
-        { id: 32, name: 'CV', type: 'cv', status: 'validé', uploaded_at: '2024-09-01', validated_at: '2024-09-02', comment: null },
-      ],
-    },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [statsRes, dossiersRes, requiredDocsRes] = await Promise.all([
+        documentsApi.getStats(),
+        documentsApi.getDossiers({ search: searchTerm, ...filters }),
+        documentsApi.getRequiredDocuments()
+      ]);
+      
+      setStats(statsRes.data);
+      setDossiers(dossiersRes.data.data);
+      setRequiredDocuments(requiredDocsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!uploadForm.file) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Veuillez sélectionner un fichier',
+        confirmButtonColor: '#0D529C',
+      });
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('student_id', uploadForm.student_id.toString());
+      formData.append('name', uploadForm.name);
+      formData.append('type', uploadForm.type);
+      formData.append('file', uploadForm.file);
+      if (uploadForm.comment) {
+        formData.append('comment', uploadForm.comment);
+      }
+
+      await documentsApi.upload(formData);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Document uploadé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setShowUploadModal(false);
+      resetUploadForm();
+      fetchData();
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible d\'uploader le document',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleValidate = async (documentId: number, status: 'validé' | 'rejeté') => {
+    let comment = '';
+    
+    if (status === 'rejeté') {
+      const result = await Swal.fire({
+        title: 'Motif de rejet',
+        input: 'textarea',
+        inputLabel: 'Veuillez indiquer le motif du rejet',
+        inputPlaceholder: 'Ex: Document illisible, informations manquantes...',
+        showCancelButton: true,
+        confirmButtonColor: '#C1272D',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Rejeter',
+        cancelButtonText: 'Annuler',
+        inputValidator: (value) => {
+          if (!value) {
+            return 'Vous devez indiquer un motif!';
+          }
+        }
+      });
+
+      if (!result.isConfirmed) return;
+      comment = result.value;
+    } else {
+      const result = await Swal.fire({
+        title: 'Valider le document',
+        text: 'Êtes-vous sûr de vouloir valider ce document ?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#257035',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Valider',
+        cancelButtonText: 'Annuler',
+      });
+
+      if (!result.isConfirmed) return;
+    }
+
+    try {
+      await documentsApi.validate(documentId, { status, comment });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: status === 'validé' ? 'Document validé avec succès' : 'Document rejeté',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      fetchData();
+      if (selectedDossier) {
+        const updatedDossier = dossiers.find(d => d.id === selectedDossier.id);
+        if (updatedDossier) {
+          setSelectedDossier(updatedDossier);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error validating document:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de valider le document',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDownload = async (documentId: number) => {
+    try {
+      const response = await documentsApi.download(documentId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'document.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de télécharger le document',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const resetUploadForm = () => {
+    setUploadForm({
+      student_id: 0,
+      name: '',
+      type: '',
+      file: null,
+      comment: '',
+    });
+  };
+
+  const resetFilters = () => {
+    setFilters({ status: '', filiere: '', program: '' });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -206,10 +261,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const resetFilters = () => {
-    setFilters({ status: '', filiere: '', program: '' });
-  };
-
   return (
     <AdminLayout>
       <div className="p-8">
@@ -219,59 +270,61 @@ export default function DocumentsPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#0D529C] shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Total Dossiers</p>
-                <p className="text-3xl font-bold text-[#0D529C]">{stats.total_dossiers}</p>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#0D529C] shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Total Dossiers</p>
+                  <p className="text-3xl font-bold text-[#0D529C]">{stats.total_dossiers}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <FolderOpen className="w-6 h-6 text-[#0D529C]" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                <FolderOpen className="w-6 h-6 text-[#0D529C]" />
-              </div>
+              <p className="text-xs text-gray-400">Dossiers étudiants</p>
             </div>
-            <p className="text-xs text-gray-400">Dossiers étudiants</p>
-          </div>
 
-          <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#257035] shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Dossiers Complets</p>
-                <p className="text-3xl font-bold text-[#257035]">{stats.complete_dossiers}</p>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#257035] shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Dossiers Complets</p>
+                  <p className="text-3xl font-bold text-[#257035]">{stats.complete_dossiers}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-[#257035]" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-[#257035]" />
-              </div>
+              <p className="text-xs text-gray-400">Tous documents validés</p>
             </div>
-            <p className="text-xs text-gray-400">Tous documents validés</p>
-          </div>
 
-          <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#C1272D] shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Dossiers Incomplets</p>
-                <p className="text-3xl font-bold text-[#C1272D]">{stats.incomplete_dossiers}</p>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#C1272D] shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Dossiers Incomplets</p>
+                  <p className="text-3xl font-bold text-[#C1272D]">{stats.incomplete_dossiers}</p>
+                </div>
+                <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-[#C1272D]" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-[#C1272D]" />
-              </div>
+              <p className="text-xs text-gray-400">Documents manquants</p>
             </div>
-            <p className="text-xs text-gray-400">Documents manquants</p>
-          </div>
 
-          <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-orange-500 shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">En Attente</p>
-                <p className="text-3xl font-bold text-orange-500">{stats.pending_validation}</p>
+            <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-orange-500 shadow-sm">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">En Attente</p>
+                  <p className="text-3xl font-bold text-orange-500">{stats.pending_validation}</p>
+                </div>
+                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-orange-500" />
+                </div>
               </div>
-              <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-orange-500" />
-              </div>
+              <p className="text-xs text-gray-400">À valider</p>
             </div>
-            <p className="text-xs text-gray-400">À valider</p>
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -522,7 +575,13 @@ export default function DocumentsPage() {
               <div className="bg-blue-50 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-[#0D529C]">Documents du Dossier</h3>
-                  <button className="flex items-center gap-2 px-3 py-1 bg-[#0D529C] text-white rounded-lg text-sm hover:bg-blue-700">
+                  <button
+                    onClick={() => {
+                      setUploadForm({ ...uploadForm, student_id: selectedDossier.id });
+                      setShowUploadModal(true);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1 bg-[#0D529C] text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
                     <Plus className="w-4 h-4" />
                     Ajouter
                   </button>
@@ -555,23 +614,38 @@ export default function DocumentsPage() {
                         <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getDocStatusColor(doc.status)}`}>
                           {getDocStatusLabel(doc.status)}
                         </span>
-                        {doc.status === 'en_attente' && (
+                        {doc.status === 'en_attente' && doc.id && (
                           <div className="flex gap-1">
-                            <button className="p-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <button
+                              onClick={() => handleValidate(doc.id!, 'validé')}
+                              className="p-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
                               <CheckCircle className="w-4 h-4" />
                             </button>
-                            <button className="p-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <button
+                              onClick={() => handleValidate(doc.id!, 'rejeté')}
+                              className="p-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
                               <FileX className="w-4 h-4" />
                             </button>
                           </div>
                         )}
-                        {(doc.status === 'validé' || doc.status === 'en_attente') && (
-                          <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        {(doc.status === 'validé' || doc.status === 'en_attente') && doc.id && (
+                          <button
+                            onClick={() => handleDownload(doc.id!)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
                         )}
                         {doc.status === 'manquant' && (
-                          <button className="p-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
+                          <button
+                            onClick={() => {
+                              setUploadForm({ ...uploadForm, student_id: selectedDossier.id, type: doc.type, name: doc.name });
+                              setShowUploadModal(true);
+                            }}
+                            className="p-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
                             <Upload className="w-4 h-4" />
                           </button>
                         )}
@@ -610,61 +684,91 @@ export default function DocumentsPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#0D529C]">Ajouter un Document</h2>
                 <button
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() => { setShowUploadModal(false); resetUploadForm(); }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <form onSubmit={handleUpload} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Étudiant</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
-                  <option value="">Sélectionner un étudiant</option>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Étudiant *</label>
+                <select
+                  required
+                  value={uploadForm.student_id}
+                  onChange={(e) => setUploadForm({ ...uploadForm, student_id: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
+                  <option value={0}>Sélectionner un étudiant</option>
                   {dossiers.map((d) => (
                     <option key={d.id} value={d.id}>{d.student_name} - {d.group}</option>
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Type de Document</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Type de Document *</label>
+                <select
+                  required
+                  value={uploadForm.type}
+                  onChange={(e) => {
+                    const selectedType = e.target.value;
+                    setUploadForm({ 
+                      ...uploadForm, 
+                      type: selectedType,
+                      name: requiredDocuments[selectedType] || ''
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
                   <option value="">Sélectionner le type</option>
-                  {requiredDocuments.map((doc) => (
-                    <option key={doc} value={doc}>{doc}</option>
+                  {Object.entries(requiredDocuments).map(([key, value]) => (
+                    <option key={key} value={key}>{value as string}</option>
                   ))}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Fichier</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#0D529C] transition-colors cursor-pointer">
-                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Cliquez ou glissez un fichier ici</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
-                </div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Fichier *</label>
+                <input
+                  type="file"
+                  required
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => setUploadForm({ ...uploadForm, file: e.target.files?.[0] || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Commentaire (optionnel)</label>
                 <textarea
+                  value={uploadForm.comment}
+                  onChange={(e) => setUploadForm({ ...uploadForm, comment: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent resize-none"
                   rows={3}
                   placeholder="Ajouter un commentaire..."
                 />
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Upload className="w-4 h-4" />
-                Uploader
-              </button>
-            </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowUploadModal(false); resetUploadForm(); }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Uploader
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

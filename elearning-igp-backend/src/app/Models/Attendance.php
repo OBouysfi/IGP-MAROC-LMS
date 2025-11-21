@@ -4,55 +4,42 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
     use HasFactory;
 
-    protected $table = 'attendance';
-
     protected $fillable = [
-        'session_id',
-        'student_id',
-        'joined_at',
-        'left_at',
-        'duration_minutes',
-        'status',
+        'attendable_type',
+        'attendable_id',
+        'schedule_id',
+        'course_name',
+        'date',
+        'start_time',
+        'end_time',
+        'type',
+        'justification',
+        'justification_file',
+        'justified_at',
+        'comment',
     ];
 
     protected $casts = [
-        'joined_at' => 'datetime',
-        'left_at' => 'datetime',
-        'duration_minutes' => 'integer',
+        'date' => 'date',
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
+        'justified_at' => 'datetime',
     ];
 
-    public function session()
+    public function attendable(): MorphTo
     {
-        return $this->belongsTo(JitsiSession::class, 'session_id');
+        return $this->morphTo();
     }
 
-    public function student()
+    public function schedule(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'student_id');
-    }
-
-    public function isPresent()
-    {
-        return $this->status === 'present';
-    }
-
-    public function isAbsent()
-    {
-        return $this->status === 'absent';
-    }
-
-    public function isLate()
-    {
-        return $this->status === 'late';
-    }
-
-    public function scopePresent($query)
-    {
-        return $query->where('status', 'present');
+        return $this->belongsTo(Schedule::class);
     }
 }

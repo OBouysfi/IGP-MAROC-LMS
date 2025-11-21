@@ -113,5 +113,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('exams/{id}', [ExamController::class, 'show']);
         Route::put('exams/{id}', [ExamController::class, 'update']);
         Route::delete('exams/{id}', [ExamController::class, 'destroy']);
+        // Attendances
+        Route::get('attendances/stats', [AttendanceController::class, 'stats']);
+        Route::get('attendances/students', [AttendanceController::class, 'studentsAttendance']);
+        Route::get('attendances/professors', [AttendanceController::class, 'professorsAttendance']);
+        Route::get('attendances/groups', [AttendanceController::class, 'getGroups']);
+        Route::get('attendances/departments', [AttendanceController::class, 'getDepartments']);
+        Route::get('attendances/students-by-group/{groupId}', [AttendanceController::class, 'getStudentsByGroup']);
+        Route::get('attendances/professors-by-department/{department}', [AttendanceController::class, 'getProfessorsByDepartment']);
+        Route::post('attendances', [AttendanceController::class, 'store']);
+        Route::put('attendances/{id}', [AttendanceController::class, 'update']);
+        Route::delete('attendances/{id}', [AttendanceController::class, 'destroy']);
+        Route::post('attendances/{id}/justify', [AttendanceController::class, 'justify']);
+        // Student Documents
+        Route::get('documents/stats', [StudentDocumentController::class, 'stats']);
+        Route::get('documents/dossiers', [StudentDocumentController::class, 'dossiers']);
+        Route::get('documents/required', [StudentDocumentController::class, 'getRequiredDocuments']);
+        Route::post('documents/upload', [StudentDocumentController::class, 'upload']);
+        Route::post('documents/{id}/validate', [StudentDocumentController::class, 'validate']);
+        Route::delete('documents/{id}', [StudentDocumentController::class, 'destroy']);
+        Route::get('documents/{id}/download', [StudentDocumentController::class, 'download']);
     });
 });

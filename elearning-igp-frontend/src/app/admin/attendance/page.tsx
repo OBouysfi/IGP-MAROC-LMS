@@ -1,45 +1,11 @@
-// src/app/admin/attendance/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { attendancesApi, StudentAttendance, ProfessorAttendance, AttendanceStats, Absence } from '@/lib/api/admin/attendances';
+import { coursesApi } from '@/lib/api/admin/courses';
 import { UserCheck, UserX, Clock, AlertTriangle, Search, Filter, Eye, X, CheckCircle, Plus, Calendar, Users } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface Absence {
-  id: number;
-  date: string;
-  course: string;
-  start_time: string;
-  end_time: string;
-  type: 'absent' | 'retard' | 'justifié';
-  justification: string | null;
-  justified_at: string | null;
-}
-
-interface StudentAttendance {
-  id: number;
-  student_name: string;
-  student_email: string;
-  group: string;
-  filiere: string;
-  total_absences: number;
-  total_retards: number;
-  justified_absences: number;
-  attendance_rate: number;
-  absences: Absence[];
-}
-
-interface ProfessorAttendance {
-  id: number;
-  professor_name: string;
-  professor_email: string;
-  department: string;
-  total_absences: number;
-  total_retards: number;
-  justified_absences: number;
-  attendance_rate: number;
-  absences: Absence[];
-}
+import Swal from 'sweetalert2';
 
 export default function AttendancePage() {
   const [activeTab, setActiveTab] = useState<'students' | 'professors'>('students');
@@ -50,7 +16,15 @@ export default function AttendancePage() {
   const [showAddAbsenceModal, setShowAddAbsenceModal] = useState(false);
   const [showJustifyModal, setShowJustifyModal] = useState(false);
   const [absenceToJustify, setAbsenceToJustify] = useState<Absence | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState('');
+  
+  const [studentsAttendance, setStudentsAttendance] = useState<StudentAttendance[]>([]);
+  const [professorsAttendance, setProfessorsAttendance] = useState<ProfessorAttendance[]>([]);
+  const [stats, setStats] = useState<AttendanceStats | null>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [filters, setFilters] = useState({
     group: '',
     filiere: '',
@@ -58,139 +32,246 @@ export default function AttendancePage() {
     date_to: '',
   });
 
-  const [justificationText, setJustificationText] = useState('');
+  const [absenceForm, setAbsenceForm] = useState({
+    user_type: 'student',
+    group_id: 0,
+    department: '',
+    attendable_id: 0,
+    course_name: '',
+    date: '',
+    start_time: '09:00',
+    end_time: '12:00',
+    type: 'absent' as 'absent' | 'retard',
+    comment: '',
+  });
 
-  const stats = {
-    total_students: 1250,
-    present_today: 1180,
-    absent_today: 45,
-    late_today: 25,
-    global_attendance_rate: 94.4,
+  const [justificationForm, setJustificationForm] = useState({
+    justification: '',
+    file: null as File | null,
+  });
+
+  const [groupStudents, setGroupStudents] = useState<any[]>([]);
+  const [departmentProfessors, setDepartmentProfessors] = useState<any[]>([]);
+
+  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'students') {
+      fetchStudentsAttendance();
+    } else {
+      fetchProfessorsAttendance();
+    }
+  }, [activeTab, filters, searchTerm]);
+
+  useEffect(() => {
+    if (absenceForm.group_id > 0) {
+      fetchStudentsByGroup(absenceForm.group_id);
+    }
+  }, [absenceForm.group_id]);
+
+  useEffect(() => {
+    if (absenceForm.department) {
+      fetchProfessorsByDepartment(absenceForm.department);
+    }
+  }, [absenceForm.department]);
+
+  const fetchInitialData = async () => {
+    try {
+      const [statsRes, groupsRes, departmentsRes, coursesRes] = await Promise.all([
+        attendancesApi.getStats(),
+        attendancesApi.getGroups(),
+        attendancesApi.getDepartments(),
+        coursesApi.getAll()
+      ]);
+      
+      setStats(statsRes.data);
+      setGroups(groupsRes.data.data);
+      setDepartments(departmentsRes.data.data);
+      setCourses(coursesRes.data.data);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+        confirmButtonColor: '#0D529C',
+      });
+    }
   };
 
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L3-A', 'COM-L3-B', 'MKT-M1-A', 'FIN-M1-A', 'FIN-L2-A'];
-  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
-  const departments = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion', 'Langues', 'Droit'];
+  const fetchStudentsAttendance = async () => {
+    try {
+      setLoading(true);
+      const response = await attendancesApi.getStudentsAttendance({
+        search: searchTerm,
+        ...filters
+      });
+      setStudentsAttendance(response.data.data);
+    } catch (error) {
+      console.error('Error fetching students attendance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const studentsAttendance: StudentAttendance[] = [
-    {
-      id: 1,
-      student_name: 'Ahmed Benali',
-      student_email: 'ahmed.benali@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      total_absences: 3,
-      total_retards: 2,
-      justified_absences: 2,
-      attendance_rate: 95,
-      absences: [
-        { id: 1, date: '2024-11-10', course: 'React.js Avancé', start_time: '09:00', end_time: '12:00', type: 'absent', justification: 'Certificat médical', justified_at: '2024-11-11' },
-        { id: 2, date: '2024-11-08', course: 'Node.js & Express', start_time: '14:00', end_time: '17:00', type: 'retard', justification: null, justified_at: null },
-        { id: 3, date: '2024-11-05', course: 'DevOps & CI/CD', start_time: '09:00', end_time: '12:00', type: 'justifié', justification: 'Convocation administrative', justified_at: '2024-11-06' },
-      ],
-    },
-    {
-      id: 2,
-      student_name: 'Fatima Zahra',
-      student_email: 'fatima.zahra@student.igp.edu',
-      group: 'COM-L3-B',
-      filiere: 'Commerce',
-      total_absences: 8,
-      total_retards: 5,
-      justified_absences: 3,
-      attendance_rate: 78,
-      absences: [
-        { id: 4, date: '2024-11-12', course: 'Marketing Digital', start_time: '14:00', end_time: '17:00', type: 'absent', justification: null, justified_at: null },
-        { id: 5, date: '2024-11-11', course: 'Droit des Affaires', start_time: '09:00', end_time: '12:00', type: 'absent', justification: null, justified_at: null },
-        { id: 6, date: '2024-11-09', course: 'Communication', start_time: '14:00', end_time: '16:00', type: 'retard', justification: null, justified_at: null },
-      ],
-    },
-    {
-      id: 3,
-      student_name: 'Youssef Mansouri',
-      student_email: 'youssef.mansouri@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      total_absences: 1,
-      total_retards: 0,
-      justified_absences: 1,
-      attendance_rate: 98,
-      absences: [
-        { id: 7, date: '2024-11-07', course: 'Base de données NoSQL', start_time: '09:00', end_time: '12:00', type: 'justifié', justification: 'Rendez-vous médical', justified_at: '2024-11-08' },
-      ],
-    },
-    {
-      id: 4,
-      student_name: 'Sara Idrissi',
-      student_email: 'sara.idrissi@student.igp.edu',
-      group: 'FIN-L2-A',
-      filiere: 'Finance',
-      total_absences: 0,
-      total_retards: 1,
-      justified_absences: 0,
-      attendance_rate: 99,
-      absences: [
-        { id: 8, date: '2024-11-13', course: 'Comptabilité', start_time: '09:00', end_time: '11:00', type: 'retard', justification: null, justified_at: null },
-      ],
-    },
-    {
-      id: 5,
-      student_name: 'Mohamed Alaoui',
-      student_email: 'mohamed.alaoui@student.igp.edu',
-      group: 'MKT-M1-A',
-      filiere: 'Marketing',
-      total_absences: 12,
-      total_retards: 8,
-      justified_absences: 4,
-      attendance_rate: 65,
-      absences: [
-        { id: 9, date: '2024-11-14', course: 'Stratégie Marketing', start_time: '14:00', end_time: '17:00', type: 'absent', justification: null, justified_at: null },
-        { id: 10, date: '2024-11-13', course: 'Analyse de Marché', start_time: '09:00', end_time: '12:00', type: 'absent', justification: null, justified_at: null },
-        { id: 11, date: '2024-11-12', course: 'Communication Digitale', start_time: '14:00', end_time: '16:00', type: 'retard', justification: null, justified_at: null },
-      ],
-    },
-  ];
+  const fetchProfessorsAttendance = async () => {
+    try {
+      setLoading(true);
+      const response = await attendancesApi.getProfessorsAttendance({
+        search: searchTerm,
+        department: filters.group // Utilise le même filtre
+      });
+      setProfessorsAttendance(response.data.data);
+    } catch (error) {
+      console.error('Error fetching professors attendance:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const professorsAttendance: ProfessorAttendance[] = [
-    {
-      id: 1,
-      professor_name: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      department: 'Développement',
-      total_absences: 1,
-      total_retards: 0,
-      justified_absences: 1,
-      attendance_rate: 99,
-      absences: [
-        { id: 12, date: '2024-11-06', course: 'React.js Avancé', start_time: '09:00', end_time: '12:00', type: 'justifié', justification: 'Formation externe', justified_at: '2024-11-05' },
-      ],
-    },
-    {
-      id: 2,
-      professor_name: 'Amina El Fassi',
-      professor_email: 'a.elfassi@igp.edu',
-      department: 'Marketing',
-      total_absences: 2,
-      total_retards: 1,
-      justified_absences: 2,
-      attendance_rate: 97,
-      absences: [
-        { id: 13, date: '2024-11-11', course: 'Marketing Digital', start_time: '14:00', end_time: '17:00', type: 'justifié', justification: 'Conférence', justified_at: '2024-11-10' },
-        { id: 14, date: '2024-11-08', course: 'Stratégie Social Media', start_time: '09:00', end_time: '12:00', type: 'retard', justification: null, justified_at: null },
-      ],
-    },
-    {
-      id: 3,
-      professor_name: 'Omar Tazi',
-      professor_email: 'o.tazi@igp.edu',
-      department: 'Finance',
-      total_absences: 0,
-      total_retards: 0,
-      justified_absences: 0,
-      attendance_rate: 100,
-      absences: [],
-    },
-  ];
+  const fetchStudentsByGroup = async (groupId: number) => {
+    try {
+      const response = await attendancesApi.getStudentsByGroup(groupId);
+      setGroupStudents(response.data.data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
+  const fetchProfessorsByDepartment = async (department: string) => {
+    try {
+      const response = await attendancesApi.getProfessorsByDepartment(department);
+      setDepartmentProfessors(response.data.data);
+    } catch (error) {
+      console.error('Error fetching professors:', error);
+    }
+  };
+
+  const handleAddAbsence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const data = {
+        attendable_type: absenceForm.user_type === 'student' ? 'App\\Models\\User' : 'App\\Models\\Professor',
+        attendable_id: absenceForm.attendable_id,
+        course_name: absenceForm.course_name,
+        date: absenceForm.date,
+        start_time: absenceForm.start_time,
+        end_time: absenceForm.end_time,
+        type: absenceForm.type,
+        comment: absenceForm.comment,
+      };
+
+      await attendancesApi.create(data);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Absence enregistrée avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setShowAddAbsenceModal(false);
+      resetAbsenceForm();
+      fetchInitialData();
+      if (activeTab === 'students') {
+        fetchStudentsAttendance();
+      } else {
+        fetchProfessorsAttendance();
+      }
+    } catch (error: any) {
+      console.error('Error adding absence:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible d\'enregistrer l\'absence',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleJustifyAbsence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!absenceToJustify) return;
+
+    try {
+      const formData = new FormData();
+      formData.append('justification', justificationForm.justification);
+      if (justificationForm.file) {
+        formData.append('justification_file', justificationForm.file);
+      }
+
+      await attendancesApi.justify(absenceToJustify.id, formData);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Absence justifiée avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setShowJustifyModal(false);
+      setAbsenceToJustify(null);
+      resetJustificationForm();
+      if (activeTab === 'students') {
+        fetchStudentsAttendance();
+      } else {
+        fetchProfessorsAttendance();
+      }
+    } catch (error: any) {
+      console.error('Error justifying absence:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de justifier l\'absence',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const openJustifyModal = (absence: Absence) => {
+    setAbsenceToJustify(absence);
+    setJustificationForm({
+      justification: absence.justification || '',
+      file: null,
+    });
+    setShowJustifyModal(true);
+  };
+
+  const resetAbsenceForm = () => {
+    setAbsenceForm({
+      user_type: 'student',
+      group_id: 0,
+      department: '',
+      attendable_id: 0,
+      course_name: '',
+      date: '',
+      start_time: '09:00',
+      end_time: '12:00',
+      type: 'absent',
+      comment: '',
+    });
+    setGroupStudents([]);
+    setDepartmentProfessors([]);
+  };
+
+  const resetJustificationForm = () => {
+    setJustificationForm({
+      justification: '',
+      file: null,
+    });
+  };
+
+  const resetFilters = () => {
+    setFilters({ group: '', filiere: '', date_from: '', date_to: '' });
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -216,30 +297,6 @@ export default function AttendancePage() {
     return 'text-[#C1272D] bg-red-50';
   };
 
-  const resetFilters = () => {
-    setFilters({ group: '', filiere: '', date_from: '', date_to: '' });
-  };
-
-  const openJustifyModal = (absence: Absence) => {
-    setAbsenceToJustify(absence);
-    setJustificationText(absence.justification || '');
-    setShowJustifyModal(true);
-  };
-
-  const confirmJustification = () => {
-    // Logic to save justification
-    setShowJustifyModal(false);
-    setAbsenceToJustify(null);
-    setJustificationText('');
-  };
-
-  const filteredStudents = studentsAttendance.filter(student => {
-    if (filters.group && student.group !== filters.group) return false;
-    if (filters.filiere && student.filiere !== filters.filiere) return false;
-    if (searchTerm && !student.student_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  });
-
   return (
     <AdminLayout>
       <div className="p-8">
@@ -249,67 +306,69 @@ export default function AttendancePage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-[#0D529C]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Total Étudiants</p>
-                <p className="text-lg font-bold text-[#0D529C]">{stats.total_students}</p>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#0D529C]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Total Étudiants</p>
+                  <p className="text-lg font-bold text-[#0D529C]">{stats.total_students}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-[#257035]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Présents Aujourd'hui</p>
-                <p className="text-lg font-bold text-[#257035]">{stats.present_today}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-[#257035]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Présents Aujourd'hui</p>
+                  <p className="text-lg font-bold text-[#257035]">{stats.present_today}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <UserX className="w-5 h-5 text-[#C1272D]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Absents Aujourd'hui</p>
-                <p className="text-lg font-bold text-[#C1272D]">{stats.absent_today}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                  <UserX className="w-5 h-5 text-[#C1272D]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Absents Aujourd'hui</p>
+                  <p className="text-lg font-bold text-[#C1272D]">{stats.absent_today}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Retards Aujourd'hui</p>
-                <p className="text-lg font-bold text-orange-500">{stats.late_today}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Retards Aujourd'hui</p>
+                  <p className="text-lg font-bold text-orange-500">{stats.late_today}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Taux Présence Global</p>
-                <p className="text-lg font-bold text-purple-500">{stats.global_attendance_rate}%</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Taux Présence Global</p>
+                  <p className="text-lg font-bold text-purple-500">{stats.global_attendance_rate}%</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm">
@@ -351,7 +410,10 @@ export default function AttendancePage() {
                     <p className="text-sm text-gray-500">Consultez et gérez les absences par groupe</p>
                   </div>
                   <button
-                    onClick={() => setShowAddAbsenceModal(true)}
+                    onClick={() => {
+                      setAbsenceForm({ ...absenceForm, user_type: 'student' });
+                      setShowAddAbsenceModal(true);
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
@@ -378,7 +440,7 @@ export default function AttendancePage() {
                   >
                     <option value="">Tous les groupes</option>
                     {groups.map((g) => (
-                      <option key={g} value={g}>{g}</option>
+                      <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
                   </select>
                   <button
@@ -452,7 +514,7 @@ export default function AttendancePage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredStudents.map((student) => (
+                      {studentsAttendance.map((student) => (
                         <tr key={student.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="py-4 px-4">
                             <div>
@@ -514,7 +576,10 @@ export default function AttendancePage() {
                     <p className="text-sm text-gray-500">Consultez les absences des enseignants</p>
                   </div>
                   <button
-                    onClick={() => setShowAddAbsenceModal(true)}
+                    onClick={() => {
+                      setAbsenceForm({ ...absenceForm, user_type: 'professor' });
+                      setShowAddAbsenceModal(true);
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
@@ -535,6 +600,8 @@ export default function AttendancePage() {
                     />
                   </div>
                   <select
+                    value={filters.group}
+                    onChange={(e) => setFilters({ ...filters, group: e.target.value })}
                     className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Tous les départements</option>
@@ -790,81 +857,170 @@ export default function AttendancePage() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#0D529C]">Marquer une Absence</h2>
-                <button onClick={() => setShowAddAbsenceModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowAddAbsenceModal(false); resetAbsenceForm(); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <form onSubmit={handleAddAbsence} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Type</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
+                <select
+                  value={absenceForm.user_type}
+                  onChange={(e) => setAbsenceForm({ ...absenceForm, user_type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
                   <option value="student">Étudiant</option>
                   <option value="professor">Professeur</option>
                 </select>
               </div>
+              
+              {absenceForm.user_type === 'student' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Groupe *</label>
+                    <select
+                      required
+                      value={absenceForm.group_id}
+                      onChange={(e) => setAbsenceForm({ ...absenceForm, group_id: parseInt(e.target.value), attendable_id: 0 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value={0}>Sélectionner un groupe...</option>
+                      {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Étudiant *</label>
+                    <select
+                      required
+                      value={absenceForm.attendable_id}
+                      onChange={(e) => setAbsenceForm({ ...absenceForm, attendable_id: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                      disabled={!absenceForm.group_id}
+                    >
+                      <option value={0}>Sélectionner un étudiant...</option>
+                      {groupStudents.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Département *</label>
+                    <select
+                      required
+                      value={absenceForm.department}
+                      onChange={(e) => setAbsenceForm({ ...absenceForm, department: e.target.value, attendable_id: 0 })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    >
+                      <option value="">Sélectionner un département...</option>
+                      {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Professeur *</label>
+                    <select
+                      required
+                      value={absenceForm.attendable_id}
+                      onChange={(e) => setAbsenceForm({ ...absenceForm, attendable_id: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                      disabled={!absenceForm.department}
+                    >
+                      <option value={0}>Sélectionner un professeur...</option>
+                      {departmentProfessors.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  {activeTab === 'students' ? 'Groupe' : 'Département'}
-                </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
-                  <option value="">Sélectionner...</option>
-                  {activeTab === 'students' ? (
-                    groups.map((g) => <option key={g} value={g}>{g}</option>)
-                  ) : (
-                    departments.map((d) => <option key={d} value={d}>{d}</option>)
-                  )}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  {activeTab === 'students' ? 'Étudiant' : 'Professeur'}
-                </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
-                  <option value="">Sélectionner...</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Cours</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Cours *</label>
+                <select
+                  required
+                  value={absenceForm.course_name}
+                  onChange={(e) => setAbsenceForm({ ...absenceForm, course_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
                   <option value="">Sélectionner le cours...</option>
+                  {courses.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Date *</label>
                 <input
                   type="date"
+                  required
+                  value={absenceForm.date}
+                  onChange={(e) => setAbsenceForm({ ...absenceForm, date: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                 />
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Heure début *</label>
+                  <input
+                    type="time"
+                    required
+                    value={absenceForm.start_time}
+                    onChange={(e) => setAbsenceForm({ ...absenceForm, start_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Heure fin *</label>
+                  <input
+                    type="time"
+                    required
+                    value={absenceForm.end_time}
+                    onChange={(e) => setAbsenceForm({ ...absenceForm, end_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Type d'absence</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Type d'absence *</label>
+                <select
+                  required
+                  value={absenceForm.type}
+                  onChange={(e) => setAbsenceForm({ ...absenceForm, type: e.target.value as 'absent' | 'retard' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
                   <option value="absent">Absent</option>
                   <option value="retard">Retard</option>
                 </select>
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Commentaire (optionnel)</label>
                 <textarea
+                  value={absenceForm.comment}
+                  onChange={(e) => setAbsenceForm({ ...absenceForm, comment: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent resize-none"
                   rows={3}
                   placeholder="Ajouter un commentaire..."
                 />
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
-              <button
-                onClick={() => setShowAddAbsenceModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700">
-                <UserX className="w-4 h-4" />
-                Marquer Absent
-              </button>
-            </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowAddAbsenceModal(false); resetAbsenceForm(); }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700"
+                >
+                  <UserX className="w-4 h-4" />
+                  Marquer Absent
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -876,51 +1032,58 @@ export default function AttendancePage() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#257035]">Justifier l'Absence</h2>
-                <button onClick={() => setShowJustifyModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <button onClick={() => { setShowJustifyModal(false); setAbsenceToJustify(null); resetJustificationForm(); }} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
+            <form onSubmit={handleJustifyAbsence} className="p-6 space-y-4">
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600">Date: <span className="font-medium">{new Date(absenceToJustify.date).toLocaleDateString('fr-FR')}</span></p>
                 <p className="text-sm text-gray-600">Cours: <span className="font-medium">{absenceToJustify.course}</span></p>
                 <p className="text-sm text-gray-600">Horaire: <span className="font-medium">{absenceToJustify.start_time} - {absenceToJustify.end_time}</span></p>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Motif de justification</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Motif de justification *</label>
                 <textarea
-                  value={justificationText}
-                  onChange={(e) => setJustificationText(e.target.value)}
+                  required
+                  value={justificationForm.justification}
+                  onChange={(e) => setJustificationForm({ ...justificationForm, justification: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent resize-none"
                   rows={4}
                   placeholder="Ex: Certificat médical, convocation administrative..."
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Pièce justificative (optionnel)</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#257035] transition-colors cursor-pointer">
-                  <Calendar className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Cliquez pour ajouter un fichier</p>
-                  <p className="text-xs text-gray-400">PDF, JPG, PNG (Max 5MB)</p>
-                </div>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => setJustificationForm({ ...justificationForm, file: e.target.files?.[0] || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#257035] focus:border-transparent"
+                />
+                <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</p>
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
-              <button
-                onClick={() => setShowJustifyModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={confirmJustification}
-                className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Valider Justification
-              </button>
-            </div>
+              
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowJustifyModal(false); setAbsenceToJustify(null); resetJustificationForm(); }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Valider Justification
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
