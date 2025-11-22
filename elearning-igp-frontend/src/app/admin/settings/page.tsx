@@ -1,68 +1,33 @@
-// src/app/admin/settings/page.tsx
+
 'use client';
 
-import React, { useState } from 'react';
-import { Settings, Users, Shield, Key, Mail, Lock, Save, Plus, SquarePen, Trash2, Eye, X, Check, Building, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { settingsApi, GeneralSettings, AdminUser, Role, SecuritySettings, Session, LoginLog, LoginAttempt, LockedUser, SessionsStats } from '@/lib/api/admin/settings';
+import { Settings, Users, Shield, Lock, Save, Plus, SquarePen, Trash2, X, Building, Globe, Monitor, Smartphone, LogOut, AlertTriangle, CheckCircle, XCircle, Clock, Unlock, Activity } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface Admin {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  last_login: string;
-  is_active: boolean;
-  created_at: string;
-}
-
-interface Role {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  users_count: number;
-  permissions: string[];
-}
-
-interface Permission {
-  id: number;
-  name: string;
-  slug: string;
-  module: string;
-  description: string;
-}
+import Swal from 'sweetalert2';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'general' | 'admins' | 'roles' | 'permissions' | 'email' | 'security'>('general');
-  const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [showAddAdmin, setShowAddAdmin] = useState(false);
-  const [showAddRole, setShowAddRole] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'admins' | 'roles' | 'security' | 'sessions'>('general');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // General Settings
-  const [generalSettings, setGeneralSettings] = useState({
-    school_name: 'IGP Maroc',
-    school_email: 'contact@igp.edu',
-    school_phone: '+212 5 22 12 34 56',
-    school_address: '123 Boulevard Mohammed V, Casablanca',
-    academic_year: '2024-2025',
-    website: 'https://www.igp.edu',
+  // Data states
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
+    school_name: '',
+    school_email: '',
+    school_phone: '',
+    school_address: '',
+    academic_year: '',
+    website: '',
     timezone: 'Africa/Casablanca',
     language: 'fr',
+    logo: null,
   });
 
-  // Email Settings
-  const [emailSettings, setEmailSettings] = useState({
-    smtp_host: 'smtp.gmail.com',
-    smtp_port: '587',
-    smtp_user: 'noreply@igp.edu',
-    smtp_password: '••••••••••••',
-    from_name: 'IGP Maroc',
-    from_email: 'noreply@igp.edu',
-  });
-
-  // Security Settings
-  const [securitySettings, setSecuritySettings] = useState({
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     enable_2fa: true,
     session_timeout: 30,
     max_login_attempts: 5,
@@ -72,103 +37,421 @@ export default function SettingsPage() {
     require_special: true,
   });
 
-  const admins: Admin[] = [
-    { id: 1, name: 'Super Admin', email: 'admin@igp.edu', role: 'Super Admin', last_login: '2024-11-15 10:30', is_active: true, created_at: '2024-01-01' },
-    { id: 2, name: 'Mohammed Alami', email: 'm.alami@igp.edu', role: 'Admin', last_login: '2024-11-14 16:45', is_active: true, created_at: '2024-03-15' },
-    { id: 3, name: 'Fatima Bennis', email: 'f.bennis@igp.edu', role: 'Admin', last_login: '2024-11-10 09:00', is_active: false, created_at: '2024-06-01' },
-  ];
+  // Sessions data
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
+  const [loginAttempts, setLoginAttempts] = useState<LoginAttempt[]>([]);
+  const [lockedUsers, setLockedUsers] = useState<LockedUser[]>([]);
+  const [sessionsStats, setSessionsStats] = useState<SessionsStats | null>(null);
+  const [sessionsSubTab, setSessionsSubTab] = useState<'active' | 'logs' | 'attempts' | 'locked'>('active');
 
-  const roles: Role[] = [
-    {
-      id: 1,
-      name: 'Super Admin',
-      slug: 'super_admin',
-      description: 'Accès complet à toutes les fonctionnalités',
-      users_count: 1,
-      permissions: ['all'],
-    },
-    {
-      id: 2,
-      name: 'Admin',
-      slug: 'admin',
-      description: 'Gestion des utilisateurs et du contenu',
-      users_count: 2,
-      permissions: ['users.view', 'users.create', 'users.edit', 'courses.view', 'courses.create', 'courses.edit', 'students.view', 'students.create', 'students.edit'],
-    },
-    {
-      id: 3,
-      name: 'Professeur',
-      slug: 'professor',
-      description: 'Gestion des cours et des notes',
-      users_count: 85,
-      permissions: ['courses.view', 'courses.edit', 'grades.view', 'grades.create', 'grades.edit', 'students.view'],
-    },
-    {
-      id: 4,
-      name: 'Étudiant',
-      slug: 'student',
-      description: 'Accès aux cours et aux ressources',
-      users_count: 1250,
-      permissions: ['courses.view', 'grades.view', 'documents.view', 'documents.upload'],
-    },
-  ];
-
-  const permissionModules = [
-    {
-      module: 'Utilisateurs',
-      permissions: [
-        { id: 1, name: 'Voir les utilisateurs', slug: 'users.view', module: 'users', description: 'Consulter la liste des utilisateurs' },
-        { id: 2, name: 'Créer un utilisateur', slug: 'users.create', module: 'users', description: 'Ajouter un nouvel utilisateur' },
-        { id: 3, name: 'Modifier un utilisateur', slug: 'users.edit', module: 'users', description: 'Éditer les informations utilisateur' },
-        { id: 4, name: 'Supprimer un utilisateur', slug: 'users.delete', module: 'users', description: 'Supprimer un utilisateur' },
-      ],
-    },
-    {
-      module: 'Cours',
-      permissions: [
-        { id: 5, name: 'Voir les cours', slug: 'courses.view', module: 'courses', description: 'Consulter les cours' },
-        { id: 6, name: 'Créer un cours', slug: 'courses.create', module: 'courses', description: 'Ajouter un nouveau cours' },
-        { id: 7, name: 'Modifier un cours', slug: 'courses.edit', module: 'courses', description: 'Éditer un cours' },
-        { id: 8, name: 'Supprimer un cours', slug: 'courses.delete', module: 'courses', description: 'Supprimer un cours' },
-      ],
-    },
-    {
-      module: 'Étudiants',
-      permissions: [
-        { id: 9, name: 'Voir les étudiants', slug: 'students.view', module: 'students', description: 'Consulter les étudiants' },
-        { id: 10, name: 'Créer un étudiant', slug: 'students.create', module: 'students', description: 'Inscrire un étudiant' },
-        { id: 11, name: 'Modifier un étudiant', slug: 'students.edit', module: 'students', description: 'Éditer un étudiant' },
-        { id: 12, name: 'Supprimer un étudiant', slug: 'students.delete', module: 'students', description: 'Supprimer un étudiant' },
-      ],
-    },
-    {
-      module: 'Notes',
-      permissions: [
-        { id: 13, name: 'Voir les notes', slug: 'grades.view', module: 'grades', description: 'Consulter les notes' },
-        { id: 14, name: 'Saisir les notes', slug: 'grades.create', module: 'grades', description: 'Ajouter des notes' },
-        { id: 15, name: 'Modifier les notes', slug: 'grades.edit', module: 'grades', description: 'Éditer les notes' },
-        { id: 16, name: 'Valider les notes', slug: 'grades.validate', module: 'grades', description: 'Valider les notes saisies' },
-      ],
-    },
-    {
-      module: 'Documents',
-      permissions: [
-        { id: 17, name: 'Voir les documents', slug: 'documents.view', module: 'documents', description: 'Consulter les documents' },
-        { id: 18, name: 'Uploader des documents', slug: 'documents.upload', module: 'documents', description: 'Ajouter des documents' },
-        { id: 19, name: 'Valider les documents', slug: 'documents.validate', module: 'documents', description: 'Valider les documents' },
-        { id: 20, name: 'Supprimer des documents', slug: 'documents.delete', module: 'documents', description: 'Supprimer des documents' },
-      ],
-    },
-  ];
+  // Modal states
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [showEditAdmin, setShowEditAdmin] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<AdminUser | null>(null);
+  const [adminForm, setAdminForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    role: 'admin' as 'admin' | 'assistant',
+  });
 
   const tabs = [
     { id: 'general', name: 'Général', icon: Building },
     { id: 'admins', name: 'Administrateurs', icon: Users },
     { id: 'roles', name: 'Rôles', icon: Shield },
-    { id: 'permissions', name: 'Permissions', icon: Key },
-    { id: 'email', name: 'Email', icon: Mail },
     { id: 'security', name: 'Sécurité', icon: Lock },
+    { id: 'sessions', name: 'Sessions', icon: Monitor },
   ];
+
+  useEffect(() => {
+    fetchData();
+  }, [activeTab, sessionsSubTab]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      switch (activeTab) {
+        case 'general':
+          const generalRes = await settingsApi.getGeneral();
+          setGeneralSettings(generalRes.data.data);
+          break;
+        case 'admins':
+          const adminsRes = await settingsApi.getAdmins();
+          setAdmins(adminsRes.data.data);
+          break;
+        case 'roles':
+          const rolesRes = await settingsApi.getRoles();
+          setRoles(rolesRes.data.data);
+          break;
+        case 'security':
+          const securityRes = await settingsApi.getSecurity();
+          setSecuritySettings(securityRes.data.data);
+          break;
+        case 'sessions':
+          const statsRes = await settingsApi.getSessionsStats();
+          setSessionsStats(statsRes.data.data);
+          
+          if (sessionsSubTab === 'active') {
+            const sessionsRes = await settingsApi.getSessions();
+            setSessions(sessionsRes.data.data);
+          } else if (sessionsSubTab === 'logs') {
+            const logsRes = await settingsApi.getLoginLogs();
+            setLoginLogs(logsRes.data.data);
+          } else if (sessionsSubTab === 'attempts') {
+            const attemptsRes = await settingsApi.getLoginAttempts();
+            setLoginAttempts(attemptsRes.data.data);
+          } else if (sessionsSubTab === 'locked') {
+            const lockedRes = await settingsApi.getLockedUsers();
+            setLockedUsers(lockedRes.data.data);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== GENERAL ====================
+  const handleSaveGeneral = async () => {
+    setSaving(true);
+    try {
+      await settingsApi.updateGeneral(generalSettings);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Paramètres enregistrés avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de l\'enregistrement',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const res = await settingsApi.uploadLogo(file);
+      setGeneralSettings({ ...generalSettings, logo: res.data.data.path });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Logo mis à jour',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de l\'upload',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  // ==================== ADMINS ====================
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await settingsApi.createAdmin(adminForm);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Utilisateur créé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      setShowAddAdmin(false);
+      resetAdminForm();
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la création',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleUpdateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAdmin) return;
+
+    try {
+      const data: any = {
+        first_name: adminForm.first_name,
+        last_name: adminForm.last_name,
+        email: adminForm.email,
+        role: adminForm.role,
+      };
+      if (adminForm.password) {
+        data.password = adminForm.password;
+      }
+
+      await settingsApi.updateAdmin(selectedAdmin.id, data);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Utilisateur mis à jour',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      setShowEditAdmin(false);
+      setSelectedAdmin(null);
+      resetAdminForm();
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la mise à jour',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDeleteAdmin = async (admin: AdminUser) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      text: `Voulez-vous vraiment supprimer ${admin.name} ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await settingsApi.deleteAdmin(admin.id);
+      Swal.fire({
+        icon: 'success',
+        title: 'Supprimé',
+        text: 'Utilisateur supprimé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la suppression',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleToggleStatus = async (admin: AdminUser) => {
+    try {
+      await settingsApi.toggleAdminStatus(admin.id);
+      fetchData();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du changement de statut',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const openEditModal = (admin: AdminUser) => {
+    setSelectedAdmin(admin);
+    setAdminForm({
+      first_name: admin.first_name,
+      last_name: admin.last_name,
+      email: admin.email,
+      password: '',
+      role: admin.role,
+    });
+    setShowEditAdmin(true);
+  };
+
+  const resetAdminForm = () => {
+    setAdminForm({
+      first_name: '',
+      last_name: '',
+      email: '',
+      password: '',
+      role: 'admin',
+    });
+  };
+
+  // ==================== SECURITY ====================
+  const handleSaveSecurity = async () => {
+    setSaving(true);
+    try {
+      await settingsApi.updateSecurity(securitySettings);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Paramètres de sécurité enregistrés',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de l\'enregistrement',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ==================== SESSIONS ====================
+  const handleDestroySession = async (sessionId: string, isCurrent: boolean) => {
+    if (isCurrent) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Attention',
+        text: 'Vous ne pouvez pas terminer votre session actuelle',
+        confirmButtonColor: '#0D529C',
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Terminer la session',
+      text: 'Voulez-vous vraiment terminer cette session ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Terminer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await settingsApi.destroySession(sessionId);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Session terminée',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchData();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de la terminaison',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDestroyAllSessions = async () => {
+    const result = await Swal.fire({
+      title: 'Terminer toutes les sessions',
+      text: 'Cela déconnectera tous les utilisateurs sauf vous',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Terminer tout',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await settingsApi.destroyAllSessions();
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Toutes les sessions ont été terminées',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchData();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de la terminaison',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleUnlockUser = async (userId: number) => {
+    try {
+      await settingsApi.unlockUser(userId);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Utilisateur déverrouillé',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchData();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du déverrouillage',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const getRoleColor = (color: string) => {
+    switch (color) {
+      case 'purple': return 'bg-purple-500';
+      case 'blue': return 'bg-[#0D529C]';
+      case 'green': return 'bg-[#257035]';
+      case 'orange': return 'bg-orange-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': case '2fa_verified': return 'bg-[#257035] text-white';
+      case 'failed': case 'locked': return 'bg-[#C1272D] text-white';
+      case '2fa_sent': return 'bg-orange-500 text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'success': return 'Succès';
+      case 'failed': return 'Échoué';
+      case '2fa_sent': return '2FA Envoyé';
+      case '2fa_verified': return '2FA Vérifié';
+      case 'locked': return 'Verrouillé';
+      default: return status;
+    }
+  };
+
+  const getDeviceIcon = (device: string) => {
+    return device === 'Mobile' ? <Smartphone className="w-4 h-4" /> : <Monitor className="w-4 h-4" />;
+  };
 
   return (
     <AdminLayout>
@@ -203,14 +486,18 @@ export default function SettingsPage() {
           </div>
 
           <div className="p-6">
-            {/* General Tab */}
+            {/* ==================== GENERAL TAB ==================== */}
             {activeTab === 'general' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Informations Générales</h3>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
+                  <button
+                    onClick={handleSaveGeneral}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
                     <Save className="w-4 h-4" />
-                    Enregistrer
+                    {saving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                 </div>
 
@@ -294,26 +581,27 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Logo</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#0D529C] transition-colors cursor-pointer">
+                    <label className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#0D529C] transition-colors cursor-pointer block">
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                       <Globe className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-600">Cliquez pour changer le logo</p>
-                    </div>
+                    </label>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Admins Tab */}
+            {/* ==================== ADMINS TAB ==================== */}
             {activeTab === 'admins' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-[#0D529C]">Administrateurs</h3>
+                  <h3 className="text-lg font-bold text-[#0D529C]">Administrateurs & Assistants</h3>
                   <button
-                    onClick={() => setShowAddAdmin(true)}
+                    onClick={() => { resetAdminForm(); setShowAddAdmin(true); }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    Ajouter Admin
+                    Ajouter Utilisateur
                   </button>
                 </div>
 
@@ -335,25 +623,34 @@ export default function SettingsPage() {
                           <td className="py-4 px-4 font-medium text-gray-900 text-sm">{admin.name}</td>
                           <td className="py-4 px-4 text-gray-600 text-sm">{admin.email}</td>
                           <td className="py-4 px-4">
-                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                              admin.role === 'Super Admin' ? 'bg-purple-500 text-white' : 'bg-[#0D529C] text-white'
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white ${
+                              admin.role === 'admin' ? 'bg-purple-500' : 'bg-[#0D529C]'
                             }`}>
-                              {admin.role}
+                              {admin.role === 'admin' ? 'Admin' : 'Assistant'}
                             </span>
                           </td>
                           <td className="py-4 px-4 text-gray-600 text-sm">{admin.last_login}</td>
                           <td className="py-4 px-4">
-                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                              admin.is_active ? 'bg-[#257035] text-white' : 'bg-[#C1272D] text-white'
-                            }`}>
+                            <button
+                              onClick={() => handleToggleStatus(admin)}
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                admin.is_active ? 'bg-[#257035] text-white' : 'bg-[#C1272D] text-white'
+                              }`}
+                            >
                               {admin.is_active ? 'Actif' : 'Inactif'}
-                            </span>
+                            </button>
                           </td>
                           <td className="py-4 px-4 text-right">
-                            <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
+                            <button
+                              onClick={() => openEditModal(admin)}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#0D529C] hover:text-white transition-colors"
+                            >
                               <SquarePen className="w-4 h-4" />
                             </button>
-                            <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1">
+                            <button
+                              onClick={() => handleDeleteAdmin(admin)}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </td>
@@ -365,62 +662,32 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Roles Tab */}
+            {/* ==================== ROLES TAB ==================== */}
             {activeTab === 'roles' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-[#0D529C]">Rôles & Permissions</h3>
-                  <button
-                    onClick={() => setShowAddRole(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Créer Rôle
-                  </button>
+                  <h3 className="text-lg font-bold text-[#0D529C]">Rôles du Système</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {roles.map((role) => (
                     <div key={role.id} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                       <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h4 className="font-bold text-gray-900">{role.name}</h4>
-                          <p className="text-sm text-gray-500">{role.description}</p>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getRoleColor(role.color)}`}>
+                            <Shield className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-gray-900">{role.name}</h4>
+                            <p className="text-sm text-gray-500">{role.description}</p>
+                          </div>
                         </div>
-                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getRoleColor(role.color)} text-white`}>
                           {role.users_count} utilisateurs
                         </span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-xs text-gray-500 mb-2">Permissions ({role.permissions.length})</p>
-                        <div className="flex flex-wrap gap-1">
-                          {role.permissions.slice(0, 5).map((perm) => (
-                            <span key={perm} className="inline-flex px-2 py-1 text-xs bg-white border border-gray-200 rounded">
-                              {perm}
-                            </span>
-                          ))}
-                          {role.permissions.length > 5 && (
-                            <span className="inline-flex px-2 py-1 text-xs bg-gray-200 rounded">
-                              +{role.permissions.length - 5}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => setSelectedRole(role)}
-                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                          <SquarePen className="w-4 h-4" />
-                        </button>
-                        {role.slug !== 'super_admin' && (
-                          <button className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
+                        <span className="text-xs text-gray-400">{role.slug}</span>
                       </div>
                     </div>
                   ))}
@@ -428,124 +695,18 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Permissions Tab */}
-            {activeTab === 'permissions' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-[#0D529C]">Toutes les Permissions</h3>
-                </div>
-
-                {permissionModules.map((module) => (
-                  <div key={module.module} className="bg-gray-50 rounded-xl p-6">
-                    <h4 className="font-bold text-[#0D529C] mb-4">{module.module}</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {module.permissions.map((permission) => (
-                        <div key={permission.id} className="bg-white rounded-lg p-4 border border-gray-200">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900 text-sm">{permission.name}</p>
-                              <p className="text-xs text-gray-500">{permission.description}</p>
-                              <span className="inline-flex px-2 py-0.5 text-xs bg-gray-100 rounded mt-1">
-                                {permission.slug}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="w-3 h-3 bg-[#257035] rounded-full"></span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Email Tab */}
-            {activeTab === 'email' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-[#0D529C]">Configuration Email (SMTP)</h3>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <Save className="w-4 h-4" />
-                    Enregistrer
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Serveur SMTP</label>
-                    <input
-                      type="text"
-                      value={emailSettings.smtp_host}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, smtp_host: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Port SMTP</label>
-                    <input
-                      type="text"
-                      value={emailSettings.smtp_port}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, smtp_port: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Utilisateur SMTP</label>
-                    <input
-                      type="text"
-                      value={emailSettings.smtp_user}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, smtp_user: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Mot de passe SMTP</label>
-                    <input
-                      type="password"
-                      value={emailSettings.smtp_password}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, smtp_password: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Nom d'expéditeur</label>
-                    <input
-                      type="text"
-                      value={emailSettings.from_name}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, from_name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Email d'expéditeur</label>
-                    <input
-                      type="email"
-                      value={emailSettings.from_email}
-                      onChange={(e) => setEmailSettings({ ...emailSettings, from_email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <Mail className="w-4 h-4" />
-                    Tester la Configuration
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Security Tab */}
+            {/* ==================== SECURITY TAB ==================== */}
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Paramètres de Sécurité</h3>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors">
+                  <button
+                    onClick={handleSaveSecurity}
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
                     <Save className="w-4 h-4" />
-                    Enregistrer
+                    {saving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                 </div>
 
@@ -646,6 +807,272 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+
+            {/* ==================== SESSIONS TAB ==================== */}
+            {activeTab === 'sessions' && (
+              <div className="space-y-6">
+                {/* Stats */}
+                {sessionsStats && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#0D529C] rounded-lg flex items-center justify-center">
+                          <Activity className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Sessions Actives</p>
+                          <p className="text-xl font-bold text-[#0D529C]">{sessionsStats.active_sessions}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#257035] rounded-lg flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Connexions Aujourd'hui</p>
+                          <p className="text-xl font-bold text-[#257035]">{sessionsStats.today_logins}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <AlertTriangle className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Tentatives Échouées</p>
+                          <p className="text-xl font-bold text-orange-500">{sessionsStats.failed_attempts}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-red-50 rounded-lg p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#C1272D] rounded-lg flex items-center justify-center">
+                          <Lock className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Comptes Verrouillés</p>
+                          <p className="text-xl font-bold text-[#C1272D]">{sessionsStats.locked_users}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub Tabs */}
+                <div className="flex gap-2 border-b border-gray-200 pb-2">
+                  {[
+                    { id: 'active', label: 'Sessions Actives', icon: Monitor },
+                    { id: 'logs', label: 'Historique Connexions', icon: Clock },
+                    { id: 'attempts', label: 'Tentatives', icon: AlertTriangle },
+                    { id: 'locked', label: 'Comptes Verrouillés', icon: Lock },
+                  ].map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSessionsSubTab(tab.id as any)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          sessionsSubTab === tab.id
+                            ? 'bg-[#0D529C] text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Active Sessions */}
+                {sessionsSubTab === 'active' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-[#0D529C]">Sessions Actives</h3>
+                      <button
+                        onClick={handleDestroyAllSessions}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Terminer Toutes
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {sessions.map((session) => (
+                        <div key={session.id} className={`bg-gray-50 rounded-lg p-4 border ${session.is_current ? 'border-[#257035] bg-green-50' : 'border-gray-200'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${session.is_current ? 'bg-[#257035]' : 'bg-gray-200'}`}>
+                                {getDeviceIcon(session.device.device)}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-gray-900">{session.user_name}</p>
+                                  {session.is_current && (
+                                    <span className="px-2 py-0.5 text-xs bg-[#257035] text-white rounded-full">Session Actuelle</span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500">{session.user_email}</p>
+                                <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
+                                  <span>{session.device.browser} • {session.device.os}</span>
+                                  <span>IP: {session.ip_address}</span>
+                                  <span>Dernière activité: {session.last_activity}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {!session.is_current && (
+                              <button
+                                onClick={() => handleDestroySession(session.id, session.is_current)}
+                                className="flex items-center gap-2 px-3 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                Terminer
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {sessions.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          Aucune session active
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Login Logs */}
+                {sessionsSubTab === 'logs' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-[#0D529C]">Historique des Connexions</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Utilisateur</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">IP</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Appareil</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loginLogs.map((log) => (
+                            <tr key={log.id} className="border-t border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4">
+                                <p className="font-medium text-gray-900 text-sm">{log.user_name}</p>
+                                <p className="text-xs text-gray-500">{log.user_email}</p>
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-600">{log.ip_address}</td>
+                              <td className="py-3 px-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  {getDeviceIcon(log.device.device)}
+                                  <span>{log.device.browser} • {log.device.os}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(log.status)}`}>
+                                  {getStatusLabel(log.status)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-600">{log.created_at}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Login Attempts */}
+                {sessionsSubTab === 'attempts' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-[#0D529C]">Tentatives de Connexion</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">IP</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Appareil</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Résultat</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loginAttempts.map((attempt) => (
+                            <tr key={attempt.id} className="border-t border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4 font-medium text-gray-900 text-sm">{attempt.email}</td>
+                              <td className="py-3 px-4 text-sm text-gray-600">{attempt.ip_address}</td>
+                              <td className="py-3 px-4 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  {getDeviceIcon(attempt.device.device)}
+                                  <span>{attempt.device.browser} • {attempt.device.os}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                {attempt.successful ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-[#257035] text-white">
+                                    <CheckCircle className="w-3 h-3" /> Succès
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-[#C1272D] text-white">
+                                    <XCircle className="w-3 h-3" /> Échoué
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-sm text-gray-600">{attempt.attempted_at}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Locked Users */}
+                {sessionsSubTab === 'locked' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-[#0D529C]">Comptes Verrouillés</h3>
+                    <div className="space-y-3">
+                      {lockedUsers.map((user) => (
+                        <div key={user.id} className="bg-red-50 rounded-lg p-4 border border-red-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">{user.name}</p>
+                              <p className="text-sm text-gray-500">{user.email}</p>
+                              <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                <span>Verrouillé le: {user.locked_at}</span>
+                                <span>Tentatives: {user.failed_attempts}</span>
+                              </div>
+                              {user.locked_reason && (
+                                <p className="text-sm text-[#C1272D] mt-1">Raison: {user.locked_reason}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleUnlockUser(user.id)}
+                              className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                              <Unlock className="w-4 h-4" />
+                              Déverrouiller
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {lockedUsers.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          Aucun compte verrouillé
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -656,84 +1083,170 @@ export default function SettingsPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[#0D529C]">Ajouter un Administrateur</h2>
+                <h2 className="text-xl font-bold text-[#0D529C]">Ajouter un Utilisateur</h2>
                 <button onClick={() => setShowAddAdmin(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Nom complet</label>
-                <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent" />
+            <form onSubmit={handleCreateAdmin} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Prénom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminForm.first_name}
+                    onChange={(e) => setAdminForm({ ...adminForm, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Nom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminForm.last_name}
+                    onChange={(e) => setAdminForm({ ...adminForm, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                <input type="email" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent" />
+                <label className="block text-sm font-medium text-gray-600 mb-1">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={adminForm.email}
+                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Rôle</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Rôle *</label>
+                <select
+                  required
+                  value={adminForm.role}
+                  onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value as 'admin' | 'assistant' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
                   <option value="admin">Admin</option>
-                  <option value="super_admin">Super Admin</option>
+                  <option value="assistant">Assistant</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Mot de passe</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent" />
+                <label className="block text-sm font-medium text-gray-600 mb-1">Mot de passe *</label>
+                <input
+                  type="password"
+                  required
+                  value={adminForm.password}
+                  onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
               </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-2">
-              <button onClick={() => setShowAddAdmin(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                Annuler
-              </button>
-              <button className="px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700">
-                Créer
-              </button>
-            </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddAdmin(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
+                >
+                  Créer
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Role Detail Modal */}
-      {selectedRole && (
+      {/* Edit Admin Modal */}
+      {showEditAdmin && selectedAdmin && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-[#0D529C]">Modifier l'Utilisateur</h2>
+                <button onClick={() => { setShowEditAdmin(false); setSelectedAdmin(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleUpdateAdmin} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Prénom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminForm.first_name}
+                    onChange={(e) => setAdminForm({ ...adminForm, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Nom *</label>
+                  <input
+                    type="text"
+                    required
+                    value={adminForm.last_name}
+                    onChange={(e) => setAdminForm({ ...adminForm, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  />
+                </div>
+              </div>
               <div>
-                <h2 className="text-xl font-bold">{selectedRole.name}</h2>
-                <p className="text-blue-200">{selectedRole.description}</p>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={adminForm.email}
+                  onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                />
               </div>
-              <button onClick={() => setSelectedRole(null)} className="p-2 hover:bg-white/20 rounded-lg">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <h3 className="font-bold text-[#0D529C] mb-4">Permissions Assignées</h3>
-              <div className="space-y-4">
-                {permissionModules.map((module) => (
-                  <div key={module.module} className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">{module.module}</h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {module.permissions.map((perm) => (
-                        <div key={perm.id} className="flex items-center gap-2">
-                          <div className={`w-5 h-5 rounded flex items-center justify-center ${
-                            selectedRole.permissions.includes(perm.slug) || selectedRole.permissions.includes('all')
-                              ? 'bg-[#257035] text-white'
-                              : 'bg-gray-200'
-                          }`}>
-                            {(selectedRole.permissions.includes(perm.slug) || selectedRole.permissions.includes('all')) && (
-                              <Check className="w-3 h-3" />
-                            )}
-                          </div>
-                          <span className="text-sm text-gray-700">{perm.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Rôle *</label>
+                <select
+                  required
+                  value={adminForm.role}
+                  onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value as 'admin' | 'assistant' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="assistant">Assistant</option>
+                </select>
               </div>
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Nouveau mot de passe (optionnel)</label>
+                <input
+                  type="password"
+                  value={adminForm.password}
+                  onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                  placeholder="Laisser vide pour garder l'actuel"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditAdmin(false); setSelectedAdmin(null); }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
+                >
+                  Mettre à jour
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

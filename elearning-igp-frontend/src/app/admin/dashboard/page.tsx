@@ -50,6 +50,7 @@ export default function DashboardPage() {
     const role = user.roles[0].name;
     if (role === 'admin' || role === 'super-admin') return 'Admin';
     if (role === 'professor') return 'Professeur';
+    if (role === 'assistant') return 'Assistant';
     return 'Étudiant';
   };
 
@@ -161,13 +162,15 @@ export default function DashboardPage() {
                     <td className="py-4 px-4 text-gray-600 text-sm">
                       {formatDate(user.created_at)}
                     </td>
-                    <td className="py-4 px-4">
+                   <td className="py-4 px-4">
                       <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
                         getRoleName(user) === 'Professeur' 
                           ? 'bg-[#0D529C] text-white'
                           : getRoleName(user) === 'Admin'
                           ? 'bg-[#000] text-white'
-                          : 'bg-orange-500 text-white'
+                          : getRoleName(user) === 'Assistant'
+                          ? 'bg-[#C1272D] text-white'
+                          : 'bg-[#c68a0a] text-white'
                       }`}>
                         {getRoleName(user)}
                       </span>

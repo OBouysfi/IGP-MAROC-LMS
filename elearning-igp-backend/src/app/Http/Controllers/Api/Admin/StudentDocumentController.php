@@ -27,16 +27,15 @@ class StudentDocumentController extends Controller
 
     public function stats(): JsonResponse
     {
-        $totalStudents = User::where('role', 'student')->count();
+        // Utiliser Spatie
+        $totalStudents = User::role('student')->count();
         
-        // Étudiants avec dossier complet (tous documents validés)
-        $completeCount = User::where('role', 'student')
+        $completeCount = User::role('student')
             ->whereHas('documents', function($q) {
                 $q->where('status', 'validé');
             }, '=', count($this->requiredDocuments))
             ->count();
         
-        // Documents en attente
         $pendingCount = StudentDocument::where('status', 'en_attente')->count();
         
         $incompleteCount = $totalStudents - $completeCount;
@@ -53,32 +52,29 @@ class StudentDocumentController extends Controller
 
     public function dossiers(Request $request): JsonResponse
     {
-        $query = User::where('role', 'student')
-            ->with(['group', 'documents']);
+        // Utiliser Spatie
+        $query = User::role('student')
+            ->with(['student.group.filiere', 'student.group.program', 'documents']);
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhereHas('group', fn($q) => $q->where('name', 'like', "%{$search}%"));
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        if ($request->filled('status')) {
-            // Filtrer par statut de dossier
-        }
-
         if ($request->filled('filiere')) {
-            $query->whereHas('group', fn($q) => $q->where('filiere', $request->filiere));
+            $query->whereHas('student.group', fn($q) => $q->where('filiere_id', $request->filiere));
         }
 
         if ($request->filled('program')) {
-            $query->whereHas('group', fn($q) => $q->where('program', $request->program));
+            $query->whereHas('student.group', fn($q) => $q->where('program_id', $request->program));
         }
 
-        $students = $query->get()->map(function($student) {
-            $documents = $student->documents;
+        $students = $query->get()->map(function($user) {
+            $documents = $user->documents ?? collect();
             
             // Créer les documents manquants
             $existingTypes = $documents->pluck('type')->toArray();
@@ -100,7 +96,6 @@ class StudentDocumentController extends Controller
             $documentsProvided = $documents->whereNotIn('status', ['manquant'])->count();
             $documentsValidated = $documents->where('status', 'validé')->count();
 
-            // Déterminer le statut du dossier
             $dossierStatus = 'incomplet';
             if ($documentsValidated === $documentsRequired) {
                 $dossierStatus = 'complet';
@@ -109,17 +104,17 @@ class StudentDocumentController extends Controller
             }
 
             return [
-                'id' => $student->id,
-                'student_name' => $student->name,
-                'student_email' => $student->email,
-                'program' => $student->group->program ?? '-',
-                'filiere' => $student->group->filiere ?? '-',
-                'group' => $student->group->name ?? '-',
+                'id' => $user->id,
+                'student_name' => $user->first_name . ' ' . $user->last_name,
+                'student_email' => $user->email,
+                'program' => $user->student?->group?->program?->name ?? '-',
+                'filiere' => $user->student?->group?->filiere?->name ?? '-',
+                'group' => $user->student?->group?->name ?? '-',
                 'dossier_status' => $dossierStatus,
                 'documents_required' => $documentsRequired,
                 'documents_provided' => $documentsProvided,
                 'documents_validated' => $documentsValidated,
-                'last_update' => $student->documents->max('updated_at')?->format('Y-m-d') ?? $student->updated_at->format('Y-m-d'),
+                'last_update' => $documents->max('updated_at')?->format('Y-m-d') ?? $user->updated_at->format('Y-m-d'),
                 'documents' => StudentDocumentResource::collection($documents),
             ];
         });
@@ -181,7 +176,7 @@ class StudentDocumentController extends Controller
         return response()->json(null, 204);
     }
 
-    public function download($id): JsonResponse
+    public function download($id)
     {
         $document = StudentDocument::findOrFail($id);
         

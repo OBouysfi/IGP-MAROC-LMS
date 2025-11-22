@@ -43,9 +43,9 @@ const menuItems = [
   { name: 'Absences', icon: UserX, path: '/admin/attendance' },
   { name: 'Documents', icon: FolderOpen, path: '/admin/documents' },
   { name: 'Paie', icon: DollarSign, path: '/admin/payroll' },
-  { name: 'Support', icon: MessageSquare, path: '/admin/support' },
+  // { name: 'Support', icon: MessageSquare, path: '/admin/support' },
   { name: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
-  { name: 'Paramètres', icon: Settings, path: '/admin/settings' },
+  // { name: 'Paramètres', icon: Settings, path: '/admin/settings' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

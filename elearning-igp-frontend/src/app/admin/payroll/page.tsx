@@ -1,39 +1,10 @@
-// src/app/admin/payroll/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { payrollsApi, ProfessorPayroll, PayrollStats, PaymentHistory } from '@/lib/api/admin/payrolls';
 import { DollarSign, Clock, Users, CheckCircle, Search, Filter, Eye, Download, X, Calendar, FileText, CreditCard, TrendingUp, Printer } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
-
-interface ProfessorPayroll {
-  id: number;
-  professor_name: string;
-  professor_email: string;
-  department: string;
-  contract_type: string;
-  hourly_rate: number;
-  hours_worked: number;
-  bonus: number;
-  deductions: number;
-  gross_salary: number;
-  net_salary: number;
-  payment_status: 'payé' | 'en_attente' | 'en_cours';
-  payment_date: string | null;
-  payment_reference: string | null;
-  payment_method: string | null;
-  bank_info: string;
-  courses_details: { course: string; hours: number; group: string }[];
-}
-
-interface PaymentHistory {
-  id: number;
-  month: string;
-  year: number;
-  professor_name: string;
-  amount: number;
-  payment_date: string;
-  reference: string;
-}
+import Swal from 'sweetalert2';
 
 export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
@@ -44,8 +15,17 @@ export default function PayrollPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedForPayment, setSelectedForPayment] = useState<number[]>([]);
   const [paymentToConfirm, setPaymentToConfirm] = useState<ProfessorPayroll | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState('Novembre');
-  const [selectedYear, setSelectedYear] = useState('2024');
+  
+  const [payrolls, setPayrolls] = useState<ProfessorPayroll[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
+  const [stats, setStats] = useState<PayrollStats | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const [selectedMonth, setSelectedMonth] = useState(months[new Date().getMonth()]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
   const [filters, setFilters] = useState({
     department: '',
     status: '',
@@ -59,163 +39,194 @@ export default function PayrollPage() {
     comment: '',
   });
 
-  const stats = {
-    total_to_pay: 425000,
-    total_hours: 1250,
-    professors_count: 85,
-    paid_count: 72,
-    pending_count: 13,
-  };
-
-  const departments = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion', 'Langues', 'Droit'];
   const contractTypes = ['CDI', 'CDD', 'Vacataire'];
-  const paymentStatuses = ['Payé', 'En attente', 'En cours'];
-  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const paymentStatuses = ['payé', 'en_attente', 'en_cours'];
   const paymentMethods = [
     { value: 'virement', label: 'Virement Bancaire' },
     { value: 'cheque', label: 'Chèque' },
     { value: 'especes', label: 'Espèces' },
   ];
 
-  const [payrolls, setPayrolls] = useState<ProfessorPayroll[]>([
-    {
-      id: 1,
-      professor_name: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      department: 'Développement',
-      contract_type: 'CDI',
-      hourly_rate: 350,
-      hours_worked: 48,
-      bonus: 500,
-      deductions: 0,
-      gross_salary: 17300,
-      net_salary: 17300,
-      payment_status: 'payé',
-      payment_date: '2024-11-05',
-      payment_reference: 'VIR-2024-11-001',
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'current') {
+      fetchPayrolls();
+      fetchStats();
+    } else {
+      fetchHistory();
+    }
+  }, [activeTab, selectedMonth, selectedYear, filters, searchTerm]);
+
+  const getMonthNumber = (monthName: string): number => {
+    return months.indexOf(monthName) + 1;
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const response = await payrollsApi.getDepartments();
+      setDepartments(response.data.data);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await payrollsApi.getStats(getMonthNumber(selectedMonth), parseInt(selectedYear));
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchPayrolls = async () => {
+    try {
+      setLoading(true);
+      const response = await payrollsApi.getAll({
+        month: getMonthNumber(selectedMonth),
+        year: parseInt(selectedYear),
+        search: searchTerm,
+        ...filters,
+      });
+      setPayrolls(response.data.data);
+    } catch (error) {
+      console.error('Error fetching payrolls:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await payrollsApi.getHistory({ year: parseInt(selectedYear) });
+      setPaymentHistory(response.data.data);
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGeneratePayrolls = async () => {
+    const result = await Swal.fire({
+      title: 'Générer les fiches de paie',
+      text: `Voulez-vous générer les fiches de paie pour ${selectedMonth} ${selectedYear} ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0D529C',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Générer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await payrollsApi.generate(getMonthNumber(selectedMonth), parseInt(selectedYear));
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Fiches de paie générées avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchPayrolls();
+      fetchStats();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de générer les fiches',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const openPaymentModal = (payroll: ProfessorPayroll) => {
+    setPaymentToConfirm(payroll);
+    setPaymentForm({
+      payment_date: new Date().toISOString().split('T')[0],
+      payment_reference: `VIR-${selectedYear}-${getMonthNumber(selectedMonth)}-${String(payroll.id).padStart(3, '0')}`,
       payment_method: 'virement',
-      bank_info: 'BMCE ****1234',
-      courses_details: [
-        { course: 'React.js Avancé', hours: 24, group: 'DEV-M2-A' },
-        { course: 'Node.js & Express', hours: 16, group: 'DEV-M2-A' },
-        { course: 'Introduction Web', hours: 8, group: 'DEV-L1-A' },
-      ],
-    },
-    {
-      id: 2,
-      professor_name: 'Amina El Fassi',
-      professor_email: 'a.elfassi@igp.edu',
-      department: 'Marketing',
-      contract_type: 'CDI',
-      hourly_rate: 400,
-      hours_worked: 36,
-      bonus: 0,
-      deductions: 0,
-      gross_salary: 14400,
-      net_salary: 14400,
-      payment_status: 'en_attente',
-      payment_date: null,
-      payment_reference: null,
-      payment_method: null,
-      bank_info: 'Attijariwafa ****5678',
-      courses_details: [
-        { course: 'Marketing Digital', hours: 16, group: 'COM-L3-B' },
-        { course: 'Stratégie Social Media', hours: 20, group: 'MKT-M1-A' },
-      ],
-    },
-    {
-      id: 3,
-      professor_name: 'Omar Tazi',
-      professor_email: 'o.tazi@igp.edu',
-      department: 'Finance',
-      contract_type: 'Vacataire',
-      hourly_rate: 500,
-      hours_worked: 16,
-      bonus: 0,
-      deductions: 0,
-      gross_salary: 8000,
-      net_salary: 8000,
-      payment_status: 'en_attente',
-      payment_date: null,
-      payment_reference: null,
-      payment_method: null,
-      bank_info: 'CIH ****9012',
-      courses_details: [
-        { course: 'Analyse Financière', hours: 16, group: 'FIN-M1-A' },
-      ],
-    },
-    {
-      id: 4,
-      professor_name: 'Hassan Alami',
-      professor_email: 'h.alami@igp.edu',
-      department: 'Développement',
-      contract_type: 'CDI',
-      hourly_rate: 380,
-      hours_worked: 40,
-      bonus: 200,
-      deductions: 0,
-      gross_salary: 15400,
-      net_salary: 15400,
-      payment_status: 'en_attente',
-      payment_date: null,
-      payment_reference: null,
-      payment_method: null,
-      bank_info: 'BMCE ****3456',
-      courses_details: [
-        { course: 'DevOps & CI/CD', hours: 20, group: 'DEV-M2-A' },
-        { course: 'Python Avancé', hours: 20, group: 'DEV-M1-A' },
-      ],
-    },
-    {
-      id: 5,
-      professor_name: 'Nadia Fassi',
-      professor_email: 'n.fassi@igp.edu',
-      department: 'Développement',
-      contract_type: 'CDD',
-      hourly_rate: 320,
-      hours_worked: 28,
-      bonus: 0,
-      deductions: 0,
-      gross_salary: 8960,
-      net_salary: 8960,
-      payment_status: 'en_attente',
-      payment_date: null,
-      payment_reference: null,
-      payment_method: null,
-      bank_info: 'BP ****7890',
-      courses_details: [
-        { course: 'Base de données NoSQL', hours: 12, group: 'DEV-M2-A' },
-        { course: 'JavaScript', hours: 16, group: 'DEV-L2-A' },
-      ],
-    },
-  ]);
+      comment: '',
+    });
+    setShowPaymentModal(true);
+  };
 
-  const paymentHistory: PaymentHistory[] = [
-    { id: 1, month: 'Octobre', year: 2024, professor_name: 'Karim Benjelloun', amount: 16800, payment_date: '2024-10-05', reference: 'VIR-2024-10-001' },
-    { id: 2, month: 'Octobre', year: 2024, professor_name: 'Amina El Fassi', amount: 14400, payment_date: '2024-10-05', reference: 'VIR-2024-10-002' },
-    { id: 3, month: 'Octobre', year: 2024, professor_name: 'Hassan Alami', amount: 15200, payment_date: '2024-10-05', reference: 'VIR-2024-10-003' },
-  ];
+  const confirmPayment = async () => {
+    if (!paymentToConfirm) return;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'payé': return 'bg-[#257035] text-white';
-      case 'en_attente': return 'bg-orange-500 text-white';
-      case 'en_cours': return 'bg-[#0D529C] text-white';
-      default: return 'bg-gray-500 text-white';
+    try {
+      await payrollsApi.confirmPayment(paymentToConfirm.id, paymentForm);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Paiement confirmé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setShowPaymentModal(false);
+      setShowReceiptModal(true);
+      fetchPayrolls();
+      fetchStats();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de confirmer le paiement',
+        confirmButtonColor: '#0D529C',
+      });
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'payé': return 'Payé';
-      case 'en_attente': return 'En attente';
-      case 'en_cours': return 'En cours';
-      default: return status;
-    }
-  };
+  const confirmMultiplePayments = async () => {
+    if (selectedForPayment.length === 0) return;
 
-  const resetFilters = () => {
-    setFilters({ department: '', status: '', contract_type: '' });
+    const result = await Swal.fire({
+      title: 'Confirmer les paiements',
+      text: `Voulez-vous confirmer le paiement de ${selectedForPayment.length} professeur(s) ?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#257035',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Confirmer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await payrollsApi.confirmMultiplePayments({
+        ids: selectedForPayment,
+        payment_date: new Date().toISOString().split('T')[0],
+        payment_method: 'virement',
+      });
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: `${selectedForPayment.length} paiements confirmés`,
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setSelectedForPayment([]);
+      fetchPayrolls();
+      fetchStats();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de confirmer les paiements',
+        confirmButtonColor: '#0D529C',
+      });
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -235,57 +246,31 @@ export default function PayrollPage() {
     }
   };
 
-  const openPaymentModal = (payroll: ProfessorPayroll) => {
-    setPaymentToConfirm(payroll);
-    setPaymentForm({
-      payment_date: new Date().toISOString().split('T')[0],
-      payment_reference: `VIR-${selectedYear}-${months.indexOf(selectedMonth) + 1}-${String(payroll.id).padStart(3, '0')}`,
-      payment_method: 'virement',
-      comment: '',
-    });
-    setShowPaymentModal(true);
-  };
-
-  const confirmPayment = () => {
-    if (paymentToConfirm) {
-      setPayrolls(payrolls.map(p => {
-        if (p.id === paymentToConfirm.id) {
-          return {
-            ...p,
-            payment_status: 'payé' as const,
-            payment_date: paymentForm.payment_date,
-            payment_reference: paymentForm.payment_reference,
-            payment_method: paymentForm.payment_method,
-          };
-        }
-        return p;
-      }));
-      setShowPaymentModal(false);
-      setPaymentToConfirm(null);
-      setShowReceiptModal(true);
-    }
-  };
-
-  const confirmMultiplePayments = () => {
-    const reference_base = `VIR-${selectedYear}-${months.indexOf(selectedMonth) + 1}`;
-    setPayrolls(payrolls.map(p => {
-      if (selectedForPayment.includes(p.id)) {
-        return {
-          ...p,
-          payment_status: 'payé' as const,
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_reference: `${reference_base}-${String(p.id).padStart(3, '0')}`,
-          payment_method: 'virement',
-        };
-      }
-      return p;
-    }));
-    setSelectedForPayment([]);
-  };
-
   const generateReceipt = (payroll: ProfessorPayroll) => {
     setPaymentToConfirm(payroll);
     setShowReceiptModal(true);
+  };
+
+  const resetFilters = () => {
+    setFilters({ department: '', status: '', contract_type: '' });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'payé': return 'bg-[#257035] text-white';
+      case 'en_attente': return 'bg-orange-500 text-white';
+      case 'en_cours': return 'bg-[#0D529C] text-white';
+      default: return 'bg-gray-500 text-white';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'payé': return 'Payé';
+      case 'en_attente': return 'En attente';
+      case 'en_cours': return 'En cours';
+      default: return status;
+    }
   };
 
   const unpaidPayrolls = payrolls.filter(p => p.payment_status === 'en_attente');
@@ -302,67 +287,69 @@ export default function PayrollPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-[#0D529C]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Total à Payer</p>
-                <p className="text-lg font-bold text-[#0D529C]">{(stats.total_to_pay / 1000).toFixed(0)}K MAD</p>
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-[#0D529C]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Total à Payer</p>
+                  <p className="text-lg font-bold text-[#0D529C]">{(stats.total_to_pay / 1000).toFixed(0)}K MAD</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Heures Totales</p>
-                <p className="text-lg font-bold text-purple-500">{stats.total_hours}h</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Heures Totales</p>
+                  <p className="text-lg font-bold text-purple-500">{stats.total_hours}h</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Professeurs</p>
-                <p className="text-lg font-bold text-orange-500">{stats.professors_count}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Professeurs</p>
+                  <p className="text-lg font-bold text-orange-500">{stats.professors_count}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-[#257035]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Payés</p>
-                <p className="text-lg font-bold text-[#257035]">{payrolls.filter(p => p.payment_status === 'payé').length}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-[#257035]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Payés</p>
+                  <p className="text-lg font-bold text-[#257035]">{stats.paid_count}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-[#C1272D]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">En Attente</p>
-                <p className="text-lg font-bold text-[#C1272D]">{unpaidPayrolls.length}</p>
+            <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#C1272D]" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">En Attente</p>
+                  <p className="text-lg font-bold text-[#C1272D]">{stats.pending_count}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm">
@@ -416,9 +403,17 @@ export default function PayrollPage() {
                     >
                       <option value="2024">2024</option>
                       <option value="2023">2023</option>
+                      <option value="2025">2025</option>
                     </select>
                   </div>
                   <div className="flex gap-2">
+                    <button
+                      onClick={handleGeneratePayrolls}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Générer Fiches
+                    </button>
                     {selectedForPayment.length > 0 && (
                       <button
                         onClick={confirmMultiplePayments}
@@ -521,7 +516,7 @@ export default function PayrollPage() {
                         >
                           <option value="">Tous les statuts</option>
                           {paymentStatuses.map((s) => (
-                            <option key={s} value={s}>{s}</option>
+                            <option key={s} value={s}>{getStatusLabel(s)}</option>
                           ))}
                         </select>
                       </div>
@@ -720,9 +715,10 @@ export default function PayrollPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Date de Paiement</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Date de Paiement *</label>
                 <input
                   type="date"
+                  required
                   value={paymentForm.payment_date}
                   onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
@@ -730,9 +726,10 @@ export default function PayrollPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Référence de Paiement</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Référence de Paiement *</label>
                 <input
                   type="text"
+                  required
                   value={paymentForm.payment_reference}
                   onChange={(e) => setPaymentForm({ ...paymentForm, payment_reference: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
@@ -740,8 +737,9 @@ export default function PayrollPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Méthode de Paiement</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Méthode de Paiement *</label>
                 <select
+                  required
                   value={paymentForm.payment_method}
                   onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
@@ -898,7 +896,7 @@ export default function PayrollPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Compte Bancaire</p>
-                    <p className="font-medium">{paymentToConfirm.bank_info}</p>
+                    <p className="font-medium">{paymentToConfirm.bank_info || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Référence</p>
@@ -1027,9 +1025,9 @@ export default function PayrollPage() {
                 {selectedPayroll.payment_status === 'en_attente' && (
                   <button
                     onClick={() => {
-                      setPaymentToConfirm(selectedPayroll);
+                      const payroll = selectedPayroll;
                       setSelectedPayroll(null);
-                      openPaymentModal(selectedPayroll);
+                      openPaymentModal(payroll);
                     }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
                   >

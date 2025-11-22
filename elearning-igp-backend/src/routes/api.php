@@ -14,6 +14,13 @@ use App\Http\Controllers\Api\Admin\CourseController;
 use App\Http\Controllers\Api\Admin\GroupController;
 use App\Http\Controllers\Api\Admin\ProgramController;
 use App\Http\Controllers\Api\Admin\FiliereController;
+use App\Http\Controllers\Api\Admin\ScheduleController;
+use App\Http\Controllers\Api\Admin\ExamController;
+use App\Http\Controllers\Api\Admin\AttendanceController;
+use App\Http\Controllers\Api\Admin\StudentDocumentController;
+use App\Http\Controllers\Api\Admin\PayrollController;
+use App\Http\Controllers\Api\Admin\SettingsController;
+
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -133,5 +140,44 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('documents/{id}/validate', [StudentDocumentController::class, 'validate']);
         Route::delete('documents/{id}', [StudentDocumentController::class, 'destroy']);
         Route::get('documents/{id}/download', [StudentDocumentController::class, 'download']);
+        // Payroll - Paie des Professeurs
+        Route::get('payrolls/stats', [PayrollController::class, 'stats']);
+        Route::get('payrolls', [PayrollController::class, 'index']);
+        Route::post('payrolls/generate', [PayrollController::class, 'generate']);
+        Route::put('payrolls/{id}', [PayrollController::class, 'update']);
+        Route::post('payrolls/{id}/pay', [PayrollController::class, 'confirmPayment']);
+        Route::post('payrolls/pay-multiple', [PayrollController::class, 'confirmMultiplePayments']);
+        Route::get('payrolls/history', [PayrollController::class, 'history']);
+        Route::get('payrolls/departments', [PayrollController::class, 'getDepartments']);
+         // Setting -  General
+        Route::prefix('settings')->group(function () {
+            // Setting - General
+            Route::get('general', [SettingsController::class, 'getGeneral']);
+            Route::put('general', [SettingsController::class, 'updateGeneral']);
+            Route::post('logo', [SettingsController::class, 'uploadLogo']);
+            
+            // Setting - Admins & Assistants
+            Route::get('admins', [SettingsController::class, 'getAdmins']);
+            Route::post('admins', [SettingsController::class, 'createAdmin']);
+            Route::put('admins/{id}', [SettingsController::class, 'updateAdmin']);
+            Route::delete('admins/{id}', [SettingsController::class, 'deleteAdmin']);
+            Route::patch('admins/{id}/toggle', [SettingsController::class, 'toggleAdminStatus']);
+            
+            // Setting - Roles
+            Route::get('roles', [SettingsController::class, 'getRoles']);
+            
+            // Setting - Security
+            Route::get('security', [SettingsController::class, 'getSecurity']);
+            Route::put('security', [SettingsController::class, 'updateSecurity']);
+             // Sessions & Logs (NOUVEAU)
+            Route::get('sessions/stats', [SettingsController::class, 'getSessionsStats']);
+            Route::get('sessions', [SettingsController::class, 'getSessions']);
+            Route::delete('sessions/all', [SettingsController::class, 'destroyAllSessions']);
+            Route::delete('sessions/{id}', [SettingsController::class, 'destroySession']);
+            Route::get('login-logs', [SettingsController::class, 'getLoginLogs']);
+            Route::get('login-attempts', [SettingsController::class, 'getLoginAttempts']);
+            Route::get('locked-users', [SettingsController::class, 'getLockedUsers']);
+            Route::post('users/{id}/unlock', [SettingsController::class, 'unlockUser']);
+        });
     });
 });

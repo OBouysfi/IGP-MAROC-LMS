@@ -5,11 +5,18 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
+        // S'assurer que les rôles existent
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $professorRole = Role::firstOrCreate(['name' => 'professor', 'guard_name' => 'web']);
+        $studentRole = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
+        $assistantRole = Role::firstOrCreate(['name' => 'assistant', 'guard_name' => 'web']);
+
         $admin = User::create([
             'first_name' => 'IGP',
             'last_name' => 'Maroc',
@@ -19,7 +26,7 @@ class AdminUserSeeder extends Seeder
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
-        $admin->assignRole('admin');
+        $admin->roles()->attach($adminRole->id);
 
         $professor = User::create([
             'first_name' => 'Othman',
@@ -30,7 +37,7 @@ class AdminUserSeeder extends Seeder
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
-        $professor->assignRole('professor');
+        $professor->roles()->attach($professorRole->id);
 
         $student = User::create([
             'first_name' => 'Othman',
@@ -41,7 +48,7 @@ class AdminUserSeeder extends Seeder
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
-        $student->assignRole('student');
+        $student->roles()->attach($studentRole->id);
 
         $assistant = User::create([
             'first_name' => 'Othman',
@@ -52,6 +59,6 @@ class AdminUserSeeder extends Seeder
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
-        $assistant->assignRole('assistant');
+        $assistant->roles()->attach($assistantRole->id);
     }
 }
