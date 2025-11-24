@@ -107,4 +107,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(StudentDocument::class, 'student_id');
     }
+
+    public function professor()
+    {
+        return $this->hasOne(Professor::class);
+    }
 }

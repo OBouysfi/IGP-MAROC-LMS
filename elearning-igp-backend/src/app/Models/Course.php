@@ -4,50 +4,63 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Course extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'name',
         'code',
+        'name',
         'description',
-        'program',
-        'level',
-        'filiere',
-        'professor_id',
-        'students_count',
-        'max_students',
-        'hours_total',
-        'hours_completed',
-        'start_date',
-        'end_date',
-        'schedule',
-        'status',
-        'materials',
-        'completion_rate',
         'credits',
-        'is_active',
+        'hours',
+        'hours_per_session',
+        'professor_id',
+        'group_id',
+        'filiere_id',
+        'program_id',
     ];
 
-    protected $casts = [
-        'schedule' => 'array',
-        'materials' => 'array',
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'is_active' => 'boolean',
-    ];
-
-    public function professor()
+    public function professor(): BelongsTo
     {
         return $this->belongsTo(Professor::class);
     }
 
-    public function students()
+    public function group(): BelongsTo
     {
-        return $this->belongsToMany(Student::class, 'course_student')
-                    ->withTimestamps();
+        return $this->belongsTo(Group::class);
+    }
+
+    public function filiere(): BelongsTo
+    {
+        return $this->belongsTo(Filiere::class);
+    }
+
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(Program::class);
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
+    public function resources(): HasMany
+    {
+        return $this->hasMany(CourseResource::class);
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function exams(): HasMany
+    {
+        return $this->hasMany(Exam::class);
     }
 }

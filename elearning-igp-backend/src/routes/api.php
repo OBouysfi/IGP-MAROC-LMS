@@ -181,3 +181,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
         });
     });
 });
+
+
+
+
+
+
+ // Professor routes
+ // routes/api.php - Ajouter
+
+Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
+    // Courses
+    Route::get('courses/stats', [App\Http\Controllers\Api\Professor\CourseController::class, 'stats']);
+    Route::get('courses', [App\Http\Controllers\Api\Professor\CourseController::class, 'index']);
+    Route::get('courses/{id}', [App\Http\Controllers\Api\Professor\CourseController::class, 'show']);
+    Route::post('courses/{id}/resources', [App\Http\Controllers\Api\Professor\CourseController::class, 'uploadResource']);
+    Route::delete('courses/{courseId}/resources/{resourceId}', [App\Http\Controllers\Api\Professor\CourseController::class, 'deleteResource']);
+});

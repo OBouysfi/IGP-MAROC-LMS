@@ -24,27 +24,51 @@ export default function LoginPage() {
     role: 'student',
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  // src/app/login/page.tsx - Modifier handleLogin
 
-    try {
-      const response = await authApi.login({
-        email: formData.email,
-        password: formData.password,
-        role: formData.role as 'student' | 'professor' | 'assistant',
-      });
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
 
-      if (response.requires_2fa) {
-        router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}`);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur de connexion');
-    } finally {
-      setIsLoading(false);
+  try {
+    const response = await authApi.login({
+      email: formData.email,
+      password: formData.password,
+      role: formData.role as 'student' | 'professor' | 'assistant',
+    });
+
+    // ========== SI 2FA EST REQUIS ==========
+    if (response.requires_2fa) {
+      router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}`);
+      return;
     }
-  };
+
+    // ========== SI PAS DE 2FA → CONNEXION DIRECTE ==========
+    // Stocker le token et les infos user
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+
+    // Rediriger selon le rôle
+    const role = response.user.role;
+    if (role === 'admin') {
+      router.push('/admin/dashboard');
+    } else if (role === 'professor') {
+      router.push('/professor/dashboard');
+    } else if (role === 'student') {
+      router.push('/student/dashboard');
+    } else if (role === 'assistant') {
+      router.push('/assistant/dashboard');
+    } else {
+      // Fallback
+      router.push('/dashboard');
+    }
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Erreur de connexion');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
