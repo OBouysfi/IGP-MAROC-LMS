@@ -218,7 +218,7 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     // Emploi du Temps
     Route::get('schedule/stats', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'stats']);
     Route::get('schedule', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'index']);
-      // Documents
+    // Documents
     Route::get('documents/stats', [App\Http\Controllers\Api\Professor\DocumentController::class, 'stats']);
     Route::get('documents/my-courses', [App\Http\Controllers\Api\Professor\DocumentController::class, 'myCourses']);
     Route::get('documents', [App\Http\Controllers\Api\Professor\DocumentController::class, 'index']);
@@ -226,4 +226,16 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::post('documents/{id}/toggle-share', [App\Http\Controllers\Api\Professor\DocumentController::class, 'toggleShare']);
     Route::get('documents/{id}/download', [App\Http\Controllers\Api\Professor\DocumentController::class, 'download']);
     Route::delete('documents/{id}', [App\Http\Controllers\Api\Professor\DocumentController::class, 'destroy']);
+    // Settings (NOUVEAU)
+    Route::get('settings/profile', [App\Http\Controllers\Api\Professor\SettingsController::class, 'getProfile']);
+    Route::put('settings/profile', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updateProfile']);
+    Route::post('settings/avatar', [App\Http\Controllers\Api\Professor\SettingsController::class, 'uploadAvatar']);
+    Route::post('settings/password', [App\Http\Controllers\Api\Professor\SettingsController::class, 'changePassword']);
+    Route::get('settings/notifications', [App\Http\Controllers\Api\Professor\SettingsController::class, 'getNotifications']);
+    Route::put('settings/notifications', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updateNotifications']);
+    Route::get('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'getPreferences']);
+    Route::put('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updatePreferences']);
+    Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Professor\SettingsController::class, 'toggle2FA']);
+    // Dashboard
+    Route::get('dashboard', [App\Http\Controllers\Api\Professor\DashboardController::class, 'index']);
 });

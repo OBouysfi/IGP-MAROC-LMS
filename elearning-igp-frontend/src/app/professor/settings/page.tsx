@@ -1,26 +1,29 @@
-// src/app/professor/settings/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { User, Lock, Bell, Mail, Globe, Camera, Save, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Lock, Bell, Mail, Globe, Camera, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
+import { professorSettingsApi, ProfileData, NotificationSettings, Preferences } from '@/lib/api/professor/settings';
+import Swal from 'sweetalert2';
 
 export default function ProfessorSettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [profile, setProfile] = useState({
-    first_name: 'Karim',
-    last_name: 'Benjelloun',
-    email: 'k.benjelloun@igp.edu',
-    phone: '+212 6 12 34 56 78',
-    department: 'Développement',
-    specialization: 'Développement Web & Mobile',
-    bio: 'Professeur spécialisé en développement web moderne avec plus de 10 ans d\'expérience. Expert React.js, Node.js et architectures cloud.',
-    linkedin: 'https://linkedin.com/in/karimbenjelloun',
-    github: 'https://github.com/kbenjelloun',
+  const [profile, setProfile] = useState<ProfileData>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    department: '',
+    specialization: '',
+    bio: '',
+    linkedin: '',
+    github: '',
   });
 
   const [security, setSecurity] = useState({
@@ -28,10 +31,9 @@ export default function ProfessorSettingsPage() {
     new_password: '',
     confirm_password: '',
     two_factor_enabled: false,
-    session_timeout: 30,
   });
 
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<NotificationSettings>({
     email_new_student: true,
     email_grade_reminder: true,
     email_session_reminder: true,
@@ -41,7 +43,7 @@ export default function ProfessorSettingsPage() {
     push_grade_deadline: true,
   });
 
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<Preferences>({
     language: 'fr',
     timezone: 'Africa/Casablanca',
     date_format: 'DD/MM/YYYY',
@@ -57,26 +59,196 @@ export default function ProfessorSettingsPage() {
     { id: 'preferences', name: 'Préférences', icon: Globe },
   ];
 
-  const handleSaveProfile = () => {
-    alert('Profil mis à jour avec succès!');
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [profileRes, notificationsRes, preferencesRes] = await Promise.all([
+        professorSettingsApi.getProfile(),
+        professorSettingsApi.getNotifications(),
+        professorSettingsApi.getPreferences(),
+      ]);
+      setProfile(profileRes.data.data);
+      setNotifications(notificationsRes.data.data);
+      setPreferences(preferencesRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        await professorSettingsApi.uploadAvatar(file);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Photo de profil mise à jour',
+          confirmButtonColor: '#0D529C',
+          timer: 2000,
+        });
+        fetchData();
+      } catch (error: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de l\'upload',
+          confirmButtonColor: '#0D529C',
+        });
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await professorSettingsApi.updateProfile(profile);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Profil mis à jour avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la mise à jour',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
     if (security.new_password !== security.confirm_password) {
-      alert('Les mots de passe ne correspondent pas!');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Les mots de passe ne correspondent pas',
+        confirmButtonColor: '#0D529C',
+      });
       return;
     }
-    alert('Mot de passe modifié avec succès!');
-    setSecurity({ ...security, current_password: '', new_password: '', confirm_password: '' });
+
+    try {
+      await professorSettingsApi.changePassword({
+        current_password: security.current_password,
+        new_password: security.new_password,
+        new_password_confirmation: security.confirm_password,
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Mot de passe modifié avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      setSecurity({ ...security, current_password: '', new_password: '', confirm_password: '' });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors du changement de mot de passe',
+        confirmButtonColor: '#0D529C',
+      });
+    }
   };
 
-  const handleSaveNotifications = () => {
-    alert('Préférences de notifications sauvegardées!');
+  const handleToggle2FA = async () => {
+    try {
+      await professorSettingsApi.toggle2FA();
+      setSecurity({ ...security, two_factor_enabled: !security.two_factor_enabled });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: security.two_factor_enabled ? '2FA désactivée' : '2FA activée',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de la modification',
+        confirmButtonColor: '#0D529C',
+      });
+    }
   };
 
-  const handleSavePreferences = () => {
-    alert('Préférences sauvegardées!');
+  const handleSaveNotifications = async () => {
+    setSaving(true);
+    try {
+      await professorSettingsApi.updateNotifications(notifications);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Préférences de notifications sauvegardées',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la sauvegarde',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleSavePreferences = async () => {
+    setSaving(true);
+    try {
+      await professorSettingsApi.updatePreferences(preferences);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Préférences sauvegardées',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la sauvegarde',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getInitials = () => {
+    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
 
   return (
     <ProfessorLayout>
@@ -87,7 +259,6 @@ export default function ProfessorSettingsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm">
-          {/* Tabs */}
           <div className="border-b border-gray-200">
             <div className="flex overflow-x-auto">
               {tabs.map((tab) => {
@@ -111,29 +282,33 @@ export default function ProfessorSettingsPage() {
           </div>
 
           <div className="p-6">
-            {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Informations Personnelles</h3>
                   <button
                     onClick={handleSaveProfile}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Enregistrer
                   </button>
                 </div>
 
-                {/* Avatar */}
                 <div className="flex items-center gap-6">
                   <div className="relative">
-                    <div className="w-24 h-24 bg-[#0D529C] rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                      KB
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-[#257035] text-white rounded-full flex items-center justify-center hover:bg-green-700 transition-colors">
+                    {profile.avatar ? (
+                      <img src={profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-24 h-24 bg-[#0D529C] rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                        {getInitials()}
+                      </div>
+                    )}
+                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#257035] text-white rounded-full flex items-center justify-center hover:bg-green-700 transition-colors cursor-pointer">
                       <Camera className="w-4 h-4" />
-                    </button>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                    </label>
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Photo de Profil</h4>
@@ -165,7 +340,6 @@ export default function ProfessorSettingsPage() {
                     <input
                       type="email"
                       value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent bg-gray-50"
                       disabled
                     />
@@ -185,7 +359,6 @@ export default function ProfessorSettingsPage() {
                     <input
                       type="text"
                       value={profile.department}
-                      onChange={(e) => setProfile({ ...profile, department: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent bg-gray-50"
                       disabled
                     />
@@ -237,14 +410,12 @@ export default function ProfessorSettingsPage() {
               </div>
             )}
 
-            {/* Security Tab */}
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Sécurité du Compte</h3>
                 </div>
 
-                {/* Change Password */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h4 className="font-bold text-gray-900 mb-4">Changer le Mot de Passe</h4>
                   <div className="space-y-4">
@@ -312,7 +483,6 @@ export default function ProfessorSettingsPage() {
                   </div>
                 </div>
 
-                {/* Two Factor Authentication */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -320,7 +490,7 @@ export default function ProfessorSettingsPage() {
                       <p className="text-sm text-gray-500">Ajoutez une couche de sécurité supplémentaire</p>
                     </div>
                     <button
-                      onClick={() => setSecurity({ ...security, two_factor_enabled: !security.two_factor_enabled })}
+                      onClick={handleToggle2FA}
                       className={`w-12 h-6 rounded-full transition-colors ${
                         security.two_factor_enabled ? 'bg-[#257035]' : 'bg-gray-300'
                       }`}
@@ -336,42 +506,23 @@ export default function ProfessorSettingsPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Session Timeout */}
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h4 className="font-bold text-gray-900 mb-4">Expiration de Session</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Déconnexion automatique après (minutes)</label>
-                    <select
-                      value={security.session_timeout}
-                      onChange={(e) => setSecurity({ ...security, session_timeout: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    >
-                      <option value={15}>15 minutes</option>
-                      <option value={30}>30 minutes</option>
-                      <option value={60}>1 heure</option>
-                      <option value={120}>2 heures</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Préférences de Notifications</h3>
                   <button
                     onClick={handleSaveNotifications}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Enregistrer
                   </button>
                 </div>
 
-                {/* Email Notifications */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Mail className="w-5 h-5 text-[#0D529C]" />
@@ -445,7 +596,6 @@ export default function ProfessorSettingsPage() {
                   </div>
                 </div>
 
-                {/* Push Notifications */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Bell className="w-5 h-5 text-[#0D529C]" />
@@ -505,16 +655,16 @@ export default function ProfessorSettingsPage() {
               </div>
             )}
 
-            {/* Preferences Tab */}
             {activeTab === 'preferences' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#0D529C]">Préférences Générales</h3>
                   <button
                     onClick={handleSavePreferences}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Enregistrer
                   </button>
                 </div>

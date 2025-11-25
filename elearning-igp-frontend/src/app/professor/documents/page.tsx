@@ -1,22 +1,10 @@
-// src/app/professor/documents/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { FileText, Upload, Download, Eye, Trash2, Search, Filter, FolderOpen, File, Video, Image, X, Plus, Clock, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Upload, Download, Eye, Trash2, Search, Filter, FolderOpen, File, Video, Image, X, Plus, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
-
-interface Document {
-  id: number;
-  name: string;
-  type: 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'video' | 'image' | 'zip';
-  size: string;
-  course: string;
-  course_code: string;
-  category: 'cours' | 'tp' | 'examen' | 'correction' | 'ressource';
-  uploaded_at: string;
-  downloads: number;
-  shared_with_students: boolean;
-}
+import { professorDocumentsApi, Document, DocumentsStats, CourseOption } from '@/lib/api/professor/documents';
+import Swal from 'sweetalert2';
 
 export default function ProfessorDocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,23 +12,20 @@ export default function ProfessorDocumentsPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [stats, setStats] = useState<DocumentsStats | null>(null);
+  const [myCourses, setMyCourses] = useState<CourseOption[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [newDocument, setNewDocument] = useState({
     name: '',
-    course: '',
+    course_id: 0,
     category: 'cours',
     shared_with_students: true,
   });
-
-  const myCourses = [
-    'React.js Avancé',
-    'Node.js & Express',
-    'Introduction au Web',
-    'JavaScript Moderne',
-    'Base de données NoSQL',
-  ];
 
   const categories = [
     { value: 'cours', label: 'Support de Cours' },
@@ -50,134 +35,174 @@ export default function ProfessorDocumentsPage() {
     { value: 'ressource', label: 'Ressource' },
   ];
 
-  const documents: Document[] = [
-    {
-      id: 1,
-      name: 'Introduction aux Hooks React',
-      type: 'pdf',
-      size: '2.5 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      category: 'cours',
-      uploaded_at: '2024-11-01',
-      downloads: 45,
-      shared_with_students: true,
-    },
-    {
-      id: 2,
-      name: 'TP - Context API et State Management',
-      type: 'pdf',
-      size: '1.8 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      category: 'tp',
-      uploaded_at: '2024-11-05',
-      downloads: 38,
-      shared_with_students: true,
-    },
-    {
-      id: 3,
-      name: 'Vidéo - Performance React',
-      type: 'video',
-      size: '150 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      category: 'ressource',
-      uploaded_at: '2024-11-08',
-      downloads: 22,
-      shared_with_students: true,
-    },
-    {
-      id: 4,
-      name: 'Partiel React - Novembre 2024',
-      type: 'pdf',
-      size: '500 KB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      category: 'examen',
-      uploaded_at: '2024-11-10',
-      downloads: 0,
-      shared_with_students: false,
-    },
-    {
-      id: 5,
-      name: 'Correction Partiel React',
-      type: 'pdf',
-      size: '1.2 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      category: 'correction',
-      uploaded_at: '2024-11-15',
-      downloads: 0,
-      shared_with_students: false,
-    },
-    {
-      id: 6,
-      name: 'Guide Express.js',
-      type: 'pdf',
-      size: '3.1 MB',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      category: 'cours',
-      uploaded_at: '2024-10-20',
-      downloads: 52,
-      shared_with_students: true,
-    },
-    {
-      id: 7,
-      name: 'TP - API REST avec JWT',
-      type: 'docx',
-      size: '900 KB',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      category: 'tp',
-      uploaded_at: '2024-11-02',
-      downloads: 48,
-      shared_with_students: true,
-    },
-    {
-      id: 8,
-      name: 'Présentation MongoDB',
-      type: 'pptx',
-      size: '5.2 MB',
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      category: 'cours',
-      uploaded_at: '2024-11-12',
-      downloads: 18,
-      shared_with_students: true,
-    },
-    {
-      id: 9,
-      name: 'Exercices JavaScript ES6+',
-      type: 'pdf',
-      size: '1.5 MB',
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      category: 'tp',
-      uploaded_at: '2024-11-08',
-      downloads: 35,
-      shared_with_students: true,
-    },
-    {
-      id: 10,
-      name: 'Projet Final - Consignes',
-      type: 'pdf',
-      size: '800 KB',
-      course: 'Introduction au Web',
-      course_code: 'DEV-WEB',
-      category: 'ressource',
-      uploaded_at: '2024-11-14',
-      downloads: 42,
-      shared_with_students: true,
-    },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const stats = {
-    total_documents: documents.length,
-    total_size: '167.5 MB',
-    shared_documents: documents.filter(d => d.shared_with_students).length,
-    total_downloads: documents.reduce((sum, d) => sum + d.downloads, 0),
+  useEffect(() => {
+    fetchDocuments();
+  }, [searchTerm, filterCourse, filterCategory, filterType]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [documentsRes, statsRes, coursesRes] = await Promise.all([
+        professorDocumentsApi.getDocuments(),
+        professorDocumentsApi.getStats(),
+        professorDocumentsApi.getMyCourses(),
+      ]);
+      setDocuments(documentsRes.data.data);
+      setStats(statsRes.data.data);
+      setMyCourses(coursesRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const documentsRes = await professorDocumentsApi.getDocuments({ 
+        search: searchTerm,
+        course: filterCourse, 
+        category: filterCategory,
+        type: filterType
+      });
+      setDocuments(documentsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      if (!newDocument.name) {
+        setNewDocument({ ...newDocument, name: e.target.files[0].name.split('.')[0] });
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!newDocument.name || !newDocument.course_id || !selectedFile) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Attention',
+        text: 'Veuillez remplir tous les champs obligatoires',
+        confirmButtonColor: '#0D529C',
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', newDocument.name);
+      formData.append('course_id', newDocument.course_id.toString());
+      formData.append('category', newDocument.category);
+      formData.append('shared_with_students', newDocument.shared_with_students ? '1' : '0');
+      formData.append('file', selectedFile);
+
+      await professorDocumentsApi.uploadDocument(formData);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Document uploadé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      setNewDocument({
+        name: '',
+        course_id: 0,
+        category: 'cours',
+        shared_with_students: true,
+      });
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de l\'upload',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleShare = async (docId: number) => {
+    try {
+      await professorDocumentsApi.toggleShare(docId);
+      fetchDocuments();
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Statut de partage modifié',
+        confirmButtonColor: '#0D529C',
+        timer: 1500,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de la modification',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const deleteDocument = async (docId: number) => {
+    const result = await Swal.fire({
+      title: 'Confirmer la suppression',
+      text: 'Êtes-vous sûr de vouloir supprimer ce document?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await professorDocumentsApi.deleteDocument(docId);
+      fetchData();
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Document supprimé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors de la suppression',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      const response = await professorDocumentsApi.downloadDocument(doc.id);
+      window.open(response.data.url, '_blank');
+    } catch (error) {
+      console.error('Error downloading:', error);
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -228,29 +253,15 @@ export default function ProfessorDocumentsPage() {
     }
   };
 
-  const filteredDocuments = documents.filter(doc => {
-    if (searchTerm && !doc.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    if (filterCourse && doc.course !== filterCourse) return false;
-    if (filterCategory && doc.category !== filterCategory) return false;
-    if (filterType && doc.type !== filterType) return false;
-    return true;
-  });
-
-  const handleUpload = () => {
-    setShowUploadModal(false);
-    alert('Document uploadé avec succès!');
-  };
-
-  const toggleShare = (docId: number) => {
-    // Logic to toggle sharing
-    alert('Partage modifié!');
-  };
-
-  const deleteDocument = (docId: number) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce document?')) {
-      alert('Document supprimé!');
-    }
-  };
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
 
   return (
     <ProfessorLayout>
@@ -260,7 +271,6 @@ export default function ProfessorDocumentsPage() {
           <p className="text-gray-500">Gérez vos supports de cours, TPs et ressources pédagogiques.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -269,7 +279,7 @@ export default function ProfessorDocumentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Total Documents</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total_documents}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.total_documents || 0}</p>
               </div>
             </div>
           </div>
@@ -281,7 +291,7 @@ export default function ProfessorDocumentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Espace Utilisé</p>
-                <p className="text-xl font-bold text-purple-500">{stats.total_size}</p>
+                <p className="text-xl font-bold text-purple-500">{stats?.total_size || '0 MB'}</p>
               </div>
             </div>
           </div>
@@ -293,7 +303,7 @@ export default function ProfessorDocumentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Partagés</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.shared_documents}</p>
+                <p className="text-xl font-bold text-[#257035]">{stats?.shared_documents || 0}</p>
               </div>
             </div>
           </div>
@@ -305,13 +315,12 @@ export default function ProfessorDocumentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Téléchargements</p>
-                <p className="text-xl font-bold text-orange-500">{stats.total_downloads}</p>
+                <p className="text-xl font-bold text-orange-500">{stats?.total_downloads || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Actions & Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex flex-col md:flex-row gap-4 flex-1">
@@ -332,7 +341,7 @@ export default function ProfessorDocumentsPage() {
               >
                 <option value="">Tous les cours</option>
                 {myCourses.map((course) => (
-                  <option key={course} value={course}>{course}</option>
+                  <option key={course.id} value={course.name}>{course.name}</option>
                 ))}
               </select>
               <select
@@ -376,10 +385,9 @@ export default function ProfessorDocumentsPage() {
           </div>
         </div>
 
-        {/* Documents Grid View */}
         {viewMode === 'grid' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredDocuments.map((doc) => (
+            {documents.map((doc) => (
               <div key={doc.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -423,11 +431,17 @@ export default function ProfessorDocumentsPage() {
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between">
-                  <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-[#0D529C] transition-colors">
+                  <button 
+                    onClick={() => doc.file_url && window.open(doc.file_url, '_blank')}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-[#0D529C] transition-colors"
+                  >
                     <Eye className="w-4 h-4" />
                     Voir
                   </button>
-                  <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-[#257035] transition-colors">
+                  <button
+                    onClick={() => handleDownload(doc)}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-[#257035] transition-colors"
+                  >
                     <Download className="w-4 h-4" />
                     Télécharger
                   </button>
@@ -444,7 +458,6 @@ export default function ProfessorDocumentsPage() {
           </div>
         )}
 
-        {/* Documents List View */}
         {viewMode === 'list' && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <table className="w-full">
@@ -461,7 +474,7 @@ export default function ProfessorDocumentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredDocuments.map((doc) => (
+                {documents.map((doc) => (
                   <tr key={doc.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
@@ -496,10 +509,16 @@ export default function ProfessorDocumentsPage() {
                       {new Date(doc.uploaded_at).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-blue-50 hover:text-[#0D529C] transition-colors">
+                      <button 
+                        onClick={() => doc.file_url && window.open(doc.file_url, '_blank')}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-blue-50 hover:text-[#0D529C] transition-colors"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-green-50 hover:text-[#257035] transition-colors">
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-green-50 hover:text-[#257035] transition-colors"
+                      >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
@@ -516,7 +535,7 @@ export default function ProfessorDocumentsPage() {
           </div>
         )}
 
-        {filteredDocuments.length === 0 && (
+        {documents.length === 0 && (
           <div className="bg-white rounded-lg p-12 text-center">
             <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">Aucun document trouvé</p>
@@ -538,7 +557,7 @@ export default function ProfessorDocumentsPage() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Nom du document</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Nom du document *</label>
                 <input
                   type="text"
                   value={newDocument.name}
@@ -548,20 +567,20 @@ export default function ProfessorDocumentsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Cours associé</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Cours associé *</label>
                 <select
-                  value={newDocument.course}
-                  onChange={(e) => setNewDocument({ ...newDocument, course: e.target.value })}
+                  value={newDocument.course_id}
+                  onChange={(e) => setNewDocument({ ...newDocument, course_id: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                 >
-                  <option value="">Sélectionner un cours</option>
+                  <option value={0}>Sélectionner un cours</option>
                   {myCourses.map((course) => (
-                    <option key={course} value={course}>{course}</option>
+                    <option key={course.id} value={course.id}>{course.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Catégorie</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Catégorie *</label>
                 <select
                   value={newDocument.category}
                   onChange={(e) => setNewDocument({ ...newDocument, category: e.target.value })}
@@ -573,12 +592,20 @@ export default function ProfessorDocumentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Fichier</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#0D529C] transition-colors cursor-pointer">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Fichier *</label>
+                <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#0D529C] transition-colors cursor-pointer block">
+                  <input
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.mp4,.avi,.mov,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                  />
                   <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 font-medium">Cliquez ou glissez un fichier ici</p>
+                  <p className="text-sm text-gray-600 font-medium">
+                    {selectedFile ? selectedFile.name : 'Cliquez ou glissez un fichier ici'}
+                  </p>
                   <p className="text-xs text-gray-400 mt-1">PDF, DOCX, PPTX, XLSX, MP4 (Max 200MB)</p>
-                </div>
+                </label>
               </div>
               <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                 <span className="text-sm text-gray-600">Partager avec les étudiants</span>
@@ -603,10 +630,20 @@ export default function ProfessorDocumentsPage() {
               </button>
               <button
                 onClick={handleUpload}
-                className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
+                disabled={uploading}
+                className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                <Upload className="w-4 h-4" />
-                Uploader
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Uploader
+                  </>
+                )}
               </button>
             </div>
           </div>

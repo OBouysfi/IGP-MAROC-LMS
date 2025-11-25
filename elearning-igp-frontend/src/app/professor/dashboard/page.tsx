@@ -1,13 +1,17 @@
 // src/app/professor/dashboard/page.tsx
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Users, ClipboardList, Video, Calendar, Clock, TrendingUp, AlertTriangle, CheckCircle, PlayCircle } from 'lucide-react';
+import { BookOpen, Users, ClipboardList, Video, Calendar, Clock, TrendingUp, AlertTriangle, CheckCircle, PlayCircle, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
+import { professorDashboardApi, DashboardData } from '@/lib/api/professor/dashboard';
+import Swal from 'sweetalert2';
 
 export default function ProfessorDashboard() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -22,49 +26,33 @@ export default function ProfessorDashboard() {
       const user = JSON.parse(userStr);
       if (user.role !== 'professor') {
         router.replace('/login');
+        return;
       }
     } catch (e) {
       router.replace('/login');
+      return;
     }
+
+    fetchDashboard();
   }, [router]);
-  const stats = {
-    total_courses: 5,
-    total_students: 125,
-    pending_grades: 3,
-    upcoming_sessions: 2,
-    hours_this_month: 48,
-    average_attendance: 92,
+
+  const fetchDashboard = async () => {
+    setLoading(true);
+    try {
+      const response = await professorDashboardApi.getDashboard();
+      setData(response.data.data);
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement du dashboard',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const todaySchedule = [
-    { id: 1, course: 'React.js Avancé', group: 'DEV-M2-A', time: '09:00 - 12:00', room: 'Salle A12', type: 'Cours' },
-    { id: 2, course: 'Node.js & Express', group: 'DEV-M2-A', time: '14:00 - 17:00', room: 'Lab Info 1', type: 'TP' },
-  ];
-
-  const upcomingSessions = [
-    { id: 1, course: 'React.js Avancé', date: '2024-11-18', time: '10:00', topic: 'Hooks avancés et Performance', students_registered: 22 },
-    { id: 2, course: 'Node.js & Express', date: '2024-11-20', time: '14:00', topic: 'API REST et Authentification', students_registered: 25 },
-  ];
-
-  const pendingTasks = [
-    { id: 1, task: 'Saisir les notes - Partiel React.js', deadline: '2024-11-20', priority: 'high' },
-    { id: 2, task: 'Préparer session live - Hooks avancés', deadline: '2024-11-18', priority: 'medium' },
-    { id: 3, task: 'Corriger devoirs Node.js', deadline: '2024-11-22', priority: 'low' },
-  ];
-
-  const recentActivity = [
-    { id: 1, action: '15 étudiants ont rejoint la session', course: 'React.js Avancé', time: 'Il y a 2h' },
-    { id: 2, action: 'Nouveau devoir soumis', course: 'Node.js & Express', time: 'Il y a 4h' },
-    { id: 3, action: 'Question posée sur le forum', course: 'Introduction Web', time: 'Il y a 6h' },
-  ];
-
-  const myCourses = [
-    { id: 1, name: 'React.js Avancé', code: 'DEV-REACT', students: 25, progress: 65, next_class: '2024-11-18' },
-    { id: 2, name: 'Node.js & Express', code: 'DEV-NODE', students: 28, progress: 50, next_class: '2024-11-19' },
-    { id: 3, name: 'Introduction Web', code: 'DEV-WEB', students: 35, progress: 80, next_class: '2024-11-20' },
-    { id: 4, name: 'JavaScript Moderne', code: 'DEV-JS', students: 30, progress: 45, next_class: '2024-11-21' },
-    { id: 5, name: 'Base de données NoSQL', code: 'DEV-NOSQL', students: 22, progress: 30, next_class: '2024-11-22' },
-  ];
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -84,16 +72,26 @@ export default function ProfessorDashboard() {
     }
   };
 
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
+
+  if (!data) return null;
+
   return (
     <ProfessorLayout>
       <div className="p-8">
-        {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Bonjour, Prof. Karim! 👋</h1>
+          <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Bonjour, Professeur! 👋</h1>
           <p className="text-gray-500">Voici un aperçu de votre activité aujourd'hui.</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -102,7 +100,7 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Mes Cours</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total_courses}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{data.stats.total_courses}</p>
               </div>
             </div>
           </div>
@@ -114,7 +112,7 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Étudiants</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.total_students}</p>
+                <p className="text-xl font-bold text-[#257035]">{data.stats.total_students}</p>
               </div>
             </div>
           </div>
@@ -126,7 +124,7 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Notes en attente</p>
-                <p className="text-xl font-bold text-orange-500">{stats.pending_grades}</p>
+                <p className="text-xl font-bold text-orange-500">{data.stats.pending_grades}</p>
               </div>
             </div>
           </div>
@@ -138,7 +136,7 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Sessions à venir</p>
-                <p className="text-xl font-bold text-purple-500">{stats.upcoming_sessions}</p>
+                <p className="text-xl font-bold text-purple-500">{data.stats.upcoming_sessions}</p>
               </div>
             </div>
           </div>
@@ -150,7 +148,7 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Heures ce mois</p>
-                <p className="text-xl font-bold text-[#C1272D]">{stats.hours_this_month}h</p>
+                <p className="text-xl font-bold text-[#C1272D]">{data.stats.hours_this_month}h</p>
               </div>
             </div>
           </div>
@@ -162,30 +160,27 @@ export default function ProfessorDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Présence moy.</p>
-                <p className="text-xl font-bold text-teal-500">{stats.average_attendance}%</p>
+                <p className="text-xl font-bold text-teal-500">{data.stats.average_attendance}%</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Schedule & Tasks */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Today's Schedule */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#0D529C]">Emploi du temps aujourd'hui</h3>
                 <span className="text-sm text-gray-500">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
               </div>
-              {todaySchedule.length === 0 ? (
+              {data.today_schedule.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                   <p>Pas de cours prévu aujourd'hui</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {todaySchedule.map((schedule) => (
+                  {data.today_schedule.map((schedule) => (
                     <div key={schedule.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border-l-4 border-[#0D529C]">
                       <div className="flex items-center gap-4">
                         <div className="text-center">
@@ -208,14 +203,13 @@ export default function ProfessorDashboard() {
               )}
             </div>
 
-            {/* My Courses */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#0D529C]">Mes Cours</h3>
-                <button className="text-sm text-[#0D529C] hover:underline">Voir tout</button>
+                <button onClick={() => router.push('/professor/courses')} className="text-sm text-[#0D529C] hover:underline">Voir tout</button>
               </div>
               <div className="space-y-4">
-                {myCourses.map((course) => (
+                {data.my_courses.map((course) => (
                   <div key={course.id} className="p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -239,16 +233,14 @@ export default function ProfessorDashboard() {
             </div>
           </div>
 
-          {/* Right Column - Sessions, Tasks, Activity */}
           <div className="space-y-6">
-            {/* Upcoming Live Sessions */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#0D529C]">Sessions Live à venir</h3>
-                <button className="text-sm text-[#0D529C] hover:underline">Planifier</button>
+                <button onClick={() => router.push('/professor/sessions')} className="text-sm text-[#0D529C] hover:underline">Planifier</button>
               </div>
               <div className="space-y-3">
-                {upcomingSessions.map((session) => (
+                {data.upcoming_sessions.map((session) => (
                   <div key={session.id} className="p-4 bg-purple-50 rounded-lg border border-purple-100">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium text-gray-900 text-sm">{session.course}</p>
@@ -269,16 +261,15 @@ export default function ProfessorDashboard() {
               </div>
             </div>
 
-            {/* Pending Tasks */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#0D529C]">Tâches en attente</h3>
                 <span className="w-6 h-6 bg-[#C1272D] text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {pendingTasks.length}
+                  {data.pending_tasks.length}
                 </span>
               </div>
               <div className="space-y-3">
-                {pendingTasks.map((task) => (
+                {data.pending_tasks.map((task) => (
                   <div key={task.id} className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-start justify-between mb-2">
                       <p className="text-sm font-medium text-gray-900">{task.task}</p>
@@ -297,11 +288,10 @@ export default function ProfessorDashboard() {
               </div>
             </div>
 
-            {/* Recent Activity */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#0D529C] mb-4">Activité récente</h3>
               <div className="space-y-4">
-                {recentActivity.map((activity) => (
+                {data.recent_activity.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
                       <CheckCircle className="w-4 h-4 text-[#257035]" />
