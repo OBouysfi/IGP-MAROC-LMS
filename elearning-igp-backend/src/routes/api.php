@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\Student\StudentCourseController;
 use App\Http\Controllers\Api\Student\StudentGradeController;
 use App\Http\Controllers\Api\Student\StudentSessionController;
 use App\Http\Controllers\Api\Student\StudentScheduleController;
+use App\Http\Controllers\Api\Student\DocumentController;
+use App\Http\Controllers\Api\Student\ResourceController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -261,4 +263,20 @@ Route::middleware(['auth:sanctum'])->prefix('student')->group(function () {
     Route::post('/sessions/{id}/join', [StudentSessionController::class, 'join']);
     // Mon Emploi du Temps
     Route::get('/schedule', [StudentScheduleController::class, 'index']);
+    // Document
+    Route::get('/documents', [DocumentController::class, 'index']);
+    Route::get('/documents/{id}/download', [DocumentController::class, 'download']);
+    // Ressource
+    Route::get('/resources', [ResourceController::class, 'index']);
+    // Settings
+    Route::get('settings/profile', [App\Http\Controllers\Api\Student\SettingsController::class, 'getProfile']);
+    Route::put('settings/profile', [App\Http\Controllers\Api\Student\SettingsController::class, 'updateProfile']);
+    Route::post('settings/avatar', [App\Http\Controllers\Api\Student\SettingsController::class, 'uploadAvatar']);
+    Route::post('settings/password', [App\Http\Controllers\Api\Student\SettingsController::class, 'changePassword']);
+    Route::get('settings/notifications', [App\Http\Controllers\Api\Student\SettingsController::class, 'getNotifications']);
+    Route::put('settings/notifications', [App\Http\Controllers\Api\Student\SettingsController::class, 'updateNotifications']);
+    Route::get('settings/preferences', [App\Http\Controllers\Api\Student\SettingsController::class, 'getPreferences']);
+    Route::put('settings/preferences', [App\Http\Controllers\Api\Student\SettingsController::class, 'updatePreferences']);
+    Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Student\SettingsController::class, 'toggle2FA']);
+
 });

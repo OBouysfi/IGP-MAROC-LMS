@@ -1,28 +1,30 @@
-// src/app/student/settings/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { User, Lock, Bell, Globe, Camera, Save, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Lock, Bell, Globe, Camera, Save, Eye, EyeOff, Loader2 } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
+import { studentSettingsApi, ProfileData, NotificationSettings, Preferences } from '@/lib/api/student/settings';
+import Swal from 'sweetalert2';
 
 export default function StudentSettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
+  const [loading, setLoading] = useState(true);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [profile, setProfile] = useState({
-    first_name: 'Ahmed',
-    last_name: 'Benali',
-    email: 'ahmed.benali@student.igp.edu',
-    phone: '+212 6 98 76 54 32',
-    date_of_birth: '2000-05-15',
-    address: 'Casablanca, Maroc',
-    group: 'DEV-M2-A',
-    student_id: 'STU-2024-001',
-    bio: 'Étudiant passionné par le développement web et les nouvelles technologies.',
+  const [profile, setProfile] = useState<ProfileData>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    date_of_birth: '',
+    address: '',
+    group: '',
+    student_id: '',
+    bio: '',
     linkedin: '',
-    github: 'https://github.com/ahmedbenali',
+    github: '',
   });
 
   const [security, setSecurity] = useState({
@@ -32,7 +34,7 @@ export default function StudentSettingsPage() {
     two_factor_enabled: false,
   });
 
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<NotificationSettings>({
     email_new_grade: true,
     email_new_resource: true,
     email_session_reminder: true,
@@ -43,13 +45,201 @@ export default function StudentSettingsPage() {
     push_announcements: true,
   });
 
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<Preferences>({
     language: 'fr',
     timezone: 'Africa/Casablanca',
     date_format: 'DD/MM/YYYY',
     theme: 'light',
     email_frequency: 'immediate',
   });
+
+  useEffect(() => {
+    fetchProfile();
+    fetchNotifications();
+    fetchPreferences();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await studentSettingsApi.getProfile();
+      setProfile(response.data.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await studentSettingsApi.getNotifications();
+      setNotifications(response.data.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const fetchPreferences = async () => {
+    try {
+      const response = await studentSettingsApi.getPreferences();
+      setPreferences(response.data.data);
+    } catch (error) {
+      console.error('Error fetching preferences:', error);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        await studentSettingsApi.uploadAvatar(file);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Photo de profil mise à jour',
+          confirmButtonColor: '#257035',
+          timer: 2000,
+        });
+        fetchProfile();
+      } catch (error: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de l\'upload',
+          confirmButtonColor: '#257035',
+        });
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      await studentSettingsApi.updateProfile(profile);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Profil mis à jour avec succès',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la mise à jour',
+        confirmButtonColor: '#257035',
+      });
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (security.new_password !== security.confirm_password) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Les mots de passe ne correspondent pas',
+        confirmButtonColor: '#257035',
+      });
+      return;
+    }
+    if (security.new_password.length < 8) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Le mot de passe doit contenir au moins 8 caractères',
+        confirmButtonColor: '#257035',
+      });
+      return;
+    }
+
+    try {
+      await studentSettingsApi.changePassword({
+        current_password: security.current_password,
+        new_password: security.new_password,
+        new_password_confirmation: security.confirm_password,
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Mot de passe modifié avec succès',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+      setSecurity({ ...security, current_password: '', new_password: '', confirm_password: '' });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors du changement de mot de passe',
+        confirmButtonColor: '#257035',
+      });
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    try {
+      await studentSettingsApi.updateNotifications(notifications);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Préférences de notifications sauvegardées',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la sauvegarde',
+        confirmButtonColor: '#257035',
+      });
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      await studentSettingsApi.updatePreferences(preferences);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Préférences sauvegardées',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la sauvegarde',
+        confirmButtonColor: '#257035',
+      });
+    }
+  };
+
+  const handleToggle2FA = async () => {
+    try {
+      await studentSettingsApi.toggle2FA();
+      setSecurity({ ...security, two_factor_enabled: !security.two_factor_enabled });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: security.two_factor_enabled ? '2FA désactivée' : '2FA activée',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur',
+        confirmButtonColor: '#257035',
+      });
+    }
+  };
+
+  const getInitials = () => {
+    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+  };
 
   const tabs = [
     { id: 'profile', name: 'Profil', icon: User },
@@ -58,30 +248,15 @@ export default function StudentSettingsPage() {
     { id: 'preferences', name: 'Préférences', icon: Globe },
   ];
 
-  const handleSaveProfile = () => {
-    alert('Profil mis à jour avec succès!');
-  };
-
-  const handleChangePassword = () => {
-    if (security.new_password !== security.confirm_password) {
-      alert('Les mots de passe ne correspondent pas!');
-      return;
-    }
-    if (security.new_password.length < 8) {
-      alert('Le mot de passe doit contenir au moins 8 caractères!');
-      return;
-    }
-    alert('Mot de passe modifié avec succès!');
-    setSecurity({ ...security, current_password: '', new_password: '', confirm_password: '' });
-  };
-
-  const handleSaveNotifications = () => {
-    alert('Préférences de notifications sauvegardées!');
-  };
-
-  const handleSavePreferences = () => {
-    alert('Préférences sauvegardées!');
-  };
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#257035]" />
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout>
@@ -92,7 +267,6 @@ export default function StudentSettingsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm">
-          {/* Tabs */}
           <div className="border-b border-gray-200">
             <div className="flex overflow-x-auto">
               {tabs.map((tab) => {
@@ -116,7 +290,6 @@ export default function StudentSettingsPage() {
           </div>
 
           <div className="p-6">
-            {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -130,15 +303,19 @@ export default function StudentSettingsPage() {
                   </button>
                 </div>
 
-                {/* Avatar */}
                 <div className="flex items-center gap-6">
                   <div className="relative">
-                    <div className="w-24 h-24 bg-[#257035] rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                      AB
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-[#0D529C] text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors">
+                    {profile.avatar ? (
+                      <img src={profile.avatar} alt="Avatar" className="w-24 h-24 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-24 h-24 bg-[#257035] rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                        {getInitials()}
+                      </div>
+                    )}
+                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#0D529C] text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors cursor-pointer">
                       <Camera className="w-4 h-4" />
-                    </button>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                    </label>
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Photo de Profil</h4>
@@ -146,7 +323,6 @@ export default function StudentSettingsPage() {
                   </div>
                 </div>
 
-                {/* Student Info (Read-only) */}
                 <div className="bg-green-50 rounded-lg p-4">
                   <h4 className="font-medium text-[#257035] mb-3">Informations Académiques</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -250,12 +426,10 @@ export default function StudentSettingsPage() {
               </div>
             )}
 
-            {/* Security Tab */}
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-[#257035]">Sécurité du Compte</h3>
 
-                {/* Change Password */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h4 className="font-bold text-gray-900 mb-4">Changer le Mot de Passe</h4>
                   <div className="space-y-4">
@@ -324,7 +498,6 @@ export default function StudentSettingsPage() {
                   </div>
                 </div>
 
-                {/* Two Factor */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div>
@@ -332,7 +505,7 @@ export default function StudentSettingsPage() {
                       <p className="text-sm text-gray-500">Sécurisez davantage votre compte</p>
                     </div>
                     <button
-                      onClick={() => setSecurity({ ...security, two_factor_enabled: !security.two_factor_enabled })}
+                      onClick={handleToggle2FA}
                       className={`w-12 h-6 rounded-full transition-colors ${
                         security.two_factor_enabled ? 'bg-[#257035]' : 'bg-gray-300'
                       }`}
@@ -351,7 +524,6 @@ export default function StudentSettingsPage() {
               </div>
             )}
 
-            {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -365,151 +537,66 @@ export default function StudentSettingsPage() {
                   </button>
                 </div>
 
-                {/* Email Notifications */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h4 className="font-bold text-gray-900 mb-4">Notifications par Email</h4>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Nouvelle note disponible</p>
-                        <p className="text-xs text-gray-500">Recevoir un email quand une note est publiée</p>
+                    {[
+                      { key: 'email_new_grade', label: 'Nouvelle note disponible', desc: 'Recevoir un email quand une note est publiée' },
+                      { key: 'email_new_resource', label: 'Nouvelle ressource', desc: 'Recevoir un email quand un document est ajouté' },
+                      { key: 'email_session_reminder', label: 'Rappel de session live', desc: 'Recevoir un rappel avant les sessions' },
+                      { key: 'email_deadline_reminder', label: 'Rappel de deadlines', desc: 'Recevoir un rappel avant les dates limites' },
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-700">{item.label}</p>
+                          <p className="text-xs text-gray-500">{item.desc}</p>
+                        </div>
+                        <button
+                          onClick={() => setNotifications({ ...notifications, [item.key]: !notifications[item.key as keyof NotificationSettings] })}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            notifications[item.key as keyof NotificationSettings] ? 'bg-[#257035]' : 'bg-gray-300'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                            notifications[item.key as keyof NotificationSettings] ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, email_new_grade: !notifications.email_new_grade })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.email_new_grade ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.email_new_grade ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Nouvelle ressource</p>
-                        <p className="text-xs text-gray-500">Recevoir un email quand un document est ajouté</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, email_new_resource: !notifications.email_new_resource })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.email_new_resource ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.email_new_resource ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Rappel de session live</p>
-                        <p className="text-xs text-gray-500">Recevoir un rappel avant les sessions</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, email_session_reminder: !notifications.email_session_reminder })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.email_session_reminder ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.email_session_reminder ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Rappel de deadlines</p>
-                        <p className="text-xs text-gray-500">Recevoir un rappel avant les dates limites</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, email_deadline_reminder: !notifications.email_deadline_reminder })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.email_deadline_reminder ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.email_deadline_reminder ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Push Notifications */}
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h4 className="font-bold text-gray-900 mb-4">Notifications Push</h4>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Nouvelle note</p>
-                        <p className="text-xs text-gray-500">Notification immédiate</p>
+                    {[
+                      { key: 'push_new_grade', label: 'Nouvelle note', desc: 'Notification immédiate' },
+                      { key: 'push_session_start', label: 'Début de session', desc: '10 min avant le début' },
+                      { key: 'push_new_document', label: 'Nouveau document', desc: 'Notification instantanée' },
+                      { key: 'push_announcements', label: 'Annonces importantes', desc: 'Communications de l\'administration' },
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-700">{item.label}</p>
+                          <p className="text-xs text-gray-500">{item.desc}</p>
+                        </div>
+                        <button
+                          onClick={() => setNotifications({ ...notifications, [item.key]: !notifications[item.key as keyof NotificationSettings] })}
+                          className={`w-12 h-6 rounded-full transition-colors ${
+                            notifications[item.key as keyof NotificationSettings] ? 'bg-[#257035]' : 'bg-gray-300'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
+                            notifications[item.key as keyof NotificationSettings] ? 'translate-x-6' : 'translate-x-0.5'
+                          }`} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, push_new_grade: !notifications.push_new_grade })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.push_new_grade ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.push_new_grade ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Début de session</p>
-                        <p className="text-xs text-gray-500">10 min avant le début</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, push_session_start: !notifications.push_session_start })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.push_session_start ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.push_session_start ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Nouveau document</p>
-                        <p className="text-xs text-gray-500">Notification instantanée</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, push_new_document: !notifications.push_new_document })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.push_new_document ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.push_new_document ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-700">Annonces importantes</p>
-                        <p className="text-xs text-gray-500">Communications de l'administration</p>
-                      </div>
-                      <button
-                        onClick={() => setNotifications({ ...notifications, push_announcements: !notifications.push_announcements })}
-                        className={`w-12 h-6 rounded-full transition-colors ${
-                          notifications.push_announcements ? 'bg-[#257035]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                          notifications.push_announcements ? 'translate-x-6' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Preferences Tab */}
             {activeTab === 'preferences' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">

@@ -1,206 +1,38 @@
-// src/app/student/resources/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { FileText, Download, ExternalLink, Search, BookOpen, Video, Link2, Globe, Star, Clock, Filter, Play } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, ExternalLink, Search, BookOpen, Video, Link2, Globe, Star, Clock, Play } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
-
-interface Resource {
-  id: number;
-  title: string;
-  description: string;
-  type: 'article' | 'video' | 'tutorial' | 'documentation' | 'tool' | 'book';
-  course: string;
-  course_code: string;
-  professor: string;
-  url: string;
-  is_external: boolean;
-  difficulty: 'débutant' | 'intermédiaire' | 'avancé';
-  duration: string;
-  rating: number;
-  views: number;
-  added_at: string;
-  tags: string[];
-}
+import { studentResourcesApi, StudentResource } from '@/lib/api/student/resources';
+import Swal from 'sweetalert2';
 
 export default function StudentResourcesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
+  const [resources, setResources] = useState<StudentResource[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const resources: Resource[] = [
-    {
-      id: 1,
-      title: 'React Documentation Officielle',
-      description: 'Documentation complète et officielle de React. Inclut les guides, tutoriels et références API.',
-      type: 'documentation',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      url: 'https://react.dev',
-      is_external: true,
-      difficulty: 'intermédiaire',
-      duration: '-',
-      rating: 5,
-      views: 156,
-      added_at: '2024-11-01',
-      tags: ['React', 'Documentation', 'Officiel'],
-    },
-    {
-      id: 2,
-      title: 'Tutoriel Hooks Personnalisés',
-      description: 'Apprenez à créer vos propres hooks React pour réutiliser la logique entre composants.',
-      type: 'tutorial',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      url: 'https://youtube.com/watch?v=example',
-      is_external: true,
-      difficulty: 'avancé',
-      duration: '45 min',
-      rating: 4.8,
-      views: 89,
-      added_at: '2024-11-10',
-      tags: ['React', 'Hooks', 'Custom Hooks'],
-    },
-    {
-      id: 3,
-      title: 'Express.js - Guide de Démarrage',
-      description: 'Guide complet pour démarrer avec Express.js. Configuration, routing et middlewares.',
-      type: 'article',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      url: 'https://expressjs.com/guide',
-      is_external: true,
-      difficulty: 'débutant',
-      duration: '20 min',
-      rating: 4.5,
-      views: 124,
-      added_at: '2024-11-05',
-      tags: ['Express', 'Node.js', 'Backend'],
-    },
-    {
-      id: 4,
-      title: 'MongoDB University - Cours Gratuit',
-      description: 'Formation gratuite MongoDB par les créateurs. Certification incluse.',
-      type: 'tutorial',
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      professor: 'Karim Benjelloun',
-      url: 'https://university.mongodb.com',
-      is_external: true,
-      difficulty: 'intermédiaire',
-      duration: '10h',
-      rating: 4.9,
-      views: 78,
-      added_at: '2024-11-08',
-      tags: ['MongoDB', 'NoSQL', 'Certification'],
-    },
-    {
-      id: 5,
-      title: 'JavaScript.info - Le Tutorial Moderne',
-      description: 'Le guide le plus complet sur JavaScript moderne. ES6+, async/await, et plus.',
-      type: 'book',
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      professor: 'Karim Benjelloun',
-      url: 'https://javascript.info',
-      is_external: true,
-      difficulty: 'débutant',
-      duration: '-',
-      rating: 5,
-      views: 203,
-      added_at: '2024-10-28',
-      tags: ['JavaScript', 'ES6', 'Tutorial'],
-    },
-    {
-      id: 6,
-      title: 'Docker - Vidéo Introduction',
-      description: 'Introduction complète à Docker : images, containers, volumes et networking.',
-      type: 'video',
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      url: 'https://youtube.com/watch?v=docker',
-      is_external: true,
-      difficulty: 'débutant',
-      duration: '1h30',
-      rating: 4.7,
-      views: 95,
-      added_at: '2024-11-12',
-      tags: ['Docker', 'DevOps', 'Containers'],
-    },
-    {
-      id: 7,
-      title: 'Postman - Outil de Test API',
-      description: 'Outil gratuit pour tester vos APIs REST. Indispensable pour le développement backend.',
-      type: 'tool',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      url: 'https://postman.com',
-      is_external: true,
-      difficulty: 'débutant',
-      duration: '-',
-      rating: 4.8,
-      views: 167,
-      added_at: '2024-11-03',
-      tags: ['API', 'Testing', 'Outil'],
-    },
-    {
-      id: 8,
-      title: 'Redux Toolkit - Guide Officiel',
-      description: 'La façon moderne de faire du Redux. Simplifiez votre state management.',
-      type: 'documentation',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      url: 'https://redux-toolkit.js.org',
-      is_external: true,
-      difficulty: 'avancé',
-      duration: '-',
-      rating: 4.6,
-      views: 112,
-      added_at: '2024-11-14',
-      tags: ['Redux', 'State Management', 'React'],
-    },
-    {
-      id: 9,
-      title: 'GitHub Actions - CI/CD Automatisé',
-      description: 'Automatisez vos workflows de développement avec GitHub Actions.',
-      type: 'article',
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      url: 'https://docs.github.com/actions',
-      is_external: true,
-      difficulty: 'intermédiaire',
-      duration: '30 min',
-      rating: 4.5,
-      views: 68,
-      added_at: '2024-11-11',
-      tags: ['GitHub', 'CI/CD', 'Automation'],
-    },
-    {
-      id: 10,
-      title: 'Microservices Patterns',
-      description: 'Les patterns essentiels pour architecturer des applications microservices.',
-      type: 'book',
-      course: 'Architecture Microservices',
-      course_code: 'DEV-MICRO',
-      professor: 'Omar Tazi',
-      url: 'https://microservices.io/patterns',
-      is_external: true,
-      difficulty: 'avancé',
-      duration: '-',
-      rating: 4.9,
-      views: 54,
-      added_at: '2024-11-09',
-      tags: ['Microservices', 'Architecture', 'Patterns'],
-    },
-  ];
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async () => {
+    try {
+      const data = await studentResourcesApi.getAll();
+      setResources(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les ressources',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const uniqueCourses = [...new Set(resources.map(r => r.course))];
   const resourceTypes = [
@@ -289,6 +121,16 @@ export default function StudentResourcesPage() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257035]"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout>
       <div className="p-8">
@@ -297,7 +139,6 @@ export default function StudentResourcesPage() {
           <p className="text-gray-500">Explorez les ressources complémentaires recommandées par vos professeurs.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -348,7 +189,6 @@ export default function StudentResourcesPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="relative flex-1">
@@ -394,7 +234,6 @@ export default function StudentResourcesPage() {
           </div>
         </div>
 
-        {/* Resources Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredResources.map((resource) => (
             <div key={resource.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">

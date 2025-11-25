@@ -1,189 +1,69 @@
-// src/app/student/documents/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { FileText, Download, Eye, Search, FolderOpen, File, Video, Image, Calendar, User, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, Eye, Search, FolderOpen, File, Video, Image, Calendar, User } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
-
-interface Document {
-  id: number;
-  name: string;
-  type: 'pdf' | 'docx' | 'pptx' | 'xlsx' | 'video' | 'image' | 'zip';
-  size: string;
-  course: string;
-  course_code: string;
-  professor: string;
-  category: 'cours' | 'tp' | 'correction' | 'ressource';
-  uploaded_at: string;
-  downloads: number;
-  is_new: boolean;
-}
+import { studentDocumentsApi, StudentDocument } from '@/lib/api/student/documents';
+import Swal from 'sweetalert2';
 
 export default function StudentDocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [filterType, setFilterType] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [documents, setDocuments] = useState<StudentDocument[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const documents: Document[] = [
-    {
-      id: 1,
-      name: 'Introduction aux Hooks React',
-      type: 'pdf',
-      size: '2.5 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      category: 'cours',
-      uploaded_at: '2024-11-15',
-      downloads: 45,
-      is_new: true,
-    },
-    {
-      id: 2,
-      name: 'TP - Context API et State Management',
-      type: 'pdf',
-      size: '1.8 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      category: 'tp',
-      uploaded_at: '2024-11-14',
-      downloads: 38,
-      is_new: true,
-    },
-    {
-      id: 3,
-      name: 'Vidéo - Performance React',
-      type: 'video',
-      size: '150 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      category: 'ressource',
-      uploaded_at: '2024-11-12',
-      downloads: 22,
-      is_new: false,
-    },
-    {
-      id: 4,
-      name: 'Correction Partiel React',
-      type: 'pdf',
-      size: '1.2 MB',
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      category: 'correction',
-      uploaded_at: '2024-11-10',
-      downloads: 52,
-      is_new: false,
-    },
-    {
-      id: 5,
-      name: 'Guide Express.js Complet',
-      type: 'pdf',
-      size: '3.1 MB',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      category: 'cours',
-      uploaded_at: '2024-11-08',
-      downloads: 48,
-      is_new: false,
-    },
-    {
-      id: 6,
-      name: 'TP - API REST avec JWT',
-      type: 'docx',
-      size: '900 KB',
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      category: 'tp',
-      uploaded_at: '2024-11-13',
-      downloads: 35,
-      is_new: true,
-    },
-    {
-      id: 7,
-      name: 'Présentation MongoDB',
-      type: 'pptx',
-      size: '5.2 MB',
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      professor: 'Karim Benjelloun',
-      category: 'cours',
-      uploaded_at: '2024-11-11',
-      downloads: 18,
-      is_new: false,
-    },
-    {
-      id: 8,
-      name: 'Exercices JavaScript ES6+',
-      type: 'pdf',
-      size: '1.5 MB',
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      professor: 'Karim Benjelloun',
-      category: 'tp',
-      uploaded_at: '2024-11-09',
-      downloads: 42,
-      is_new: false,
-    },
-    {
-      id: 9,
-      name: 'Docker - Guide Débutant',
-      type: 'pdf',
-      size: '2.8 MB',
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      category: 'cours',
-      uploaded_at: '2024-11-07',
-      downloads: 25,
-      is_new: false,
-    },
-    {
-      id: 10,
-      name: 'TP Docker Compose',
-      type: 'pdf',
-      size: '1.1 MB',
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      category: 'tp',
-      uploaded_at: '2024-11-14',
-      downloads: 20,
-      is_new: true,
-    },
-    {
-      id: 11,
-      name: 'Architecture Microservices - Slides',
-      type: 'pptx',
-      size: '4.5 MB',
-      course: 'Architecture Microservices',
-      course_code: 'DEV-MICRO',
-      professor: 'Omar Tazi',
-      category: 'cours',
-      uploaded_at: '2024-11-06',
-      downloads: 15,
-      is_new: false,
-    },
-    {
-      id: 12,
-      name: 'Correction TP MongoDB',
-      type: 'pdf',
-      size: '800 KB',
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      professor: 'Karim Benjelloun',
-      category: 'correction',
-      uploaded_at: '2024-11-05',
-      downloads: 30,
-      is_new: false,
-    },
-  ];
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const fetchDocuments = async () => {
+    try {
+      const data = await studentDocumentsApi.getAll();
+      setDocuments(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les documents',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadDocument = async (docId: number, docName: string) => {
+    try {
+      const blob = await studentDocumentsApi.download(docId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = docName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Téléchargement réussi',
+        text: 'Le document a été téléchargé',
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      
+      fetchDocuments();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de télécharger le document',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
 
   const uniqueCourses = [...new Set(documents.map(d => d.course))];
   const categories = [
@@ -191,6 +71,7 @@ export default function StudentDocumentsPage() {
     { value: 'tp', label: 'TP / Exercices' },
     { value: 'correction', label: 'Correction' },
     { value: 'ressource', label: 'Ressource' },
+    { value: 'examen', label: 'Examen' },
   ];
 
   const stats = {
@@ -232,6 +113,7 @@ export default function StudentDocumentsPage() {
       case 'tp': return 'bg-[#257035] text-white';
       case 'correction': return 'bg-purple-500 text-white';
       case 'ressource': return 'bg-orange-500 text-white';
+      case 'examen': return 'bg-red-500 text-white';
       default: return 'bg-gray-500 text-white';
     }
   };
@@ -242,6 +124,7 @@ export default function StudentDocumentsPage() {
       case 'tp': return 'TP';
       case 'correction': return 'Correction';
       case 'ressource': return 'Ressource';
+      case 'examen': return 'Examen';
       default: return category;
     }
   };
@@ -250,13 +133,18 @@ export default function StudentDocumentsPage() {
     if (searchTerm && !doc.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterCourse && doc.course !== filterCourse) return false;
     if (filterCategory && doc.category !== filterCategory) return false;
-    if (filterType && doc.type !== filterType) return false;
     return true;
   });
 
-  const downloadDocument = (docId: number) => {
-    alert('Téléchargement démarré!');
-  };
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257035]"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout>
@@ -266,7 +154,6 @@ export default function StudentDocumentsPage() {
           <p className="text-gray-500">Accédez aux supports de cours, TPs et ressources partagés par vos professeurs.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -317,7 +204,6 @@ export default function StudentDocumentsPage() {
           </div>
         </div>
 
-        {/* New Documents Alert */}
         {stats.new_documents > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-3">
@@ -329,7 +215,6 @@ export default function StudentDocumentsPage() {
           </div>
         )}
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex flex-col md:flex-row gap-4 flex-1">
@@ -385,7 +270,6 @@ export default function StudentDocumentsPage() {
           </div>
         </div>
 
-        {/* Documents Grid View */}
         {viewMode === 'grid' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredDocuments.map((doc) => (
@@ -433,7 +317,7 @@ export default function StudentDocumentsPage() {
                     Aperçu
                   </button>
                   <button
-                    onClick={() => downloadDocument(doc.id)}
+                    onClick={() => downloadDocument(doc.id, doc.name)}
                     className="flex items-center gap-1 text-sm text-white bg-[#257035] px-3 py-1 rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <Download className="w-4 h-4" />
@@ -445,7 +329,6 @@ export default function StudentDocumentsPage() {
           </div>
         )}
 
-        {/* Documents List View */}
         {viewMode === 'list' && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <table className="w-full">
@@ -505,7 +388,7 @@ export default function StudentDocumentsPage() {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => downloadDocument(doc.id)}
+                        onClick={() => downloadDocument(doc.id, doc.name)}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-[#257035] hover:bg-green-700 transition-colors ml-2"
                       >
                         <Download className="w-4 h-4" />
