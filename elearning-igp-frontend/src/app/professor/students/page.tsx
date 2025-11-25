@@ -1,196 +1,73 @@
 // src/app/professor/students/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Users, Search, Filter, Eye, Mail, X, BookOpen, TrendingUp, AlertTriangle, CheckCircle, Clock, Award } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Search, Eye, Mail, X, BookOpen, TrendingUp, AlertTriangle, CheckCircle, Award, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
-
-interface StudentGrade {
-  course: string;
-  grade: number;
-  type: string;
-  date: string;
-}
-
-interface StudentAttendance {
-  total_sessions: number;
-  attended: number;
-  absences: number;
-  rate: number;
-}
-
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  group: string;
-  filiere: string;
-  program: string;
-  photo: string;
-  courses: string[];
-  average: number;
-  attendance: StudentAttendance;
-  grades: StudentGrade[];
-  status: 'excellent' | 'good' | 'average' | 'at_risk';
-}
+import { professorStudentsApi, Student, StudentsStats } from '@/lib/api/professor/students';
+import Swal from 'sweetalert2';
 
 export default function ProfessorStudentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [stats, setStats] = useState<StudentsStats | null>(null);
+  const [myCourses, setMyCourses] = useState<string[]>([]);
+  const [myGroups, setMyGroups] = useState<string[]>([]);
 
-  const myCourses = [
-    'React.js Avancé',
-    'Node.js & Express',
-    'Introduction au Web',
-    'JavaScript Moderne',
-    'Base de données NoSQL',
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const myGroups = ['DEV-M2-A', 'DEV-L1-A', 'DEV-L2-A'];
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchStudents();
+    }, 500);
 
-  const students: Student[] = [
-    {
-      id: 1,
-      name: 'Ahmed Benali',
-      email: 'ahmed.benali@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      photo: '',
-      courses: ['React.js Avancé', 'Node.js & Express', 'Base de données NoSQL'],
-      average: 16.5,
-      attendance: { total_sessions: 24, attended: 22, absences: 2, rate: 92 },
-      grades: [
-        { course: 'React.js Avancé', grade: 17.5, type: 'Partiel', date: '2024-11-10' },
-        { course: 'Node.js & Express', grade: 15.5, type: 'TP', date: '2024-11-08' },
-        { course: 'Base de données NoSQL', grade: 16.0, type: 'Contrôle', date: '2024-11-05' },
-      ],
-      status: 'excellent',
-    },
-    {
-      id: 2,
-      name: 'Youssef Mansouri',
-      email: 'youssef.mansouri@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      photo: '',
-      courses: ['React.js Avancé', 'Node.js & Express', 'Base de données NoSQL'],
-      average: 14.8,
-      attendance: { total_sessions: 24, attended: 23, absences: 1, rate: 96 },
-      grades: [
-        { course: 'React.js Avancé', grade: 15.0, type: 'Partiel', date: '2024-11-10' },
-        { course: 'Node.js & Express', grade: 14.5, type: 'TP', date: '2024-11-08' },
-        { course: 'Base de données NoSQL', grade: 15.0, type: 'Contrôle', date: '2024-11-05' },
-      ],
-      status: 'good',
-    },
-    {
-      id: 3,
-      name: 'Khadija Amrani',
-      email: 'khadija.amrani@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      photo: '',
-      courses: ['React.js Avancé', 'Node.js & Express', 'Base de données NoSQL'],
-      average: 18.2,
-      attendance: { total_sessions: 24, attended: 24, absences: 0, rate: 100 },
-      grades: [
-        { course: 'React.js Avancé', grade: 19.0, type: 'Partiel', date: '2024-11-10' },
-        { course: 'Node.js & Express', grade: 17.5, type: 'TP', date: '2024-11-08' },
-        { course: 'Base de données NoSQL', grade: 18.0, type: 'Contrôle', date: '2024-11-05' },
-      ],
-      status: 'excellent',
-    },
-    {
-      id: 4,
-      name: 'Rachid Tazi',
-      email: 'rachid.tazi@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      photo: '',
-      courses: ['React.js Avancé', 'Node.js & Express', 'Base de données NoSQL'],
-      average: 9.5,
-      attendance: { total_sessions: 24, attended: 18, absences: 6, rate: 75 },
-      grades: [
-        { course: 'React.js Avancé', grade: 8.5, type: 'Partiel', date: '2024-11-10' },
-        { course: 'Node.js & Express', grade: 10.0, type: 'TP', date: '2024-11-08' },
-        { course: 'Base de données NoSQL', grade: 10.0, type: 'Contrôle', date: '2024-11-05' },
-      ],
-      status: 'at_risk',
-    },
-    {
-      id: 5,
-      name: 'Salma Idrissi',
-      email: 'salma.idrissi@student.igp.edu',
-      group: 'DEV-M2-A',
-      filiere: 'Développement',
-      program: 'Master',
-      photo: '',
-      courses: ['React.js Avancé', 'Node.js & Express', 'Base de données NoSQL'],
-      average: 15.0,
-      attendance: { total_sessions: 24, attended: 21, absences: 3, rate: 88 },
-      grades: [
-        { course: 'React.js Avancé', grade: 15.5, type: 'Partiel', date: '2024-11-10' },
-        { course: 'Node.js & Express', grade: 14.5, type: 'TP', date: '2024-11-08' },
-        { course: 'Base de données NoSQL', grade: 15.0, type: 'Contrôle', date: '2024-11-05' },
-      ],
-      status: 'good',
-    },
-    {
-      id: 6,
-      name: 'Omar Benjelloun',
-      email: 'omar.benjelloun@student.igp.edu',
-      group: 'DEV-L1-A',
-      filiere: 'Développement',
-      program: 'Licence',
-      photo: '',
-      courses: ['Introduction au Web'],
-      average: 13.5,
-      attendance: { total_sessions: 16, attended: 15, absences: 1, rate: 94 },
-      grades: [
-        { course: 'Introduction au Web', grade: 13.5, type: 'Partiel', date: '2024-11-12' },
-      ],
-      status: 'average',
-    },
-    {
-      id: 7,
-      name: 'Fatima Zahra',
-      email: 'fatima.zahra@student.igp.edu',
-      group: 'DEV-L2-A',
-      filiere: 'Développement',
-      program: 'Licence',
-      photo: '',
-      courses: ['JavaScript Moderne'],
-      average: 12.0,
-      attendance: { total_sessions: 12, attended: 10, absences: 2, rate: 83 },
-      grades: [
-        { course: 'JavaScript Moderne', grade: 12.0, type: 'Contrôle', date: '2024-11-14' },
-      ],
-      status: 'average',
-    },
-    {
-      id: 8,
-      name: 'Hassan Alaoui',
-      email: 'hassan.alaoui@student.igp.edu',
-      group: 'DEV-L1-A',
-      filiere: 'Développement',
-      program: 'Licence',
-      photo: '',
-      courses: ['Introduction au Web'],
-      average: 16.0,
-      attendance: { total_sessions: 16, attended: 16, absences: 0, rate: 100 },
-      grades: [
-        { course: 'Introduction au Web', grade: 16.0, type: 'Partiel', date: '2024-11-12' },
-      ],
-      status: 'excellent',
-    },
-  ];
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, selectedCourse, selectedGroup]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [studentsRes, statsRes, coursesRes, groupsRes] = await Promise.all([
+        professorStudentsApi.getStudents(),
+        professorStudentsApi.getStats(),
+        professorStudentsApi.getMyCourses(),
+        professorStudentsApi.getMyGroups(),
+      ]);
+      setStudents(studentsRes.data.data);
+      setStats(statsRes.data.data);
+      setMyCourses(coursesRes.data.data);
+      setMyGroups(groupsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudents = async () => {
+    try {
+      const studentsRes = await professorStudentsApi.getStudents({ 
+        search: searchTerm, 
+        course: selectedCourse, 
+        group: selectedGroup 
+      });
+      setStudents(studentsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -225,26 +102,15 @@ export default function ProfessorStudentsPage() {
     return 'text-[#C1272D]';
   };
 
-  const filteredStudents = students.filter(student => {
-    if (searchTerm && !student.name.toLowerCase().includes(searchTerm.toLowerCase()) && !student.email.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    if (selectedCourse && !student.courses.includes(selectedCourse)) {
-      return false;
-    }
-    if (selectedGroup && student.group !== selectedGroup) {
-      return false;
-    }
-    return true;
-  });
-
-  const stats = {
-    total: filteredStudents.length,
-    excellent: filteredStudents.filter(s => s.status === 'excellent').length,
-    good: filteredStudents.filter(s => s.status === 'good').length,
-    average: filteredStudents.filter(s => s.status === 'average').length,
-    at_risk: filteredStudents.filter(s => s.status === 'at_risk').length,
-  };
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
 
   return (
     <ProfessorLayout>
@@ -254,7 +120,6 @@ export default function ProfessorStudentsPage() {
           <p className="text-gray-500">Suivez la performance et la présence de vos étudiants.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -263,7 +128,7 @@ export default function ProfessorStudentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Total Étudiants</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.total || 0}</p>
               </div>
             </div>
           </div>
@@ -275,7 +140,7 @@ export default function ProfessorStudentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Excellents</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.excellent}</p>
+                <p className="text-xl font-bold text-[#257035]">{stats?.excellent || 0}</p>
               </div>
             </div>
           </div>
@@ -287,7 +152,7 @@ export default function ProfessorStudentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Bons</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.good}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.good || 0}</p>
               </div>
             </div>
           </div>
@@ -299,7 +164,7 @@ export default function ProfessorStudentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Moyens</p>
-                <p className="text-xl font-bold text-orange-500">{stats.average}</p>
+                <p className="text-xl font-bold text-orange-500">{stats?.average || 0}</p>
               </div>
             </div>
           </div>
@@ -311,16 +176,14 @@ export default function ProfessorStudentsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">À Risque</p>
-                <p className="text-xl font-bold text-[#C1272D]">{stats.at_risk}</p>
+                <p className="text-xl font-bold text-[#C1272D]">{stats?.at_risk || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6">
-            {/* Search & Filter */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -354,7 +217,6 @@ export default function ProfessorStudentsPage() {
               </select>
             </div>
 
-            {/* Students Table */}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -369,7 +231,7 @@ export default function ProfessorStudentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStudents.map((student) => (
+                  {students.map((student) => (
                     <tr key={student.id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
@@ -434,7 +296,7 @@ export default function ProfessorStudentsPage() {
               </table>
             </div>
 
-            {filteredStudents.length === 0 && (
+            {students.length === 0 && (
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Aucun étudiant trouvé</p>
@@ -444,12 +306,10 @@ export default function ProfessorStudentsPage() {
         </div>
       </div>
 
-      {/* Student Detail Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl">
+            <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-[#0D529C] font-bold text-xl">
@@ -476,7 +336,6 @@ export default function ProfessorStudentsPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Performance Summary */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold text-[#0D529C]">{selectedStudent.average.toFixed(1)}</p>
@@ -496,7 +355,6 @@ export default function ProfessorStudentsPage() {
                 </div>
               </div>
 
-              {/* Courses */}
               <div className="bg-gray-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#0D529C] mb-4">Cours suivis avec vous</h3>
                 <div className="flex flex-wrap gap-2">
@@ -509,7 +367,6 @@ export default function ProfessorStudentsPage() {
                 </div>
               </div>
 
-              {/* Grades History */}
               <div className="bg-blue-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#0D529C] mb-4">Historique des Notes</h3>
                 <div className="space-y-3">
@@ -527,7 +384,6 @@ export default function ProfessorStudentsPage() {
                 </div>
               </div>
 
-              {/* Attendance Details */}
               <div className="bg-green-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#257035] mb-4">Détails de Présence</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -562,7 +418,6 @@ export default function ProfessorStudentsPage() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center justify-end gap-2">
                 <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   <Mail className="w-4 h-4" />

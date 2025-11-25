@@ -1,34 +1,10 @@
-// src/app/professor/grades/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { ClipboardList, Search, Save, CheckCircle, AlertTriangle, X, Users, BookOpen, Calendar, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ClipboardList, Search, Save, CheckCircle, AlertTriangle, X, Calendar, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
-
-interface StudentGrade {
-  id: number;
-  student_name: string;
-  student_email: string;
-  grade: number | null;
-  comment: string;
-  status: 'saved' | 'pending' | 'empty';
-}
-
-interface Exam {
-  id: number;
-  course: string;
-  course_code: string;
-  group: string;
-  type: 'partiel' | 'final' | 'controle' | 'tp' | 'projet';
-  date: string;
-  max_grade: number;
-  coefficient: number;
-  deadline: string;
-  status: 'en_attente' | 'en_cours' | 'terminé' | 'validé';
-  total_students: number;
-  graded_students: number;
-  students: StudentGrade[];
-}
+import { professorGradesApi, Exam, GradesStats, GradeInput } from '@/lib/api/professor/grades';
+import Swal from 'sweetalert2';
 
 export default function ProfessorGradesPage() {
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -36,106 +12,161 @@ export default function ProfessorGradesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCourse, setFilterCourse] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [stats, setStats] = useState<GradesStats | null>(null);
+  const [myCourses, setMyCourses] = useState<string[]>([]);
   const [grades, setGrades] = useState<{ [key: number]: { grade: number | null; comment: string } }>({});
   const [hasChanges, setHasChanges] = useState(false);
 
-  const myCourses = [
-    'React.js Avancé',
-    'Node.js & Express',
-    'Introduction au Web',
-    'JavaScript Moderne',
-    'Base de données NoSQL',
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const exams: Exam[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      group: 'DEV-M2-A',
-      type: 'partiel',
-      date: '2024-11-10',
-      max_grade: 20,
-      coefficient: 2,
-      deadline: '2024-11-20',
-      status: 'en_cours',
-      total_students: 25,
-      graded_students: 18,
-      students: [
-        { id: 1, student_name: 'Ahmed Benali', student_email: 'ahmed.benali@student.igp.edu', grade: 17.5, comment: 'Excellent travail', status: 'saved' },
-        { id: 2, student_name: 'Youssef Mansouri', student_email: 'youssef.mansouri@student.igp.edu', grade: 15.0, comment: '', status: 'saved' },
-        { id: 3, student_name: 'Khadija Amrani', student_email: 'khadija.amrani@student.igp.edu', grade: 19.0, comment: 'Travail exceptionnel', status: 'saved' },
-        { id: 4, student_name: 'Rachid Tazi', student_email: 'rachid.tazi@student.igp.edu', grade: null, comment: '', status: 'empty' },
-        { id: 5, student_name: 'Salma Idrissi', student_email: 'salma.idrissi@student.igp.edu', grade: 15.5, comment: '', status: 'saved' },
-        { id: 6, student_name: 'Mohamed Alaoui', student_email: 'mohamed.alaoui@student.igp.edu', grade: null, comment: '', status: 'empty' },
-        { id: 7, student_name: 'Fatima Zahra', student_email: 'fatima.zahra@student.igp.edu', grade: 14.0, comment: '', status: 'saved' },
-      ],
-    },
-    {
-      id: 2,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      group: 'DEV-M2-A',
-      type: 'tp',
-      date: '2024-11-08',
-      max_grade: 20,
-      coefficient: 1,
-      deadline: '2024-11-18',
-      status: 'en_attente',
-      total_students: 28,
-      graded_students: 0,
-      students: [
-        { id: 8, student_name: 'Ahmed Benali', student_email: 'ahmed.benali@student.igp.edu', grade: null, comment: '', status: 'empty' },
-        { id: 9, student_name: 'Youssef Mansouri', student_email: 'youssef.mansouri@student.igp.edu', grade: null, comment: '', status: 'empty' },
-        { id: 10, student_name: 'Khadija Amrani', student_email: 'khadija.amrani@student.igp.edu', grade: null, comment: '', status: 'empty' },
-      ],
-    },
-    {
-      id: 3,
-      course: 'Introduction au Web',
-      course_code: 'DEV-WEB',
-      group: 'DEV-L1-A',
-      type: 'controle',
-      date: '2024-11-12',
-      max_grade: 20,
-      coefficient: 1,
-      deadline: '2024-11-22',
-      status: 'terminé',
-      total_students: 35,
-      graded_students: 35,
-      students: [],
-    },
-    {
-      id: 4,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      group: 'DEV-L2-A',
-      type: 'projet',
-      date: '2024-11-15',
-      max_grade: 20,
-      coefficient: 3,
-      deadline: '2024-11-25',
-      status: 'en_attente',
-      total_students: 30,
-      graded_students: 0,
-      students: [],
-    },
-    {
-      id: 5,
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      group: 'DEV-M2-A',
-      type: 'final',
-      date: '2024-12-05',
-      max_grade: 20,
-      coefficient: 3,
-      deadline: '2024-12-15',
-      status: 'en_attente',
-      total_students: 22,
-      graded_students: 0,
-      students: [],
-    },
-  ];
+  useEffect(() => {
+    fetchExams();
+  }, [filterCourse, filterStatus]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [examsRes, statsRes, coursesRes] = await Promise.all([
+        professorGradesApi.getExams(),
+        professorGradesApi.getStats(),
+        professorGradesApi.getMyCourses(),
+      ]);
+      setExams(examsRes.data.data);
+      setStats(statsRes.data.data);
+      setMyCourses(coursesRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExams = async () => {
+    try {
+      const examsRes = await professorGradesApi.getExams({ 
+        course: filterCourse, 
+        status: filterStatus 
+      });
+      setExams(examsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching exams:', error);
+    }
+  };
+
+  const openGradingModal = (exam: Exam) => {
+    setSelectedExam(exam);
+    const initialGrades: { [key: number]: { grade: number | null; comment: string } } = {};
+    exam.students.forEach(student => {
+      initialGrades[student.id] = { grade: student.grade, comment: student.comment };
+    });
+    setGrades(initialGrades);
+    setHasChanges(false);
+    setShowGradingModal(true);
+  };
+
+  const updateGrade = (studentId: number, field: 'grade' | 'comment', value: number | string | null) => {
+    setGrades(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [field]: value,
+      },
+    }));
+    setHasChanges(true);
+  };
+
+  const saveGrades = async () => {
+    if (!selectedExam) return;
+
+    const gradesArray: GradeInput[] = Object.entries(grades).map(([studentId, data]) => ({
+      student_id: parseInt(studentId),
+      grade: data.grade,
+      comment: data.comment,
+    }));
+
+    setSaving(true);
+    try {
+      await professorGradesApi.saveGrades(selectedExam.id, gradesArray);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Notes enregistrées avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      setHasChanges(false);
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de l\'enregistrement',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitGrades = async () => {
+    if (!selectedExam) return;
+
+    const allGraded = Object.values(grades).every(g => g.grade !== null && g.grade !== undefined);
+    
+    if (!allGraded) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Attention',
+        text: 'Toutes les notes doivent être saisies avant la soumission',
+        confirmButtonColor: '#0D529C',
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Confirmer la soumission',
+      text: 'Voulez-vous vraiment soumettre ces notes pour validation ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#257035',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Soumettre',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await professorGradesApi.submitGrades(selectedExam.id);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Notes soumises pour validation',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      setShowGradingModal(false);
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la soumission',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -187,51 +218,6 @@ export default function ProfessorGradesPage() {
     return 'bg-red-50 text-[#C1272D]';
   };
 
-  const openGradingModal = (exam: Exam) => {
-    setSelectedExam(exam);
-    const initialGrades: { [key: number]: { grade: number | null; comment: string } } = {};
-    exam.students.forEach(student => {
-      initialGrades[student.id] = { grade: student.grade, comment: student.comment };
-    });
-    setGrades(initialGrades);
-    setHasChanges(false);
-    setShowGradingModal(true);
-  };
-
-  const updateGrade = (studentId: number, field: 'grade' | 'comment', value: number | string | null) => {
-    setGrades(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        [field]: value,
-      },
-    }));
-    setHasChanges(true);
-  };
-
-  const saveGrades = () => {
-    setHasChanges(false);
-    alert('Notes enregistrées avec succès!');
-  };
-
-  const submitGrades = () => {
-    setShowGradingModal(false);
-    alert('Notes soumises pour validation!');
-  };
-
-  const filteredExams = exams.filter(exam => {
-    if (filterCourse && exam.course !== filterCourse) return false;
-    if (filterStatus && exam.status !== filterStatus) return false;
-    return true;
-  });
-
-  const stats = {
-    total_exams: exams.length,
-    pending: exams.filter(e => e.status === 'en_attente').length,
-    in_progress: exams.filter(e => e.status === 'en_cours').length,
-    completed: exams.filter(e => e.status === 'terminé' || e.status === 'validé').length,
-  };
-
   const getDaysRemaining = (deadline: string) => {
     const today = new Date();
     const deadlineDate = new Date(deadline);
@@ -239,6 +225,16 @@ export default function ProfessorGradesPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
+
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
 
   return (
     <ProfessorLayout>
@@ -248,7 +244,6 @@ export default function ProfessorGradesPage() {
           <p className="text-gray-500">Gérez et saisissez les notes de vos examens et évaluations.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -257,7 +252,7 @@ export default function ProfessorGradesPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Total Examens</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total_exams}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.total_exams || 0}</p>
               </div>
             </div>
           </div>
@@ -269,7 +264,7 @@ export default function ProfessorGradesPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">En Attente</p>
-                <p className="text-xl font-bold text-orange-500">{stats.pending}</p>
+                <p className="text-xl font-bold text-orange-500">{stats?.pending || 0}</p>
               </div>
             </div>
           </div>
@@ -281,7 +276,7 @@ export default function ProfessorGradesPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">En Cours</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.in_progress}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.in_progress || 0}</p>
               </div>
             </div>
           </div>
@@ -293,13 +288,12 @@ export default function ProfessorGradesPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Terminés</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.completed}</p>
+                <p className="text-xl font-bold text-[#257035]">{stats?.completed || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <select
@@ -326,9 +320,8 @@ export default function ProfessorGradesPage() {
           </div>
         </div>
 
-        {/* Exams List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredExams.map((exam) => {
+          {exams.map((exam) => {
             const daysRemaining = getDaysRemaining(exam.deadline);
             const progressPercent = exam.total_students > 0 ? (exam.graded_students / exam.total_students) * 100 : 0;
 
@@ -429,7 +422,7 @@ export default function ProfessorGradesPage() {
           })}
         </div>
 
-        {filteredExams.length === 0 && (
+        {exams.length === 0 && (
           <div className="bg-white rounded-lg p-12 text-center">
             <ClipboardList className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">Aucun examen trouvé</p>
@@ -437,11 +430,10 @@ export default function ProfessorGradesPage() {
         )}
       </div>
 
-      {/* Grading Modal */}
       {showGradingModal && selectedExam && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="sticky top-0 bg-[#0D529C] text-white p-6 flex items-center justify-between">
+            <div className="sticky top-0 bg-[#0D529C] text-white p-6 flex items-center justify-between z-10">
               <div>
                 <h2 className="text-xl font-bold">{selectedExam.course}</h2>
                 <p className="text-blue-200">
@@ -561,15 +553,24 @@ export default function ProfessorGradesPage() {
                 </button>
                 <button
                   onClick={saveGrades}
-                  disabled={!hasChanges}
+                  disabled={!hasChanges || saving}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    hasChanges
+                    hasChanges && !saving
                       ? 'bg-[#0D529C] text-white hover:bg-blue-700'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  <Save className="w-4 h-4" />
-                  Enregistrer
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Enregistrer
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={submitGrades}

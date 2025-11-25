@@ -197,4 +197,15 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::get('courses/{id}', [App\Http\Controllers\Api\Professor\CourseController::class, 'show']);
     Route::post('courses/{id}/resources', [App\Http\Controllers\Api\Professor\CourseController::class, 'uploadResource']);
     Route::delete('courses/{courseId}/resources/{resourceId}', [App\Http\Controllers\Api\Professor\CourseController::class, 'deleteResource']);
+    // Students
+    Route::get('students/stats', [App\Http\Controllers\Api\Professor\StudentController::class, 'stats']);
+    Route::get('students/my-courses', [App\Http\Controllers\Api\Professor\StudentController::class, 'myCourses']);
+    Route::get('students/my-groups', [App\Http\Controllers\Api\Professor\StudentController::class, 'myGroups']);
+    Route::get('students', [App\Http\Controllers\Api\Professor\StudentController::class, 'index']);
+     // Grades
+    Route::get('grades/stats', [App\Http\Controllers\Api\Professor\GradeController::class, 'stats']);
+    Route::get('grades/my-courses', [App\Http\Controllers\Api\Professor\GradeController::class, 'myCourses']);
+    Route::get('grades', [App\Http\Controllers\Api\Professor\GradeController::class, 'index']);
+    Route::post('grades/{examId}/save', [App\Http\Controllers\Api\Professor\GradeController::class, 'saveGrades']);
+    Route::post('grades/{examId}/submit', [App\Http\Controllers\Api\Professor\GradeController::class, 'submitGrades']);
 });
