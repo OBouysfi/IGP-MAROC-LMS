@@ -1,29 +1,59 @@
-// src/app/professor/schedule/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, BookOpen, Video } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight, BookOpen, Video, Loader2 } from 'lucide-react';
 import ProfessorLayout from '@/components/layouts/ProfessorLayout';
-
-interface ScheduleEvent {
-  id: number;
-  course: string;
-  course_code: string;
-  group: string;
-  type: 'cours' | 'tp' | 'td' | 'examen' | 'session_live';
-  day: string;
-  start_time: string;
-  end_time: string;
-  room: string;
-  students_count: number;
-}
+import { professorScheduleApi, ScheduleEvent, ScheduleStats } from '@/lib/api/professor/schedule';
+import Swal from 'sweetalert2';
 
 export default function ProfessorSchedulePage() {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState<'week' | 'list'>('week');
+  const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+  const [stats, setStats] = useState<ScheduleStats | null>(null);
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [currentWeek]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [scheduleRes, statsRes] = await Promise.all([
+        professorScheduleApi.getSchedule({ week_offset: currentWeek }),
+        professorScheduleApi.getStats(),
+      ]);
+      setSchedule(scheduleRes.data.data);
+      setStats(statsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#0D529C',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSchedule = async () => {
+    try {
+      const scheduleRes = await professorScheduleApi.getSchedule({ week_offset: currentWeek });
+      setSchedule(scheduleRes.data.data);
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
+    }
+  };
 
   const getWeekDates = (weekOffset: number) => {
     const today = new Date();
@@ -42,105 +72,6 @@ export default function ProfessorSchedulePage() {
   };
 
   const weekDates = getWeekDates(currentWeek);
-
-  const schedule: ScheduleEvent[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      group: 'DEV-M2-A',
-      type: 'cours',
-      day: 'Lundi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Salle A12',
-      students_count: 25,
-    },
-    {
-      id: 2,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      group: 'DEV-M2-A',
-      type: 'tp',
-      day: 'Mardi',
-      start_time: '14:00',
-      end_time: '17:00',
-      room: 'Lab Info 1',
-      students_count: 28,
-    },
-    {
-      id: 3,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      group: 'DEV-M2-A',
-      type: 'cours',
-      day: 'Mercredi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Salle A12',
-      students_count: 25,
-    },
-    {
-      id: 4,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      group: 'DEV-L2-A',
-      type: 'cours',
-      day: 'Mercredi',
-      start_time: '14:00',
-      end_time: '18:00',
-      room: 'Salle C5',
-      students_count: 30,
-    },
-    {
-      id: 5,
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      group: 'DEV-M2-A',
-      type: 'tp',
-      day: 'Jeudi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Lab Info 2',
-      students_count: 22,
-    },
-    {
-      id: 6,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      group: 'DEV-M2-A',
-      type: 'td',
-      day: 'Jeudi',
-      start_time: '14:00',
-      end_time: '16:00',
-      room: 'Salle B8',
-      students_count: 28,
-    },
-    {
-      id: 7,
-      course: 'Introduction au Web',
-      course_code: 'DEV-WEB',
-      group: 'DEV-L1-A',
-      type: 'cours',
-      day: 'Vendredi',
-      start_time: '09:00',
-      end_time: '13:00',
-      room: 'Amphi B',
-      students_count: 35,
-    },
-    {
-      id: 8,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      group: 'DEV-M2-A',
-      type: 'session_live',
-      day: 'Vendredi',
-      start_time: '16:00',
-      end_time: '17:30',
-      room: 'En ligne',
-      students_count: 25,
-    },
-  ];
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -191,22 +122,21 @@ export default function ProfessorSchedulePage() {
     return duration * 60;
   };
 
-  const stats = {
-    total_hours: schedule.reduce((sum, event) => {
-      const start = parseInt(event.start_time.split(':')[0]);
-      const end = parseInt(event.end_time.split(':')[0]);
-      return sum + (end - start);
-    }, 0),
-    total_courses: new Set(schedule.map(s => s.course)).size,
-    total_groups: new Set(schedule.map(s => s.group)).size,
-    sessions_this_week: schedule.length,
-  };
-
   const todayEvents = schedule.filter(event => {
     const today = new Date();
     const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     return event.day === dayNames[today.getDay()];
   });
+
+  if (loading) {
+    return (
+      <ProfessorLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D529C]" />
+        </div>
+      </ProfessorLayout>
+    );
+  }
 
   return (
     <ProfessorLayout>
@@ -216,7 +146,6 @@ export default function ProfessorSchedulePage() {
           <p className="text-gray-500">Consultez votre planning de cours hebdomadaire.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -225,7 +154,7 @@ export default function ProfessorSchedulePage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Heures/Semaine</p>
-                <p className="text-xl font-bold text-[#0D529C]">{stats.total_hours}h</p>
+                <p className="text-xl font-bold text-[#0D529C]">{stats?.total_hours || 0}h</p>
               </div>
             </div>
           </div>
@@ -237,7 +166,7 @@ export default function ProfessorSchedulePage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Cours</p>
-                <p className="text-xl font-bold text-[#257035]">{stats.total_courses}</p>
+                <p className="text-xl font-bold text-[#257035]">{stats?.total_courses || 0}</p>
               </div>
             </div>
           </div>
@@ -249,7 +178,7 @@ export default function ProfessorSchedulePage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Groupes</p>
-                <p className="text-xl font-bold text-purple-500">{stats.total_groups}</p>
+                <p className="text-xl font-bold text-purple-500">{stats?.total_groups || 0}</p>
               </div>
             </div>
           </div>
@@ -261,13 +190,12 @@ export default function ProfessorSchedulePage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Séances/Semaine</p>
-                <p className="text-xl font-bold text-orange-500">{stats.sessions_this_week}</p>
+                <p className="text-xl font-bold text-orange-500">{stats?.sessions_this_week || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Today's Schedule */}
         {todayEvents.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h3 className="font-bold text-[#0D529C] mb-3">📅 Aujourd'hui</h3>
@@ -285,7 +213,6 @@ export default function ProfessorSchedulePage() {
           </div>
         )}
 
-        {/* Calendar Controls */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -339,7 +266,6 @@ export default function ProfessorSchedulePage() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="bg-white rounded-lg p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-center gap-6">
             <span className="text-sm font-medium text-gray-700">Légende:</span>
@@ -366,7 +292,6 @@ export default function ProfessorSchedulePage() {
           </div>
         </div>
 
-        {/* Calendar View */}
         {viewMode === 'week' && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -425,7 +350,6 @@ export default function ProfessorSchedulePage() {
           </div>
         )}
 
-        {/* List View */}
         {viewMode === 'list' && (
           <div className="space-y-4">
             {days.map((day) => {
@@ -485,6 +409,13 @@ export default function ProfessorSchedulePage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {schedule.length === 0 && (
+          <div className="bg-white rounded-lg p-12 text-center">
+            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Aucune séance programmée cette semaine</p>
           </div>
         )}
       </div>

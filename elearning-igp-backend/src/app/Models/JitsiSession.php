@@ -4,81 +4,61 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class JitsiSession extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'course_id',
         'professor_id',
-        'room_name',
+        'course_id',
+        'group_id',
         'title',
         'description',
-        'scheduled_at',
-        'started_at',
-        'ended_at',
-        'duration_minutes',
+        'session_date',
+        'start_time',
+        'duration',
         'status',
-        'is_recorded',
-        'recording_url',
+        'max_participants',
+        'room_url',
+        'recording_enabled',
+        'chat_enabled',
     ];
 
     protected $casts = [
-        'scheduled_at' => 'datetime',
-        'started_at' => 'datetime',
-        'ended_at' => 'datetime',
-        'is_recorded' => 'boolean',
-        'duration_minutes' => 'integer',
+        'session_date' => 'date',
+        'recording_enabled' => 'boolean',
+        'chat_enabled' => 'boolean',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($session) {
+            if (!$session->room_url) {
+                $session->room_url = 'https://meet.jit.si/IGP-' . strtoupper(uniqid());
+            }
+        });
+    }
+
+    public function professor()
+    {
+        return $this->belongsTo(Professor::class);
+    }
 
     public function course()
     {
         return $this->belongsTo(Course::class);
     }
 
-    public function professor()
+    public function group()
     {
-        return $this->belongsTo(User::class, 'professor_id');
+        return $this->belongsTo(Group::class);
     }
 
-    public function attendance()
+    public function participants()
     {
-        return $this->hasMany(Attendance::class, 'session_id');
-    }
-
-    public function presentStudents()
-    {
-        return $this->belongsToMany(User::class, 'attendance', 'session_id', 'student_id')
-            ->wherePivot('status', 'present')
-            ->withPivot('joined_at', 'left_at', 'duration_minutes');
-    }
-
-    public function isLive()
-    {
-        return $this->status === 'live';
-    }
-
-    public function isScheduled()
-    {
-        return $this->status === 'scheduled';
-    }
-
-    public function isEnded()
-    {
-        return $this->status === 'ended';
-    }
-
-    public function scopeLive($query)
-    {
-        return $query->where('status', 'live');
-    }
-
-    public function scopeUpcoming($query)
-    {
-        return $query->where('status', 'scheduled')
-            ->where('scheduled_at', '>', now())
-            ->orderBy('scheduled_at');
+        return $this->hasMany(JitsiSessionParticipant::class, 'session_id');
     }
 }

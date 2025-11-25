@@ -208,4 +208,22 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::get('grades', [App\Http\Controllers\Api\Professor\GradeController::class, 'index']);
     Route::post('grades/{examId}/save', [App\Http\Controllers\Api\Professor\GradeController::class, 'saveGrades']);
     Route::post('grades/{examId}/submit', [App\Http\Controllers\Api\Professor\GradeController::class, 'submitGrades']);
+    // Session live
+    Route::get('sessions/stats', [App\Http\Controllers\Api\Professor\SessionController::class, 'stats']);
+    Route::get('sessions/my-courses', [App\Http\Controllers\Api\Professor\SessionController::class, 'myCourses']);
+    Route::get('sessions', [App\Http\Controllers\Api\Professor\SessionController::class, 'index']);
+    Route::post('sessions', [App\Http\Controllers\Api\Professor\SessionController::class, 'store']);
+    Route::post('sessions/{id}/start', [App\Http\Controllers\Api\Professor\SessionController::class, 'startSession']);
+    Route::post('sessions/{id}/end', [App\Http\Controllers\Api\Professor\SessionController::class, 'endSession']);
+    // Emploi du Temps
+    Route::get('schedule/stats', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'stats']);
+    Route::get('schedule', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'index']);
+      // Documents
+    Route::get('documents/stats', [App\Http\Controllers\Api\Professor\DocumentController::class, 'stats']);
+    Route::get('documents/my-courses', [App\Http\Controllers\Api\Professor\DocumentController::class, 'myCourses']);
+    Route::get('documents', [App\Http\Controllers\Api\Professor\DocumentController::class, 'index']);
+    Route::post('documents', [App\Http\Controllers\Api\Professor\DocumentController::class, 'store']);
+    Route::post('documents/{id}/toggle-share', [App\Http\Controllers\Api\Professor\DocumentController::class, 'toggleShare']);
+    Route::get('documents/{id}/download', [App\Http\Controllers\Api\Professor\DocumentController::class, 'download']);
+    Route::delete('documents/{id}', [App\Http\Controllers\Api\Professor\DocumentController::class, 'destroy']);
 });
