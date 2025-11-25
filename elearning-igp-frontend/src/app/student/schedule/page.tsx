@@ -1,28 +1,39 @@
-// src/app/student/schedule/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, ChevronLeft, ChevronRight, BookOpen, Video } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
-
-interface ScheduleEvent {
-  id: number;
-  course: string;
-  course_code: string;
-  professor: string;
-  type: 'cours' | 'tp' | 'td' | 'examen' | 'session_live';
-  day: string;
-  start_time: string;
-  end_time: string;
-  room: string;
-}
+import { studentScheduleApi, StudentSchedule } from '@/lib/api/student/schedule';
+import Swal from 'sweetalert2';
 
 export default function StudentSchedulePage() {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState<'week' | 'list'>('week');
+  const [schedule, setSchedule] = useState<StudentSchedule[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
   const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+  useEffect(() => {
+    fetchSchedule();
+  }, []);
+
+  const fetchSchedule = async () => {
+    try {
+      const data = await studentScheduleApi.getAll();
+      setSchedule(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger l\'emploi du temps',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getWeekDates = (weekOffset: number) => {
     const today = new Date();
@@ -42,126 +53,12 @@ export default function StudentSchedulePage() {
 
   const weekDates = getWeekDates(currentWeek);
 
-  const schedule: ScheduleEvent[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      type: 'cours',
-      day: 'Lundi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Salle A12',
-    },
-    {
-      id: 2,
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      type: 'cours',
-      day: 'Lundi',
-      start_time: '14:00',
-      end_time: '16:00',
-      room: 'Salle B3',
-    },
-    {
-      id: 3,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      type: 'tp',
-      day: 'Mardi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Lab Info 1',
-    },
-    {
-      id: 4,
-      course: 'Architecture Microservices',
-      course_code: 'DEV-MICRO',
-      professor: 'Omar Tazi',
-      type: 'cours',
-      day: 'Mardi',
-      start_time: '14:00',
-      end_time: '17:00',
-      room: 'Salle A8',
-    },
-    {
-      id: 5,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      type: 'td',
-      day: 'Mercredi',
-      start_time: '09:00',
-      end_time: '11:00',
-      room: 'Salle C2',
-    },
-    {
-      id: 6,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      professor: 'Karim Benjelloun',
-      type: 'cours',
-      day: 'Mercredi',
-      start_time: '14:00',
-      end_time: '18:00',
-      room: 'Salle C5',
-    },
-    {
-      id: 7,
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      professor: 'Karim Benjelloun',
-      type: 'tp',
-      day: 'Jeudi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Lab Info 2',
-    },
-    {
-      id: 8,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      type: 'cours',
-      day: 'Jeudi',
-      start_time: '14:00',
-      end_time: '16:00',
-      room: 'Salle B8',
-    },
-    {
-      id: 9,
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      type: 'tp',
-      day: 'Vendredi',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Lab Info 3',
-    },
-    {
-      id: 10,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      type: 'session_live',
-      day: 'Vendredi',
-      start_time: '16:00',
-      end_time: '17:30',
-      room: 'En ligne',
-    },
-  ];
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'cours': return 'bg-[#0D529C] border-[#0D529C]';
       case 'tp': return 'bg-[#257035] border-[#257035]';
       case 'td': return 'bg-purple-500 border-purple-500';
       case 'examen': return 'bg-[#C1272D] border-[#C1272D]';
-      case 'session_live': return 'bg-orange-500 border-orange-500';
       default: return 'bg-gray-500 border-gray-500';
     }
   };
@@ -172,7 +69,6 @@ export default function StudentSchedulePage() {
       case 'tp': return 'bg-green-50 border-l-4 border-[#257035]';
       case 'td': return 'bg-purple-50 border-l-4 border-purple-500';
       case 'examen': return 'bg-red-50 border-l-4 border-[#C1272D]';
-      case 'session_live': return 'bg-orange-50 border-l-4 border-orange-500';
       default: return 'bg-gray-50 border-l-4 border-gray-500';
     }
   };
@@ -183,7 +79,6 @@ export default function StudentSchedulePage() {
       case 'tp': return 'TP';
       case 'td': return 'TD';
       case 'examen': return 'Examen';
-      case 'session_live': return 'Session Live';
       default: return type;
     }
   };
@@ -197,7 +92,7 @@ export default function StudentSchedulePage() {
     });
   };
 
-  const getEventHeight = (event: ScheduleEvent) => {
+  const getEventHeight = (event: StudentSchedule) => {
     const start = parseInt(event.start_time.split(':')[0]);
     const end = parseInt(event.end_time.split(':')[0]);
     const duration = end - start;
@@ -212,7 +107,7 @@ export default function StudentSchedulePage() {
     }, 0),
     total_courses: new Set(schedule.map(s => s.course)).size,
     sessions_this_week: schedule.length,
-    live_sessions: schedule.filter(s => s.type === 'session_live').length,
+    live_sessions: 0,
   };
 
   const todayEvents = schedule.filter(event => {
@@ -229,6 +124,16 @@ export default function StudentSchedulePage() {
     return eventTime > now;
   });
 
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257035]"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout>
       <div className="p-8">
@@ -237,7 +142,6 @@ export default function StudentSchedulePage() {
           <p className="text-gray-500">Consultez votre planning de cours hebdomadaire.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -288,7 +192,6 @@ export default function StudentSchedulePage() {
           </div>
         </div>
 
-        {/* Today's Schedule Alert */}
         {todayEvents.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <h3 className="font-bold text-[#257035] mb-3">📅 Aujourd'hui - {todayEvents.length} séance(s)</h3>
@@ -313,7 +216,6 @@ export default function StudentSchedulePage() {
           </div>
         )}
 
-        {/* Calendar Controls */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -367,7 +269,6 @@ export default function StudentSchedulePage() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="bg-white rounded-lg p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-center gap-6">
             <span className="text-sm font-medium text-gray-700">Légende:</span>
@@ -387,14 +288,9 @@ export default function StudentSchedulePage() {
               <div className="w-4 h-4 bg-[#C1272D] rounded"></div>
               <span className="text-sm text-gray-600">Examen</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-orange-500 rounded"></div>
-              <span className="text-sm text-gray-600">Session Live</span>
-            </div>
           </div>
         </div>
 
-        {/* Calendar View */}
         {viewMode === 'week' && (
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -456,7 +352,6 @@ export default function StudentSchedulePage() {
           </div>
         )}
 
-        {/* List View */}
         {viewMode === 'list' && (
           <div className="space-y-4">
             {days.map((day) => {
@@ -495,17 +390,9 @@ export default function StudentSchedulePage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white ${getTypeColor(event.type)}`}>
-                                {getTypeLabel(event.type)}
-                              </span>
-                              {event.type === 'session_live' && (
-                                <button className="flex items-center gap-1 px-3 py-1 bg-orange-500 text-white rounded-lg text-xs hover:bg-orange-600 transition-colors">
-                                  <Video className="w-3 h-3" />
-                                  Rejoindre
-                                </button>
-                              )}
-                            </div>
+                            <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full text-white ${getTypeColor(event.type)}`}>
+                              {getTypeLabel(event.type)}
+                            </span>
                           </div>
                         </div>
                       ))}

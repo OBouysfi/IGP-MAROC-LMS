@@ -20,7 +20,11 @@ use App\Http\Controllers\Api\Admin\AttendanceController;
 use App\Http\Controllers\Api\Admin\StudentDocumentController;
 use App\Http\Controllers\Api\Admin\PayrollController;
 use App\Http\Controllers\Api\Admin\SettingsController;
-
+//----------------------------------------------------//
+use App\Http\Controllers\Api\Student\StudentCourseController;
+use App\Http\Controllers\Api\Student\StudentGradeController;
+use App\Http\Controllers\Api\Student\StudentSessionController;
+use App\Http\Controllers\Api\Student\StudentScheduleController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -188,7 +192,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 
  // Professor routes
- // routes/api.php - Ajouter
 
 Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     // Courses
@@ -238,4 +241,24 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Professor\SettingsController::class, 'toggle2FA']);
     // Dashboard
     Route::get('dashboard', [App\Http\Controllers\Api\Professor\DashboardController::class, 'index']);
+});
+
+
+
+
+
+// Student routes
+Route::middleware(['auth:sanctum'])->prefix('student')->group(function () {
+    // Mes Cours
+    Route::get('/courses', [StudentCourseController::class, 'index']);
+    Route::get('/courses/{id}', [StudentCourseController::class, 'show']);
+    Route::get('/courses/{id}/resources', [StudentCourseController::class, 'resources']);
+    // Mes notes
+    Route::get('/grades', [StudentGradeController::class, 'index']);
+    Route::get('/grades/summary', [StudentGradeController::class, 'summary']);
+    // Session live
+    Route::get('/sessions', [StudentSessionController::class, 'index']);
+    Route::post('/sessions/{id}/join', [StudentSessionController::class, 'join']);
+    // Mon Emploi du Temps
+    Route::get('/schedule', [StudentScheduleController::class, 'index']);
 });

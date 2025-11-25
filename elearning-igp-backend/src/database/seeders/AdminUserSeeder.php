@@ -42,7 +42,6 @@ class AdminUserSeeder extends Seeder
         ]);
         $professorUser->roles()->attach($professorRole->id);
         
-        // Créer l'entrée Professor
         Professor::create([
             'user_id' => $professorUser->id,
             'department' => 'Informatique',
@@ -62,10 +61,9 @@ class AdminUserSeeder extends Seeder
         ]);
         $studentUser->roles()->attach($studentRole->id);
         
-        // Créer l'entrée Student
         Student::create([
             'user_id' => $studentUser->id,
-            'gender' => 'male',
+            'gender' => 'Homme',
         ]);
 
         // Assistant

@@ -1,32 +1,10 @@
-// src/app/student/grades/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { ClipboardList, TrendingUp, Award, Calendar, Filter, ChevronDown, ChevronUp, Download, BarChart3 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ClipboardList, TrendingUp, Award, Calendar, ChevronDown, ChevronUp, Download, BarChart3 } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
-
-interface Grade {
-  id: number;
-  course: string;
-  course_code: string;
-  exam_type: 'partiel' | 'final' | 'controle' | 'tp' | 'projet' | 'quiz';
-  exam_name: string;
-  grade: number;
-  max_grade: number;
-  coefficient: number;
-  date: string;
-  comment: string;
-  professor: string;
-}
-
-interface CourseAverage {
-  course: string;
-  course_code: string;
-  average: number;
-  grades_count: number;
-  coefficient: number;
-  semester: string;
-}
+import { studentGradesApi, StudentGrade, CourseAverage } from '@/lib/api/student/grades';
+import Swal from 'sweetalert2';
 
 export default function StudentGradesPage() {
   const [filterCourse, setFilterCourse] = useState('');
@@ -34,142 +12,42 @@ export default function StudentGradesPage() {
   const [sortBy, setSortBy] = useState<'date' | 'grade' | 'course'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showCourseAverages, setShowCourseAverages] = useState(true);
+  const [grades, setGrades] = useState<StudentGrade[]>([]);
+  const [courseAverages, setCourseAverages] = useState<CourseAverage[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const grades: Grade[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      exam_type: 'partiel',
-      exam_name: 'Partiel Mi-Semestre',
-      grade: 17.5,
-      max_grade: 20,
-      coefficient: 2,
-      date: '2024-11-10',
-      comment: 'Excellent travail sur les hooks et Context API',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 2,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      exam_type: 'tp',
-      exam_name: 'TP 3 - Redux',
-      grade: 15.5,
-      max_grade: 20,
-      coefficient: 1,
-      date: '2024-11-05',
-      comment: '',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 3,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      exam_type: 'tp',
-      exam_name: 'TP 3 - API REST',
-      grade: 15.0,
-      max_grade: 20,
-      coefficient: 1,
-      date: '2024-11-08',
-      comment: 'Bonne compréhension des middlewares',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 4,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      exam_type: 'controle',
-      exam_name: 'Contrôle Continu 2',
-      grade: 14.5,
-      max_grade: 20,
-      coefficient: 1.5,
-      date: '2024-10-28',
-      comment: '',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 5,
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      exam_type: 'quiz',
-      exam_name: 'Quiz 2 - Aggregation',
-      grade: 18.0,
-      max_grade: 20,
-      coefficient: 0.5,
-      date: '2024-11-05',
-      comment: 'Parfaite maîtrise des pipelines',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 6,
-      course: 'Base de données NoSQL',
-      course_code: 'DEV-NOSQL',
-      exam_type: 'tp',
-      exam_name: 'TP 2 - CRUD MongoDB',
-      grade: 17.0,
-      max_grade: 20,
-      coefficient: 1,
-      date: '2024-10-30',
-      comment: '',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 7,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      exam_type: 'controle',
-      exam_name: 'Contrôle ES6+',
-      grade: 14.0,
-      max_grade: 20,
-      coefficient: 1.5,
-      date: '2024-11-03',
-      comment: 'Attention aux destructuring complexes',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 8,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      exam_type: 'projet',
-      exam_name: 'Mini-Projet Async',
-      grade: 16.0,
-      max_grade: 20,
-      coefficient: 2,
-      date: '2024-10-25',
-      comment: 'Bon projet, code bien structuré',
-      professor: 'Karim Benjelloun',
-    },
-    {
-      id: 9,
-      course: 'DevOps & CI/CD',
-      course_code: 'DEV-OPS',
-      exam_type: 'tp',
-      exam_name: 'TP 1 - Docker Basics',
-      grade: 13.5,
-      max_grade: 20,
-      coefficient: 1,
-      date: '2024-11-12',
-      comment: 'Revoir la configuration des volumes',
-      professor: 'Hassan Alami',
-    },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const courseAverages: CourseAverage[] = [
-    { course: 'React.js Avancé', course_code: 'DEV-REACT', average: 16.5, grades_count: 2, coefficient: 6, semester: 'S3' },
-    { course: 'Node.js & Express', course_code: 'DEV-NODE', average: 14.75, grades_count: 2, coefficient: 6, semester: 'S3' },
-    { course: 'Base de données NoSQL', course_code: 'DEV-NOSQL', average: 17.5, grades_count: 2, coefficient: 4, semester: 'S3' },
-    { course: 'JavaScript Moderne', course_code: 'DEV-JS', average: 15.0, grades_count: 2, coefficient: 4, semester: 'S3' },
-    { course: 'DevOps & CI/CD', course_code: 'DEV-OPS', average: 13.5, grades_count: 1, coefficient: 4, semester: 'S3' },
-  ];
+  const fetchData = async () => {
+    try {
+      const [gradesData, summaryData] = await Promise.all([
+        studentGradesApi.getAll(),
+        studentGradesApi.getSummary(),
+      ]);
+      setGrades(gradesData);
+      setCourseAverages(summaryData);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les notes',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const uniqueCourses = [...new Set(grades.map(g => g.course))];
   const examTypes = ['partiel', 'final', 'controle', 'tp', 'projet', 'quiz'];
 
   const calculateGeneralAverage = () => {
+    if (courseAverages.length === 0) return '0.00';
     const totalWeighted = courseAverages.reduce((sum, ca) => sum + (ca.average * ca.coefficient), 0);
     const totalCoeff = courseAverages.reduce((sum, ca) => sum + ca.coefficient, 0);
-    return (totalWeighted / totalCoeff).toFixed(2);
+    return totalCoeff > 0 ? (totalWeighted / totalCoeff).toFixed(2) : '0.00';
   };
 
   const getTypeColor = (type: string) => {
@@ -231,10 +109,20 @@ export default function StudentGradesPage() {
   const stats = {
     total_grades: grades.length,
     general_average: calculateGeneralAverage(),
-    highest_grade: Math.max(...grades.map(g => g.grade)),
-    lowest_grade: Math.min(...grades.map(g => g.grade)),
+    highest_grade: grades.length > 0 ? Math.max(...grades.map(g => g.grade)) : 0,
+    lowest_grade: grades.length > 0 ? Math.min(...grades.map(g => g.grade)) : 0,
     above_average: grades.filter(g => g.grade >= 10).length,
   };
+
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257035]"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout>
@@ -244,7 +132,6 @@ export default function StudentGradesPage() {
           <p className="text-gray-500">Consultez vos résultats et suivez votre progression académique.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -307,7 +194,6 @@ export default function StudentGradesPage() {
           </div>
         </div>
 
-        {/* Course Averages */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div
             className="p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer"
@@ -344,7 +230,6 @@ export default function StudentGradesPage() {
           )}
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -392,7 +277,6 @@ export default function StudentGradesPage() {
           </div>
         </div>
 
-        {/* Grades List */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>

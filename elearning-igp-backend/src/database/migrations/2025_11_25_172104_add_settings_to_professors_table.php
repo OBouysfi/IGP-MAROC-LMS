@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('professors', function (Blueprint $table) {
             $table->string('phone')->nullable()->after('user_id');
             // $table->string('specialization')->nullable()->after('phone');
-            $table->text('bio')->nullable()->after('specialization');
+            // $table->text('bio')->nullable()->after('specialization');
             $table->string('linkedin')->nullable()->after('bio');
             $table->string('github')->nullable()->after('linkedin');
             $table->json('notification_settings')->nullable()->after('github');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->dropColumn([
                 'phone',
                 // 'specialization',
-                'bio',
+                // 'bio',
                 'linkedin',
                 'github',
                 'notification_settings',

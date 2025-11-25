@@ -1,29 +1,10 @@
-// src/app/student/courses/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { BookOpen, User, Clock, Calendar, FileText, Video, ChevronRight, Search, Filter, Star, PlayCircle, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, User, Clock, Calendar, FileText, Video, ChevronRight, Search, Star, PlayCircle } from 'lucide-react';
 import StudentLayout from '@/components/layouts/StudentLayout';
-
-interface Course {
-  id: number;
-  name: string;
-  code: string;
-  professor: string;
-  professor_email: string;
-  description: string;
-  credits: number;
-  semester: string;
-  progress: number;
-  total_hours: number;
-  completed_hours: number;
-  next_class: string;
-  next_class_room: string;
-  grade_average: number | null;
-  resources_count: number;
-  sessions_count: number;
-  color: string;
-}
+import { studentCoursesApi, StudentCourse } from '@/lib/api/student/courses';
+import Swal from 'sweetalert2';
 
 interface CourseModule {
   id: number;
@@ -34,125 +15,30 @@ interface CourseModule {
 
 export default function StudentCoursesPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<StudentCourse | null>(null);
   const [showCourseDetail, setShowCourseDetail] = useState(false);
+  const [courses, setCourses] = useState<StudentCourse[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const courses: Course[] = [
-    {
-      id: 1,
-      name: 'React.js Avancé',
-      code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      description: 'Maîtrisez les concepts avancés de React.js incluant les hooks personnalisés, Context API, Redux, et les patterns de performance.',
-      credits: 6,
-      semester: 'S3',
-      progress: 67,
-      total_hours: 45,
-      completed_hours: 30,
-      next_class: '2024-11-18 09:00',
-      next_class_room: 'Salle A12',
-      grade_average: 16.5,
-      resources_count: 12,
-      sessions_count: 3,
-      color: 'from-blue-500 to-blue-600',
-    },
-    {
-      id: 2,
-      name: 'Node.js & Express',
-      code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      description: 'Développement backend avec Node.js et Express. API REST, authentification JWT, bases de données et déploiement.',
-      credits: 6,
-      semester: 'S3',
-      progress: 50,
-      total_hours: 45,
-      completed_hours: 22,
-      next_class: '2024-11-19 14:00',
-      next_class_room: 'Lab Info 1',
-      grade_average: 15.0,
-      resources_count: 8,
-      sessions_count: 2,
-      color: 'from-green-500 to-green-600',
-    },
-    {
-      id: 3,
-      name: 'Base de données NoSQL',
-      code: 'DEV-NOSQL',
-      professor: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      description: 'Introduction aux bases de données NoSQL avec MongoDB. Modélisation, requêtes, agrégation et optimisation.',
-      credits: 4,
-      semester: 'S3',
-      progress: 33,
-      total_hours: 30,
-      completed_hours: 10,
-      next_class: '2024-11-21 09:00',
-      next_class_room: 'Lab Info 2',
-      grade_average: 18.0,
-      resources_count: 6,
-      sessions_count: 1,
-      color: 'from-purple-500 to-purple-600',
-    },
-    {
-      id: 4,
-      name: 'JavaScript Moderne',
-      code: 'DEV-JS',
-      professor: 'Karim Benjelloun',
-      professor_email: 'k.benjelloun@igp.edu',
-      description: 'ES6+, programmation fonctionnelle, asynchrone, modules et outils modernes de développement JavaScript.',
-      credits: 4,
-      semester: 'S3',
-      progress: 44,
-      total_hours: 30,
-      completed_hours: 13,
-      next_class: '2024-11-20 14:00',
-      next_class_room: 'Salle C5',
-      grade_average: 14.0,
-      resources_count: 10,
-      sessions_count: 2,
-      color: 'from-yellow-500 to-yellow-600',
-    },
-    {
-      id: 5,
-      name: 'DevOps & CI/CD',
-      code: 'DEV-OPS',
-      professor: 'Hassan Alami',
-      professor_email: 'h.alami@igp.edu',
-      description: 'Introduction aux pratiques DevOps, intégration continue, déploiement continu, Docker et Kubernetes.',
-      credits: 4,
-      semester: 'S3',
-      progress: 25,
-      total_hours: 30,
-      completed_hours: 8,
-      next_class: '2024-11-22 10:00',
-      next_class_room: 'Salle B3',
-      grade_average: null,
-      resources_count: 5,
-      sessions_count: 0,
-      color: 'from-orange-500 to-orange-600',
-    },
-    {
-      id: 6,
-      name: 'Architecture Microservices',
-      code: 'DEV-MICRO',
-      professor: 'Omar Tazi',
-      professor_email: 'o.tazi@igp.edu',
-      description: 'Conception et implémentation d\'architectures microservices. Patterns, communication inter-services et scalabilité.',
-      credits: 4,
-      semester: 'S3',
-      progress: 15,
-      total_hours: 30,
-      completed_hours: 5,
-      next_class: '2024-11-23 08:00',
-      next_class_room: 'Salle A8',
-      grade_average: null,
-      resources_count: 4,
-      sessions_count: 1,
-      color: 'from-red-500 to-red-600',
-    },
-  ];
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const data = await studentCoursesApi.getAll();
+      setCourses(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les cours',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const courseModules: CourseModule[] = [
     { id: 1, title: 'Introduction à React', completed: true, duration: '3h' },
@@ -172,7 +58,7 @@ export default function StudentCoursesPage() {
     course.professor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const openCourseDetail = (course: Course) => {
+  const openCourseDetail = (course: StudentCourse) => {
     setSelectedCourse(course);
     setShowCourseDetail(true);
   };
@@ -185,6 +71,16 @@ export default function StudentCoursesPage() {
     return 'text-[#C1272D]';
   };
 
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#257035]"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout>
       <div className="p-8">
@@ -193,7 +89,6 @@ export default function StudentCoursesPage() {
           <p className="text-gray-500">Consultez vos cours, votre progression et vos ressources pédagogiques.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -250,7 +145,6 @@ export default function StudentCoursesPage() {
           </div>
         </div>
 
-        {/* Search */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -264,11 +158,9 @@ export default function StudentCoursesPage() {
           </div>
         </div>
 
-        {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCourses.map((course) => (
             <div key={course.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-              {/* Header */}
               <div className={`bg-gradient-to-r ${course.color} p-4 text-white`}>
                 <div className="flex items-start justify-between">
                   <div>
@@ -281,9 +173,7 @@ export default function StudentCoursesPage() {
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-4 space-y-4">
-                {/* Professor */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                     <User className="w-5 h-5 text-gray-500" />
@@ -294,7 +184,6 @@ export default function StudentCoursesPage() {
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600">Progression</span>
@@ -311,7 +200,6 @@ export default function StudentCoursesPage() {
                   </p>
                 </div>
 
-                {/* Stats */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="text-center p-2 bg-gray-50 rounded">
                     <p className={`text-lg font-bold ${getGradeColor(course.grade_average)}`}>
@@ -329,22 +217,22 @@ export default function StudentCoursesPage() {
                   </div>
                 </div>
 
-                {/* Next Class */}
-                <div className="bg-green-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar className="w-4 h-4 text-[#257035]" />
-                    <span className="text-xs font-medium text-[#257035]">Prochain cours</span>
+                {course.next_class && (
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4 text-[#257035]" />
+                      <span className="text-xs font-medium text-[#257035]">Prochain cours</span>
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {new Date(course.next_class).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(course.next_class).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} • {course.next_class_room}
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-700">
-                    {new Date(course.next_class).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(course.next_class).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} • {course.next_class_room}
-                  </p>
-                </div>
+                )}
               </div>
 
-              {/* Actions */}
               <div className="p-4 bg-gray-50 border-t border-gray-100">
                 <button
                   onClick={() => openCourseDetail(course)}
@@ -366,11 +254,9 @@ export default function StudentCoursesPage() {
         )}
       </div>
 
-      {/* Course Detail Modal */}
       {showCourseDetail && selectedCourse && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
             <div className={`bg-gradient-to-r ${selectedCourse.color} p-6 text-white rounded-t-2xl`}>
               <div className="flex items-start justify-between">
                 <div>
@@ -388,13 +274,11 @@ export default function StudentCoursesPage() {
             </div>
 
             <div className="p-6">
-              {/* Description */}
               <div className="mb-6">
                 <h3 className="font-bold text-gray-900 mb-2">Description</h3>
                 <p className="text-gray-600">{selectedCourse.description}</p>
               </div>
 
-              {/* Progress & Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-green-50 rounded-xl p-4">
                   <h4 className="font-medium text-[#257035] mb-2">Progression</h4>
@@ -425,7 +309,6 @@ export default function StudentCoursesPage() {
                 </div>
               </div>
 
-              {/* Modules */}
               <div className="mb-6">
                 <h3 className="font-bold text-gray-900 mb-4">Modules du cours</h3>
                 <div className="space-y-2">
@@ -452,7 +335,6 @@ export default function StudentCoursesPage() {
                 </div>
               </div>
 
-              {/* Quick Actions */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button className="flex items-center justify-center gap-2 px-4 py-3 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
                   <FileText className="w-5 h-5" />
