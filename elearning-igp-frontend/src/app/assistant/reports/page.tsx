@@ -1,49 +1,98 @@
-// src/app/assistant/reports/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, Users, Filter, BarChart3, PieChart, TrendingUp } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
+import { assistantReportApi, MonthlyStats, GroupStat, RecentReport, Group } from '@/lib/api/assistant/reports';
+import Swal from 'sweetalert2';
 
 export default function AssistantReportsPage() {
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
+  const [groupStats, setGroupStats] = useState<GroupStat[]>([]);
+  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [reportType, setReportType] = useState('monthly');
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('2024-11');
+  const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L2-A', 'DEV-L1-A'];
+  useEffect(() => {
+    fetchData();
+    fetchGroups();
+    fetchRecentReports();
+  }, [selectedMonth]);
 
-  const monthlyStats = {
-    total_absences: 156,
-    justified: 98,
-    unjustified: 58,
-    total_delays: 45,
-    absence_rate: 8.2,
-    top_absent_course: 'JavaScript Moderne',
-    most_absent_day: 'Mercredi',
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await assistantReportApi.getStats(selectedMonth);
+      setMonthlyStats(data.monthly_stats);
+      setGroupStats(data.group_stats);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les statistiques',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const groupStats = [
-    { group: 'DEV-M2-A', absences: 42, rate: 7.5, students: 25 },
-    { group: 'DEV-M1-A', absences: 38, rate: 6.8, students: 28 },
-    { group: 'DEV-L2-A', absences: 45, rate: 9.0, students: 30 },
-    { group: 'DEV-L1-A', absences: 31, rate: 5.5, students: 35 },
-  ];
+  const fetchGroups = async () => {
+    try {
+      const data = await assistantReportApi.getGroups();
+      setGroups(data);
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    }
+  };
 
-  const recentReports = [
-    { id: 1, name: 'Rapport Mensuel - Octobre 2024', type: 'monthly', date: '2024-11-01', size: '2.4 MB' },
-    { id: 2, name: 'Rapport Groupe DEV-M2-A', type: 'group', date: '2024-10-28', size: '1.8 MB' },
-    { id: 3, name: 'Rapport Hebdomadaire S45', type: 'weekly', date: '2024-10-25', size: '1.2 MB' },
-    { id: 4, name: 'Rapport Mensuel - Septembre 2024', type: 'monthly', date: '2024-10-01', size: '2.1 MB' },
-  ];
+  const fetchRecentReports = async () => {
+    try {
+      const data = await assistantReportApi.getRecent();
+      setRecentReports(data);
+    } catch (error) {
+      console.error('Error fetching recent reports:', error);
+    }
+  };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     setGeneratingReport(true);
-    setTimeout(() => {
+    try {
+      await assistantReportApi.generate(reportType, selectedMonth, selectedGroup || undefined);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Rapport généré avec succès!',
+        confirmButtonColor: '#257035',
+      });
+      
+      fetchRecentReports();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de générer le rapport',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
       setGeneratingReport(false);
-      alert('Rapport généré avec succès! Le téléchargement va commencer.');
-    }, 2000);
+    }
   };
+
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1272D]"></div>
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -53,7 +102,6 @@ export default function AssistantReportsPage() {
           <p className="text-gray-500">Générez des rapports détaillés sur les absences et présences.</p>
         </div>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -62,7 +110,7 @@ export default function AssistantReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Absences ce mois</p>
-                <p className="text-xl font-bold text-[#C1272D]">{monthlyStats.total_absences}</p>
+                <p className="text-xl font-bold text-[#C1272D]">{monthlyStats?.total_absences || 0}</p>
               </div>
             </div>
           </div>
@@ -74,7 +122,7 @@ export default function AssistantReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Justifiées</p>
-                <p className="text-xl font-bold text-green-600">{monthlyStats.justified}</p>
+                <p className="text-xl font-bold text-green-600">{monthlyStats?.justified || 0}</p>
               </div>
             </div>
           </div>
@@ -86,7 +134,7 @@ export default function AssistantReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Taux d'absence</p>
-                <p className="text-xl font-bold text-orange-500">{monthlyStats.absence_rate}%</p>
+                <p className="text-xl font-bold text-orange-500">{monthlyStats?.absence_rate || 0}%</p>
               </div>
             </div>
           </div>
@@ -98,14 +146,13 @@ export default function AssistantReportsPage() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Retards</p>
-                <p className="text-xl font-bold text-[#0D529C]">{monthlyStats.total_delays}</p>
+                <p className="text-xl font-bold text-[#0D529C]">{monthlyStats?.total_delays || 0}</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Generate Report */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#C1272D] mb-4">Générer un Rapport</h3>
@@ -129,13 +176,13 @@ export default function AssistantReportsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Groupe</label>
                     <select
-                      value={selectedGroup}
-                      onChange={(e) => setSelectedGroup(e.target.value)}
+                      value={selectedGroup || ''}
+                      onChange={(e) => setSelectedGroup(e.target.value ? parseInt(e.target.value) : null)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
                     >
                       <option value="">Sélectionner un groupe</option>
                       {groups.map((group) => (
-                        <option key={group} value={group}>{group}</option>
+                        <option key={group.id} value={group.id}>{group.name}</option>
                       ))}
                     </select>
                   </div>
@@ -187,7 +234,6 @@ export default function AssistantReportsPage() {
               </div>
             </div>
 
-            {/* Group Statistics */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#C1272D] mb-4">Statistiques par Groupe</h3>
               <div className="space-y-4">
@@ -206,7 +252,7 @@ export default function AssistantReportsPage() {
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
                         className="bg-gradient-to-r from-[#C1272D] to-red-400 h-3 rounded-full"
-                        style={{ width: `${stat.rate * 10}%` }}
+                        style={{ width: `${Math.min(stat.rate * 10, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -215,7 +261,6 @@ export default function AssistantReportsPage() {
             </div>
           </div>
 
-          {/* Recent Reports */}
           <div className="space-y-6">
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#C1272D] mb-4">Rapports Récents</h3>
@@ -240,21 +285,20 @@ export default function AssistantReportsPage() {
               </div>
             </div>
 
-            {/* Quick Stats */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#C1272D] mb-4">Informations Clés</h3>
               <div className="space-y-4">
                 <div className="bg-red-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">Jour le plus absent</p>
-                  <p className="font-bold text-[#C1272D]">{monthlyStats.most_absent_day}</p>
+                  <p className="font-bold text-[#C1272D]">{monthlyStats?.most_absent_day || 'N/A'}</p>
                 </div>
                 <div className="bg-orange-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">Cours le plus touché</p>
-                  <p className="font-bold text-orange-600">{monthlyStats.top_absent_course}</p>
+                  <p className="font-bold text-orange-600">{monthlyStats?.top_absent_course || 'N/A'}</p>
                 </div>
                 <div className="bg-blue-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500">Non justifiées</p>
-                  <p className="font-bold text-[#0D529C]">{monthlyStats.unjustified} absences</p>
+                  <p className="font-bold text-[#0D529C]">{monthlyStats?.unjustified || 0} absences</p>
                 </div>
               </div>
             </div>

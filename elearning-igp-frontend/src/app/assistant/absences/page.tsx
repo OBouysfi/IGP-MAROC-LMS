@@ -1,100 +1,60 @@
-// src/app/assistant/absences/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserCheck, UserX, Search, Filter, Calendar, Clock, Save, CheckCircle, XCircle, Users } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
-
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  group: string;
-  status: 'present' | 'absent' | 'late' | 'excused' | null;
-}
-
-interface CourseSession {
-  id: number;
-  course: string;
-  course_code: string;
-  professor: string;
-  group: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  room: string;
-  students: Student[];
-}
+import { assistantAttendanceApi, CourseSession, Group } from '@/lib/api/assistant/attendance';
+import Swal from 'sweetalert2';
 
 export default function AssistantAbsencesPage() {
+  const [sessions, setSessions] = useState<CourseSession[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [selectedSession, setSelectedSession] = useState<CourseSession | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [filterGroup, setFilterGroup] = useState('');
+  const [filterGroup, setFilterGroup] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [attendanceData, setAttendanceData] = useState<{ [key: number]: string }>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L2-A', 'DEV-L1-A'];
+  useEffect(() => {
+    fetchGroups();
+  }, []);
 
-  const sessions: CourseSession[] = [
-    {
-      id: 1,
-      course: 'React.js Avancé',
-      course_code: 'DEV-REACT',
-      professor: 'Karim Benjelloun',
-      group: 'DEV-M2-A',
-      date: '2024-11-18',
-      start_time: '09:00',
-      end_time: '12:00',
-      room: 'Salle A12',
-      students: [
-        { id: 1, name: 'Ahmed Benali', email: 'ahmed.benali@student.igp.edu', group: 'DEV-M2-A', status: 'present' },
-        { id: 2, name: 'Youssef Mansouri', email: 'youssef.mansouri@student.igp.edu', group: 'DEV-M2-A', status: 'absent' },
-        { id: 3, name: 'Khadija Amrani', email: 'khadija.amrani@student.igp.edu', group: 'DEV-M2-A', status: 'present' },
-        { id: 4, name: 'Rachid Tazi', email: 'rachid.tazi@student.igp.edu', group: 'DEV-M2-A', status: 'late' },
-        { id: 5, name: 'Salma Idrissi', email: 'salma.idrissi@student.igp.edu', group: 'DEV-M2-A', status: null },
-        { id: 6, name: 'Mohamed Alaoui', email: 'mohamed.alaoui@student.igp.edu', group: 'DEV-M2-A', status: null },
-        { id: 7, name: 'Fatima Zahra', email: 'fatima.zahra@student.igp.edu', group: 'DEV-M2-A', status: 'present' },
-      ],
-    },
-    {
-      id: 2,
-      course: 'Node.js & Express',
-      course_code: 'DEV-NODE',
-      professor: 'Karim Benjelloun',
-      group: 'DEV-M2-A',
-      date: '2024-11-18',
-      start_time: '14:00',
-      end_time: '17:00',
-      room: 'Lab Info 1',
-      students: [
-        { id: 1, name: 'Ahmed Benali', email: 'ahmed.benali@student.igp.edu', group: 'DEV-M2-A', status: null },
-        { id: 2, name: 'Youssef Mansouri', email: 'youssef.mansouri@student.igp.edu', group: 'DEV-M2-A', status: null },
-        { id: 3, name: 'Khadija Amrani', email: 'khadija.amrani@student.igp.edu', group: 'DEV-M2-A', status: null },
-      ],
-    },
-    {
-      id: 3,
-      course: 'JavaScript Moderne',
-      course_code: 'DEV-JS',
-      professor: 'Karim Benjelloun',
-      group: 'DEV-L2-A',
-      date: '2024-11-18',
-      start_time: '10:00',
-      end_time: '13:00',
-      room: 'Salle C5',
-      students: [
-        { id: 8, name: 'Omar Tazi', email: 'omar.tazi@student.igp.edu', group: 'DEV-L2-A', status: null },
-        { id: 9, name: 'Laila Bennani', email: 'laila.bennani@student.igp.edu', group: 'DEV-L2-A', status: null },
-      ],
-    },
-  ];
+  useEffect(() => {
+    fetchSessions();
+  }, [selectedDate, filterGroup]);
 
-  const filteredSessions = sessions.filter(session => {
-    if (filterGroup && session.group !== filterGroup) return false;
-    if (selectedDate && session.date !== selectedDate) return false;
-    return true;
-  });
+  const fetchGroups = async () => {
+    try {
+      const data = await assistantAttendanceApi.getGroups();
+      setGroups(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les groupes',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      const data = await assistantAttendanceApi.getSessions(selectedDate, filterGroup || undefined);
+      setSessions(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les séances',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openAttendance = (session: CourseSession) => {
     setSelectedSession(session);
@@ -114,9 +74,37 @@ export default function AssistantAbsencesPage() {
     setHasChanges(true);
   };
 
-  const saveAttendance = () => {
-    setHasChanges(false);
-    alert('Présences enregistrées avec succès!');
+  const saveAttendance = async () => {
+    if (!selectedSession) return;
+
+    const attendance = Object.entries(attendanceData)
+      .filter(([_, status]) => status)
+      .map(([studentId, status]) => ({
+        student_id: parseInt(studentId),
+        status,
+      }));
+
+    try {
+      await assistantAttendanceApi.saveAttendance(selectedSession.id, selectedDate, attendance);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Présences enregistrées avec succès',
+        confirmButtonColor: '#257035',
+      });
+
+      setHasChanges(false);
+      setSelectedSession(null);
+      fetchSessions();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible d\'enregistrer les présences',
+        confirmButtonColor: '#C1272D',
+      });
+    }
   };
 
   const markAllPresent = () => {
@@ -129,21 +117,21 @@ export default function AssistantAbsencesPage() {
     setHasChanges(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present': return 'bg-green-100 text-green-700 border-green-300';
-      case 'absent': return 'bg-red-100 text-red-700 border-red-300';
-      case 'late': return 'bg-orange-100 text-orange-700 border-orange-300';
-      case 'excused': return 'bg-blue-100 text-blue-700 border-blue-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
-    }
+  const stats = {
+    total_sessions: sessions.length,
+    completed: sessions.filter(s => s.students.every(st => st.status !== null)).length,
+    pending: sessions.filter(s => s.students.some(st => st.status === null)).length,
   };
 
-  const stats = {
-    total_sessions: filteredSessions.length,
-    completed: filteredSessions.filter(s => s.students.every(st => st.status !== null)).length,
-    pending: filteredSessions.filter(s => s.students.some(st => st.status === null)).length,
-  };
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1272D]"></div>
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -153,7 +141,6 @@ export default function AssistantAbsencesPage() {
           <p className="text-gray-500">Marquez les présences et absences par séance de cours.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -192,7 +179,6 @@ export default function AssistantAbsencesPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div>
@@ -207,22 +193,21 @@ export default function AssistantAbsencesPage() {
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Groupe</label>
               <select
-                value={filterGroup}
-                onChange={(e) => setFilterGroup(e.target.value)}
+                value={filterGroup || ''}
+                onChange={(e) => setFilterGroup(e.target.value ? parseInt(e.target.value) : null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
               >
                 <option value="">Tous les groupes</option>
                 {groups.map((group) => (
-                  <option key={group} value={group}>{group}</option>
+                  <option key={group.id} value={group.id}>{group.name}</option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Sessions List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSessions.map((session) => {
+          {sessions.map((session) => {
             const presentCount = session.students.filter(s => s.status === 'present').length;
             const absentCount = session.students.filter(s => s.status === 'absent').length;
             const pendingCount = session.students.filter(s => s.status === null).length;
@@ -289,7 +274,7 @@ export default function AssistantAbsencesPage() {
           })}
         </div>
 
-        {filteredSessions.length === 0 && (
+        {sessions.length === 0 && (
           <div className="bg-white rounded-lg p-12 text-center">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">Aucune séance trouvée pour cette date</p>
@@ -297,7 +282,6 @@ export default function AssistantAbsencesPage() {
         )}
       </div>
 
-      {/* Attendance Modal */}
       {selectedSession && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">

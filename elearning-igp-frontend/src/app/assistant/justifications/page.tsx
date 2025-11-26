@@ -1,124 +1,137 @@
-// src/app/assistant/justifications/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Search, CheckCircle, XCircle, Eye, Download, Calendar, User, Filter, Clock } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
-
-interface Justification {
-  id: number;
-  student_name: string;
-  student_email: string;
-  group: string;
-  absence_date: string;
-  absence_course: string;
-  reason: string;
-  document_name: string;
-  document_url: string;
-  submitted_at: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  comment: string;
-}
+import { assistantJustificationApi, Justification, Group } from '@/lib/api/assistant/justifications';
+import Swal from 'sweetalert2';
 
 export default function AssistantJustificationsPage() {
+  const [justifications, setJustifications] = useState<Justification[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterGroup, setFilterGroup] = useState('');
+  const [filterGroup, setFilterGroup] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedJustification, setSelectedJustification] = useState<Justification | null>(null);
   const [reviewComment, setReviewComment] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const justifications: Justification[] = [
-    {
-      id: 1,
-      student_name: 'Salma Idrissi',
-      student_email: 'salma.idrissi@student.igp.edu',
-      group: 'DEV-M2-A',
-      absence_date: '2024-11-15',
-      absence_course: 'React.js Avancé',
-      reason: 'Certificat médical - Consultation urgente',
-      document_name: 'certificat_medical.pdf',
-      document_url: '/documents/certificat_medical.pdf',
-      submitted_at: '2024-11-16T10:30:00',
-      status: 'pending',
-      reviewed_by: null,
-      reviewed_at: null,
-      comment: '',
-    },
-    {
-      id: 2,
-      student_name: 'Fatima Zahra',
-      student_email: 'fatima.zahra@student.igp.edu',
-      group: 'DEV-M2-A',
-      absence_date: '2024-11-16',
-      absence_course: 'Node.js & Express',
-      reason: 'Raison familiale - Décès dans la famille',
-      document_name: 'justificatif_famille.pdf',
-      document_url: '/documents/justificatif_famille.pdf',
-      submitted_at: '2024-11-17T09:15:00',
-      status: 'pending',
-      reviewed_by: null,
-      reviewed_at: null,
-      comment: '',
-    },
-    {
-      id: 3,
-      student_name: 'Ahmed Benali',
-      student_email: 'ahmed.benali@student.igp.edu',
-      group: 'DEV-M2-A',
-      absence_date: '2024-11-14',
-      absence_course: 'JavaScript Moderne',
-      reason: 'Rendez-vous administratif - Renouvellement carte séjour',
-      document_name: 'convocation_prefecture.pdf',
-      document_url: '/documents/convocation.pdf',
-      submitted_at: '2024-11-15T14:00:00',
-      status: 'approved',
-      reviewed_by: 'Sara El Amrani',
-      reviewed_at: '2024-11-15T16:30:00',
-      comment: 'Justificatif valide',
-    },
-    {
-      id: 4,
-      student_name: 'Mohamed Alaoui',
-      student_email: 'mohamed.alaoui@student.igp.edu',
-      group: 'DEV-M1-A',
-      absence_date: '2024-11-13',
-      absence_course: 'Base de données NoSQL',
-      reason: 'Maladie',
-      document_name: 'ordonnance.pdf',
-      document_url: '/documents/ordonnance.pdf',
-      submitted_at: '2024-11-14T11:00:00',
-      status: 'rejected',
-      reviewed_by: 'Sara El Amrani',
-      reviewed_at: '2024-11-14T15:00:00',
-      comment: 'Document non conforme - Ordonnance insuffisante, certificat médical requis',
-    },
-    {
-      id: 5,
-      student_name: 'Youssef Mansouri',
-      student_email: 'youssef.mansouri@student.igp.edu',
-      group: 'DEV-M2-A',
-      absence_date: '2024-11-12',
-      absence_course: 'DevOps & CI/CD',
-      reason: 'Problème de transport',
-      document_name: 'attestation_sncf.pdf',
-      document_url: '/documents/attestation.pdf',
-      submitted_at: '2024-11-13T08:30:00',
-      status: 'pending',
-      reviewed_by: null,
-      reviewed_at: null,
-      comment: '',
-    },
-  ];
+  useEffect(() => {
+    fetchGroups();
+  }, []);
 
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L2-A', 'DEV-L1-A'];
+  useEffect(() => {
+    fetchJustifications();
+  }, [filterStatus, filterGroup]);
 
-  const stats = {
-    total: justifications.length,
-    pending: justifications.filter(j => j.status === 'pending').length,
-    approved: justifications.filter(j => j.status === 'approved').length,
-    rejected: justifications.filter(j => j.status === 'rejected').length,
+  const fetchGroups = async () => {
+    try {
+      const data = await assistantJustificationApi.getGroups();
+      setGroups(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les groupes',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const fetchJustifications = async () => {
+    try {
+      setLoading(true);
+      const data = await assistantJustificationApi.getAll(filterStatus || undefined, filterGroup || undefined);
+      setJustifications(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les justificatifs',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveJustification = async (id: number) => {
+    try {
+      await assistantJustificationApi.approve(id, reviewComment);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Approuvé',
+        text: 'Justificatif approuvé avec succès',
+        confirmButtonColor: '#257035',
+      });
+
+      setSelectedJustification(null);
+      setReviewComment('');
+      fetchJustifications();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible d\'approuver le justificatif',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const rejectJustification = async (id: number) => {
+    if (!reviewComment) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Attention',
+        text: 'Veuillez ajouter un commentaire pour le rejet',
+        confirmButtonColor: '#C1272D',
+      });
+      return;
+    }
+
+    try {
+      await assistantJustificationApi.reject(id, reviewComment);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Rejeté',
+        text: 'Justificatif rejeté avec succès',
+        confirmButtonColor: '#257035',
+      });
+
+      setSelectedJustification(null);
+      setReviewComment('');
+      fetchJustifications();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de rejeter le justificatif',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const downloadDocument = async (id: number, filename: string) => {
+    try {
+      const blob = await assistantJustificationApi.download(id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de télécharger le document',
+        confirmButtonColor: '#C1272D',
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -140,26 +153,26 @@ export default function AssistantJustificationsPage() {
   };
 
   const filteredJustifications = justifications.filter(justif => {
-    if (filterStatus && justif.status !== filterStatus) return false;
-    if (filterGroup && justif.group !== filterGroup) return false;
     if (searchTerm && !justif.student_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
-  const approveJustification = (id: number) => {
-    alert('Justificatif approuvé!');
-    setSelectedJustification(null);
+  const stats = {
+    total: justifications.length,
+    pending: justifications.filter(j => j.status === 'pending').length,
+    approved: justifications.filter(j => j.status === 'approved').length,
+    rejected: justifications.filter(j => j.status === 'rejected').length,
   };
 
-  const rejectJustification = (id: number) => {
-    if (!reviewComment) {
-      alert('Veuillez ajouter un commentaire pour le rejet');
-      return;
-    }
-    alert('Justificatif rejeté!');
-    setSelectedJustification(null);
-    setReviewComment('');
-  };
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1272D]"></div>
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -169,7 +182,6 @@ export default function AssistantJustificationsPage() {
           <p className="text-gray-500">Validez ou rejetez les justificatifs d'absence soumis par les étudiants.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -220,7 +232,6 @@ export default function AssistantJustificationsPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -244,19 +255,18 @@ export default function AssistantJustificationsPage() {
               <option value="rejected">Rejeté</option>
             </select>
             <select
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}
+              value={filterGroup || ''}
+              onChange={(e) => setFilterGroup(e.target.value ? parseInt(e.target.value) : null)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
             >
               <option value="">Tous les groupes</option>
               {groups.map((group) => (
-                <option key={group} value={group}>{group}</option>
+                <option key={group.id} value={group.id}>{group.name}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Justifications Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
@@ -288,7 +298,10 @@ export default function AssistantJustificationsPage() {
                     <p className="text-sm text-gray-600 line-clamp-2">{justif.reason}</p>
                   </td>
                   <td className="py-4 px-4 text-center">
-                    <button className="inline-flex items-center gap-1 text-sm text-[#0D529C] hover:underline">
+                    <button 
+                      onClick={() => downloadDocument(justif.id, justif.document_name)}
+                      className="inline-flex items-center gap-1 text-sm text-[#0D529C] hover:underline"
+                    >
                       <FileText className="w-4 h-4" />
                       {justif.document_name}
                     </button>
@@ -321,7 +334,6 @@ export default function AssistantJustificationsPage() {
         </div>
       </div>
 
-      {/* Detail Modal */}
       {selectedJustification && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -338,7 +350,6 @@ export default function AssistantJustificationsPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Student Info */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="font-bold text-gray-900 mb-3">Informations Étudiant</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -361,7 +372,6 @@ export default function AssistantJustificationsPage() {
                 </div>
               </div>
 
-              {/* Absence Info */}
               <div className="bg-red-50 rounded-lg p-4">
                 <h3 className="font-bold text-[#C1272D] mb-3">Détails de l'Absence</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -376,13 +386,11 @@ export default function AssistantJustificationsPage() {
                 </div>
               </div>
 
-              {/* Reason */}
               <div>
                 <h3 className="font-bold text-gray-900 mb-2">Motif</h3>
                 <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedJustification.reason}</p>
               </div>
 
-              {/* Document */}
               <div>
                 <h3 className="font-bold text-gray-900 mb-2">Pièce Justificative</h3>
                 <div className="flex items-center justify-between bg-blue-50 p-4 rounded-lg">
@@ -390,20 +398,16 @@ export default function AssistantJustificationsPage() {
                     <FileText className="w-8 h-8 text-[#0D529C]" />
                     <span className="font-medium text-[#0D529C]">{selectedJustification.document_name}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="flex items-center gap-1 px-3 py-1 bg-[#0D529C] text-white rounded-lg text-sm hover:bg-blue-700">
-                      <Eye className="w-4 h-4" />
-                      Voir
-                    </button>
-                    <button className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600">
-                      <Download className="w-4 h-4" />
-                      Télécharger
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => downloadDocument(selectedJustification.id, selectedJustification.document_name)}
+                    className="flex items-center gap-1 px-3 py-1 bg-[#0D529C] text-white rounded-lg text-sm hover:bg-blue-700"
+                  >
+                    <Download className="w-4 h-4" />
+                    Télécharger
+                  </button>
                 </div>
               </div>
 
-              {/* Review Status */}
               {selectedJustification.status !== 'pending' && (
                 <div className={`rounded-lg p-4 ${
                   selectedJustification.status === 'approved' ? 'bg-green-50' : 'bg-red-50'
@@ -421,7 +425,6 @@ export default function AssistantJustificationsPage() {
                 </div>
               )}
 
-              {/* Review Actions */}
               {selectedJustification.status === 'pending' && (
                 <div className="space-y-4">
                   <div>

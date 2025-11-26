@@ -1,32 +1,75 @@
-// src/app/assistant/schedules/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, User, ChevronLeft, ChevronRight, Users, Filter } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
-
-interface ScheduleEvent {
-  id: number;
-  course: string;
-  course_code: string;
-  professor: string;
-  group: string;
-  type: 'cours' | 'tp' | 'td' | 'examen';
-  day: string;
-  start_time: string;
-  end_time: string;
-  room: string;
-  students_count: number;
-}
+import { assistantScheduleApi, ScheduleEvent, Group, Professor } from '@/lib/api/assistant/schedules';
+import Swal from 'sweetalert2';
 
 export default function AssistantSchedulesPage() {
+  const [schedules, setSchedules] = useState<ScheduleEvent[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [professors, setProfessors] = useState<Professor[]>([]);
   const [currentWeek, setCurrentWeek] = useState(0);
-  const [filterGroup, setFilterGroup] = useState('');
-  const [filterProfessor, setFilterProfessor] = useState('');
+  const [filterGroup, setFilterGroup] = useState<number | null>(null);
+  const [filterProfessor, setFilterProfessor] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L2-A', 'DEV-L1-A'];
-  const professors = ['Karim Benjelloun', 'Hassan Alami', 'Omar Tazi'];
+
+  useEffect(() => {
+    fetchGroups();
+    fetchProfessors();
+  }, []);
+
+  useEffect(() => {
+    fetchSchedules();
+  }, [filterGroup, filterProfessor]);
+
+  const fetchGroups = async () => {
+    try {
+      const data = await assistantScheduleApi.getGroups();
+      setGroups(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les groupes',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const fetchProfessors = async () => {
+    try {
+      const data = await assistantScheduleApi.getProfessors();
+      setProfessors(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les professeurs',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      const data = await assistantScheduleApi.getAll(filterGroup || undefined, filterProfessor || undefined);
+      setSchedules(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les emplois du temps',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getWeekDates = (weekOffset: number) => {
     const today = new Date();
@@ -46,23 +89,6 @@ export default function AssistantSchedulesPage() {
 
   const weekDates = getWeekDates(currentWeek);
 
-  const schedule: ScheduleEvent[] = [
-    { id: 1, course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', type: 'cours', day: 'Lundi', start_time: '09:00', end_time: '12:00', room: 'Salle A12', students_count: 25 },
-    { id: 2, course: 'DevOps & CI/CD', course_code: 'DEV-OPS', professor: 'Hassan Alami', group: 'DEV-M2-A', type: 'cours', day: 'Lundi', start_time: '14:00', end_time: '16:00', room: 'Salle B3', students_count: 25 },
-    { id: 3, course: 'Node.js & Express', course_code: 'DEV-NODE', professor: 'Karim Benjelloun', group: 'DEV-M2-A', type: 'tp', day: 'Mardi', start_time: '09:00', end_time: '12:00', room: 'Lab Info 1', students_count: 25 },
-    { id: 4, course: 'JavaScript Moderne', course_code: 'DEV-JS', professor: 'Karim Benjelloun', group: 'DEV-L2-A', type: 'cours', day: 'Mardi', start_time: '14:00', end_time: '17:00', room: 'Salle C5', students_count: 30 },
-    { id: 5, course: 'Architecture Microservices', course_code: 'DEV-MICRO', professor: 'Omar Tazi', group: 'DEV-M1-A', type: 'cours', day: 'Mercredi', start_time: '09:00', end_time: '12:00', room: 'Salle A8', students_count: 28 },
-    { id: 6, course: 'Introduction au Web', course_code: 'DEV-WEB', professor: 'Karim Benjelloun', group: 'DEV-L1-A', type: 'cours', day: 'Mercredi', start_time: '14:00', end_time: '18:00', room: 'Amphi B', students_count: 35 },
-    { id: 7, course: 'Base de données NoSQL', course_code: 'DEV-NOSQL', professor: 'Karim Benjelloun', group: 'DEV-M2-A', type: 'tp', day: 'Jeudi', start_time: '09:00', end_time: '12:00', room: 'Lab Info 2', students_count: 25 },
-    { id: 8, course: 'React.js Avancé', course_code: 'DEV-REACT', professor: 'Karim Benjelloun', group: 'DEV-M2-A', type: 'td', day: 'Vendredi', start_time: '09:00', end_time: '11:00', room: 'Salle C2', students_count: 25 },
-  ];
-
-  const filteredSchedule = schedule.filter(event => {
-    if (filterGroup && event.group !== filterGroup) return false;
-    if (filterProfessor && event.professor !== filterProfessor) return false;
-    return true;
-  });
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'cours': return 'bg-[#0D529C] border-[#0D529C]';
@@ -70,16 +96,6 @@ export default function AssistantSchedulesPage() {
       case 'td': return 'bg-purple-500 border-purple-500';
       case 'examen': return 'bg-[#C1272D] border-[#C1272D]';
       default: return 'bg-gray-500 border-gray-500';
-    }
-  };
-
-  const getTypeBgColor = (type: string) => {
-    switch (type) {
-      case 'cours': return 'bg-blue-50 border-l-4 border-[#0D529C]';
-      case 'tp': return 'bg-green-50 border-l-4 border-[#257035]';
-      case 'td': return 'bg-purple-50 border-l-4 border-purple-500';
-      case 'examen': return 'bg-red-50 border-l-4 border-[#C1272D]';
-      default: return 'bg-gray-50 border-l-4 border-gray-500';
     }
   };
 
@@ -94,11 +110,21 @@ export default function AssistantSchedulesPage() {
   };
 
   const stats = {
-    total_sessions: filteredSchedule.length,
-    total_groups: new Set(filteredSchedule.map(s => s.group)).size,
-    total_professors: new Set(filteredSchedule.map(s => s.professor)).size,
-    total_students: filteredSchedule.reduce((sum, s) => sum + s.students_count, 0),
+    total_sessions: schedules.length,
+    total_groups: new Set(schedules.map(s => s.group)).size,
+    total_professors: new Set(schedules.map(s => s.professor)).size,
+    total_students: schedules.reduce((sum, s) => sum + s.students_count, 0),
   };
+
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1272D]"></div>
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -108,7 +134,6 @@ export default function AssistantSchedulesPage() {
           <p className="text-gray-500">Consultez les emplois du temps de tous les groupes et professeurs.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -159,7 +184,6 @@ export default function AssistantSchedulesPage() {
           </div>
         </div>
 
-        {/* Filters & Navigation */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -186,23 +210,23 @@ export default function AssistantSchedulesPage() {
             </div>
             <div className="flex gap-4">
               <select
-                value={filterGroup}
-                onChange={(e) => setFilterGroup(e.target.value)}
+                value={filterGroup || ''}
+                onChange={(e) => setFilterGroup(e.target.value ? parseInt(e.target.value) : null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
               >
                 <option value="">Tous les groupes</option>
                 {groups.map((group) => (
-                  <option key={group} value={group}>{group}</option>
+                  <option key={group.id} value={group.id}>{group.name}</option>
                 ))}
               </select>
               <select
-                value={filterProfessor}
-                onChange={(e) => setFilterProfessor(e.target.value)}
+                value={filterProfessor || ''}
+                onChange={(e) => setFilterProfessor(e.target.value ? parseInt(e.target.value) : null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
               >
                 <option value="">Tous les professeurs</option>
                 {professors.map((prof) => (
-                  <option key={prof} value={prof}>{prof}</option>
+                  <option key={prof.id} value={prof.id}>{prof.name}</option>
                 ))}
               </select>
               <button
@@ -215,7 +239,6 @@ export default function AssistantSchedulesPage() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="bg-white rounded-lg p-4 shadow-sm mb-6">
           <div className="flex flex-wrap items-center gap-6">
             <span className="text-sm font-medium text-gray-700">Légende:</span>
@@ -238,10 +261,9 @@ export default function AssistantSchedulesPage() {
           </div>
         </div>
 
-        {/* Schedule List */}
         <div className="space-y-4">
           {days.map((day) => {
-            const dayEvents = filteredSchedule.filter(e => e.day === day);
+            const dayEvents = schedules.filter(e => e.day === day);
             if (dayEvents.length === 0) return null;
 
             return (
@@ -297,7 +319,7 @@ export default function AssistantSchedulesPage() {
           })}
         </div>
 
-        {filteredSchedule.length === 0 && (
+        {schedules.length === 0 && (
           <div className="bg-white rounded-lg p-12 text-center">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">Aucune séance trouvée avec ces filtres</p>

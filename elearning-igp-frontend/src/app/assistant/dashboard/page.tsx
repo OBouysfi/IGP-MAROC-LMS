@@ -1,51 +1,51 @@
-// src/app/assistant/dashboard/page.tsx
 'use client';
 
-import React from 'react';
-import { UserCheck, UserX, Clock, FileText, AlertTriangle, TrendingUp, Calendar, Users, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { UserCheck, UserX, Clock, FileText, AlertTriangle, TrendingUp, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
+import { assistantDashboardApi } from '@/lib/api/assistant/dashboard';
+import Swal from 'sweetalert2';
 
 export default function AssistantDashboard() {
-  const stats = {
-    total_students: 450,
-    present_today: 412,
-    absent_today: 38,
-    late_today: 15,
-    pending_justifications: 12,
-    absence_rate: 8.4,
-    justified_absences: 24,
-    unjustified_absences: 14,
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>({});
+  const [todayAbsences, setTodayAbsences] = useState<any[]>([]);
+  const [pendingJustifications, setPendingJustifications] = useState<any[]>([]);
+  const [topAbsentStudents, setTopAbsentStudents] = useState<any[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [statsRes, absencesRes, justifsRes, topStudentsRes, weeklyRes] = await Promise.all([
+        assistantDashboardApi.getStats(),
+        assistantDashboardApi.getTodayAbsences(),
+        assistantDashboardApi.getPendingJustifications(),
+        assistantDashboardApi.getTopAbsentStudents(),
+        assistantDashboardApi.getWeeklyStats(),
+      ]);
+
+      setStats(statsRes.data);
+      setTodayAbsences(absencesRes.data);
+      setPendingJustifications(justifsRes.data);
+      setTopAbsentStudents(topStudentsRes.data);
+      setWeeklyStats(weeklyRes.data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement du dashboard',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const todayAbsences = [
-    { id: 1, student: 'Youssef Mansouri', group: 'DEV-M2-A', course: 'React.js Avancé', time: '09:00 - 12:00', status: 'non_justifiée' },
-    { id: 2, student: 'Rachid Tazi', group: 'DEV-M2-A', course: 'React.js Avancé', time: '09:00 - 12:00', status: 'justifiée' },
-    { id: 3, student: 'Salma Idrissi', group: 'DEV-L1-A', course: 'Introduction au Web', time: '10:00 - 13:00', status: 'en_attente' },
-    { id: 4, student: 'Mohamed Alaoui', group: 'DEV-M1-A', course: 'JavaScript Moderne', time: '14:00 - 17:00', status: 'non_justifiée' },
-    { id: 5, student: 'Fatima Zahra', group: 'DEV-M2-A', course: 'Node.js & Express', time: '14:00 - 17:00', status: 'en_attente' },
-  ];
-
-  const pendingJustifications = [
-    { id: 1, student: 'Salma Idrissi', date: '2024-11-15', reason: 'Certificat médical', document: 'certificat_medical.pdf' },
-    { id: 2, student: 'Fatima Zahra', date: '2024-11-16', reason: 'Raison familiale', document: 'justificatif.pdf' },
-    { id: 3, student: 'Ahmed Benali', date: '2024-11-14', reason: 'Rendez-vous administratif', document: 'convocation.pdf' },
-  ];
-
-  const topAbsentStudents = [
-    { id: 1, name: 'Mohamed Alaoui', group: 'DEV-M1-A', absences: 12, hours: 36 },
-    { id: 2, name: 'Youssef Mansouri', group: 'DEV-M2-A', absences: 10, hours: 30 },
-    { id: 3, name: 'Khadija Amrani', group: 'DEV-L2-A', absences: 8, hours: 24 },
-    { id: 4, name: 'Rachid Tazi', group: 'DEV-M2-A', absences: 7, hours: 21 },
-    { id: 5, name: 'Omar Tazi', group: 'DEV-L1-A', absences: 6, hours: 18 },
-  ];
-
-  const weeklyStats = [
-    { day: 'Lun', absences: 32, rate: 7.1 },
-    { day: 'Mar', absences: 28, rate: 6.2 },
-    { day: 'Mer', absences: 45, rate: 10.0 },
-    { day: 'Jeu', absences: 35, rate: 7.8 },
-    { day: 'Ven', absences: 38, rate: 8.4 },
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -65,16 +65,24 @@ export default function AssistantDashboard() {
     }
   };
 
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#C1272D]" />
+        </div>
+      </AssistantLayout>
+    );
+  }
+
   return (
     <AssistantLayout>
       <div className="p-8">
-        {/* Welcome */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#C1272D] mb-2">Bonjour, Sara! 👋</h1>
+          <h1 className="text-3xl font-bold text-[#C1272D] mb-2">Bonjour! 👋</h1>
           <p className="text-gray-500">Voici le résumé des absences et présences du jour.</p>
         </div>
 
-        {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -83,8 +91,8 @@ export default function AssistantDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Présents Aujourd'hui</p>
-                <p className="text-2xl font-bold text-green-600">{stats.present_today}</p>
-                <p className="text-xs text-gray-400">sur {stats.total_students} étudiants</p>
+                <p className="text-2xl font-bold text-green-600">{stats.present_today || 0}</p>
+                <p className="text-xs text-gray-400">sur {stats.total_students || 0} étudiants</p>
               </div>
             </div>
           </div>
@@ -96,8 +104,8 @@ export default function AssistantDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Absents Aujourd'hui</p>
-                <p className="text-2xl font-bold text-[#C1272D]">{stats.absent_today}</p>
-                <p className="text-xs text-gray-400">{stats.absence_rate}% du total</p>
+                <p className="text-2xl font-bold text-[#C1272D]">{stats.absent_today || 0}</p>
+                <p className="text-xs text-gray-400">{stats.absence_rate || 0}% du total</p>
               </div>
             </div>
           </div>
@@ -109,7 +117,7 @@ export default function AssistantDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Retards</p>
-                <p className="text-2xl font-bold text-orange-500">{stats.late_today}</p>
+                <p className="text-2xl font-bold text-orange-500">{stats.late_today || 0}</p>
                 <p className="text-xs text-gray-400">Aujourd'hui</p>
               </div>
             </div>
@@ -122,20 +130,19 @@ export default function AssistantDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Justificatifs en attente</p>
-                <p className="text-2xl font-bold text-[#0D529C]">{stats.pending_justifications}</p>
+                <p className="text-2xl font-bold text-[#0D529C]">{stats.pending_justifications || 0}</p>
                 <p className="text-xs text-gray-400">À traiter</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Secondary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-5 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Absences Justifiées</p>
-                <p className="text-3xl font-bold">{stats.justified_absences}</p>
+                <p className="text-3xl font-bold">{stats.justified_absences || 0}</p>
                 <p className="text-xs opacity-75">Ce mois</p>
               </div>
               <CheckCircle className="w-12 h-12 opacity-50" />
@@ -146,7 +153,7 @@ export default function AssistantDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Absences Non Justifiées</p>
-                <p className="text-3xl font-bold">{stats.unjustified_absences}</p>
+                <p className="text-3xl font-bold">{stats.unjustified_absences || 0}</p>
                 <p className="text-xs opacity-75">Ce mois</p>
               </div>
               <XCircle className="w-12 h-12 opacity-50" />
@@ -157,7 +164,7 @@ export default function AssistantDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm opacity-90">Taux de Présence</p>
-                <p className="text-3xl font-bold">{(100 - stats.absence_rate).toFixed(1)}%</p>
+                <p className="text-3xl font-bold">{(100 - (stats.absence_rate || 0)).toFixed(1)}%</p>
                 <p className="text-xs opacity-75">Ce mois</p>
               </div>
               <TrendingUp className="w-12 h-12 opacity-50" />
@@ -165,11 +172,8 @@ export default function AssistantDashboard() {
           </div>
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Today's Absences */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Today's Absences */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#C1272D]">Absences du Jour</h3>
@@ -187,7 +191,7 @@ export default function AssistantDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {todayAbsences.map((absence) => (
+                    {todayAbsences.length > 0 ? todayAbsences.map((absence) => (
                       <tr key={absence.id} className="border-t border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-3">
                           <p className="font-medium text-gray-900 text-sm">{absence.student}</p>
@@ -201,18 +205,26 @@ export default function AssistantDashboard() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500">
+                          Aucune absence aujourd'hui
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
               <div className="mt-4 text-center">
-                <button className="text-sm text-[#C1272D] hover:underline">
+                <button 
+                  onClick={() => window.location.href = '/assistant/absences'}
+                  className="text-sm text-[#C1272D] hover:underline"
+                >
                   Voir toutes les absences →
                 </button>
               </div>
             </div>
 
-            {/* Weekly Stats Chart */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <h3 className="text-lg font-bold text-[#C1272D] mb-4">Absences cette semaine</h3>
               <div className="flex items-end justify-between h-48 gap-4">
@@ -221,7 +233,7 @@ export default function AssistantDashboard() {
                     <div className="w-full bg-gray-100 rounded-t relative" style={{ height: '160px' }}>
                       <div
                         className="absolute bottom-0 w-full bg-gradient-to-t from-[#C1272D] to-red-400 rounded-t transition-all duration-500"
-                        style={{ height: `${(day.absences / 50) * 100}%` }}
+                        style={{ height: `${Math.min((day.absences / 50) * 100, 100)}%` }}
                       >
                         <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700">
                           {day.absences}
@@ -236,9 +248,7 @@ export default function AssistantDashboard() {
             </div>
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
-            {/* Pending Justifications */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-[#C1272D]">Justificatifs à Traiter</h3>
@@ -247,7 +257,7 @@ export default function AssistantDashboard() {
                 </span>
               </div>
               <div className="space-y-3">
-                {pendingJustifications.map((justif) => (
+                {pendingJustifications.length > 0 ? pendingJustifications.map((justif) => (
                   <div key={justif.id} className="p-3 bg-orange-50 rounded-lg border border-orange-100">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium text-gray-900 text-sm">{justif.student}</p>
@@ -256,31 +266,27 @@ export default function AssistantDashboard() {
                     <p className="text-xs text-gray-600 mb-2">{justif.reason}</p>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[#0D529C]">📎 {justif.document}</span>
-                      <div className="flex gap-1">
-                        <button className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600">
-                          ✓
-                        </button>
-                        <button className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
-                          ✗
-                        </button>
-                      </div>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-gray-500 text-center py-4">Aucun justificatif en attente</p>
+                )}
               </div>
-              <button className="w-full mt-4 text-sm text-[#C1272D] hover:underline">
+              <button 
+                onClick={() => window.location.href = '/assistant/justifications'}
+                className="w-full mt-4 text-sm text-[#C1272D] hover:underline"
+              >
                 Voir tous les justificatifs →
               </button>
             </div>
 
-            {/* Top Absent Students */}
             <div className="bg-white rounded-lg p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
                 <AlertTriangle className="w-5 h-5 text-orange-500" />
                 <h3 className="text-lg font-bold text-[#C1272D]">Étudiants à Surveiller</h3>
               </div>
               <div className="space-y-3">
-                {topAbsentStudents.map((student, index) => (
+                {topAbsentStudents.length > 0 ? topAbsentStudents.map((student, index) => (
                   <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -298,7 +304,9 @@ export default function AssistantDashboard() {
                       <p className="text-xs text-gray-500">{student.hours}h</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-gray-500 text-center py-4">Aucun étudiant à surveiller</p>
+                )}
               </div>
             </div>
           </div>

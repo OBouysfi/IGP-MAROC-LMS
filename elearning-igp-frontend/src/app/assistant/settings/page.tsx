@@ -1,24 +1,29 @@
-// src/app/assistant/settings/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { User, Lock, Bell, Save, Eye, EyeOff, Camera } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Lock, Bell, Save, Eye, EyeOff, Camera, Loader2 } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
+import { assistantSettingsApi, ProfileData, NotificationSettings } from '@/lib/api/assistant/settings';
+import Swal from 'sweetalert2';
 
 export default function AssistantSettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications'>('profile');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [profile, setProfile] = useState({
-    first_name: 'Sara',
-    last_name: 'El Amrani',
-    email: 'sara.elamrani@igp.edu',
-    phone: '+212 6 12 34 56 78',
-    employee_id: 'ASS-2024-001',
-    department: 'Scolarité',
-    role: 'Assistante Administrative',
+  const [profile, setProfile] = useState<ProfileData>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    employee_id: '',
+    department: '',
+    role: '',
+    bio: '',
+    linkedin: '',
   });
 
   const [security, setSecurity] = useState({
@@ -27,7 +32,7 @@ export default function AssistantSettingsPage() {
     confirm_password: '',
   });
 
-  const [notifications, setNotifications] = useState({
+  const [notifications, setNotifications] = useState<NotificationSettings>({
     email_new_justification: true,
     email_high_absence: true,
     email_daily_report: false,
@@ -41,26 +46,160 @@ export default function AssistantSettingsPage() {
     { id: 'notifications', name: 'Notifications', icon: Bell },
   ];
 
-  const handleSaveProfile = () => {
-    alert('Profil mis à jour avec succès!');
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [profileRes, notificationsRes] = await Promise.all([
+        assistantSettingsApi.getProfile(),
+        assistantSettingsApi.getNotifications(),
+      ]);
+      setProfile(profileRes.data.data);
+      setNotifications(notificationsRes.data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Erreur lors du chargement des données',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        await assistantSettingsApi.uploadAvatar(file);
+        Swal.fire({
+          icon: 'success',
+          title: 'Succès',
+          text: 'Photo de profil mise à jour',
+          confirmButtonColor: '#257035',
+          timer: 2000,
+        });
+        fetchData();
+      } catch (error: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erreur',
+          text: error.response?.data?.message || 'Erreur lors de l\'upload',
+          confirmButtonColor: '#C1272D',
+        });
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await assistantSettingsApi.updateProfile(profile);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Profil mis à jour avec succès',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la mise à jour',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
     if (security.new_password !== security.confirm_password) {
-      alert('Les mots de passe ne correspondent pas!');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Les mots de passe ne correspondent pas',
+        confirmButtonColor: '#C1272D',
+      });
       return;
     }
+
     if (security.new_password.length < 8) {
-      alert('Le mot de passe doit contenir au moins 8 caractères!');
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Le mot de passe doit contenir au moins 8 caractères',
+        confirmButtonColor: '#C1272D',
+      });
       return;
     }
-    alert('Mot de passe modifié avec succès!');
-    setSecurity({ ...security, current_password: '', new_password: '', confirm_password: '' });
+
+    try {
+      await assistantSettingsApi.changePassword({
+        current_password: security.current_password,
+        new_password: security.new_password,
+        new_password_confirmation: security.confirm_password,
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Mot de passe modifié avec succès',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+      setSecurity({ current_password: '', new_password: '', confirm_password: '' });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors du changement de mot de passe',
+        confirmButtonColor: '#C1272D',
+      });
+    }
   };
 
-  const handleSaveNotifications = () => {
-    alert('Préférences de notifications sauvegardées!');
+  const handleSaveNotifications = async () => {
+    setSaving(true);
+    try {
+      await assistantSettingsApi.updateNotifications(notifications);
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Préférences de notifications sauvegardées',
+        confirmButtonColor: '#257035',
+        timer: 2000,
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la sauvegarde',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const getInitials = () => {
+    return `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-[#C1272D]" />
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -71,7 +210,6 @@ export default function AssistantSettingsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm">
-          {/* Tabs */}
           <div className="border-b border-gray-200">
             <div className="flex">
               {tabs.map((tab) => {
@@ -95,29 +233,37 @@ export default function AssistantSettingsPage() {
           </div>
 
           <div className="p-6">
-            {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#C1272D]">Informations Personnelles</h3>
                   <button
                     onClick={handleSaveProfile}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Enregistrer
                   </button>
                 </div>
 
-                {/* Avatar */}
                 <div className="flex items-center gap-6">
                   <div className="relative">
-                    <div className="w-24 h-24 bg-[#C1272D] rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                      SE
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-[#0D529C] text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors">
+                    {profile.avatar ? (
+                      <img 
+                        src={profile.avatar} 
+                        alt="Avatar" 
+                        className="w-24 h-24 rounded-full object-cover" 
+                      />
+                    ) : (
+                      <div className="w-24 h-24 bg-[#C1272D] rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                        {getInitials()}
+                      </div>
+                    )}
+                    <label className="absolute bottom-0 right-0 w-8 h-8 bg-[#257035] text-white rounded-full flex items-center justify-center hover:bg-green-700 transition-colors cursor-pointer">
                       <Camera className="w-4 h-4" />
-                    </button>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                    </label>
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">Photo de Profil</h4>
@@ -125,7 +271,6 @@ export default function AssistantSettingsPage() {
                   </div>
                 </div>
 
-                {/* Employee Info (Read-only) */}
                 <div className="bg-red-50 rounded-lg p-4">
                   <h4 className="font-medium text-[#C1272D] mb-3">Informations Professionnelles</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -168,9 +313,10 @@ export default function AssistantSettingsPage() {
                     <input
                       type="email"
                       value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent bg-gray-50"
+                      disabled
                     />
+                    <p className="text-xs text-gray-500 mt-1">L'email ne peut pas être modifié</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">Téléphone</label>
@@ -182,10 +328,31 @@ export default function AssistantSettingsPage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Biographie</label>
+                  <textarea
+                    value={profile.bio}
+                    onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent resize-none"
+                    rows={4}
+                    placeholder="Décrivez votre parcours..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">LinkedIn</label>
+                  <input
+                    type="url"
+                    value={profile.linkedin}
+                    onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                </div>
               </div>
             )}
 
-            {/* Security Tab */}
             {activeTab === 'security' && (
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-[#C1272D]">Sécurité du Compte</h3>
@@ -259,16 +426,16 @@ export default function AssistantSettingsPage() {
               </div>
             )}
 
-            {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-[#C1272D]">Préférences de Notifications</h3>
                   <button
                     onClick={handleSaveNotifications}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    <Save className="w-4 h-4" />
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Enregistrer
                   </button>
                 </div>

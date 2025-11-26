@@ -27,7 +27,16 @@ use App\Http\Controllers\Api\Student\StudentSessionController;
 use App\Http\Controllers\Api\Student\StudentScheduleController;
 use App\Http\Controllers\Api\Student\DocumentController;
 use App\Http\Controllers\Api\Student\ResourceController;
+/** Panel Assistant */
+use App\Http\Controllers\Api\Assistant\AttendanceController as AssistantAttendanceController;
+use App\Http\Controllers\Api\Assistant\JustificationController as AssistantJustificationController;
+use App\Http\Controllers\Api\Assistant\ScheduleController as AssistantScheduleController;
+use App\Http\Controllers\Api\Assistant\ReportController as AssistantReportController;
+use App\Http\Controllers\Api\Assistant\DelayController as AssistantDelayController;
+use App\Http\Controllers\Api\Assistant\SettingsController as AssistantSettingsController;
+use App\Http\Controllers\Api\Assistant\DashboardController as AssistantDashboardController;
 use Illuminate\Support\Facades\Route;
+
 
 // Public routes
 Route::prefix('auth')->group(function () {
@@ -196,6 +205,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
  // Professor routes
 
 Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
+    // Dashboard
+    Route::get('dashboard', [App\Http\Controllers\Api\Professor\DashboardController::class, 'index']);
     // Courses
     Route::get('courses/stats', [App\Http\Controllers\Api\Professor\CourseController::class, 'stats']);
     Route::get('courses', [App\Http\Controllers\Api\Professor\CourseController::class, 'index']);
@@ -241,8 +252,6 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::get('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'getPreferences']);
     Route::put('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updatePreferences']);
     Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Professor\SettingsController::class, 'toggle2FA']);
-    // Dashboard
-    Route::get('dashboard', [App\Http\Controllers\Api\Professor\DashboardController::class, 'index']);
 });
 
 
@@ -251,6 +260,10 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
 
 // Student routes
 Route::middleware(['auth:sanctum'])->prefix('student')->group(function () {
+    // Dashboard
+    Route::get('dashboard', [App\Http\Controllers\Api\Student\DashboardController::class, 'index']);
+    Route::get('/dashboard/stats', [App\Http\Controllers\Api\Student\DashboardController::class, 'stats']);
+
     // Mes Cours
     Route::get('/courses', [StudentCourseController::class, 'index']);
     Route::get('/courses/{id}', [StudentCourseController::class, 'show']);
@@ -278,5 +291,56 @@ Route::middleware(['auth:sanctum'])->prefix('student')->group(function () {
     Route::get('settings/preferences', [App\Http\Controllers\Api\Student\SettingsController::class, 'getPreferences']);
     Route::put('settings/preferences', [App\Http\Controllers\Api\Student\SettingsController::class, 'updatePreferences']);
     Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Student\SettingsController::class, 'toggle2FA']);
+    
+});
 
+
+
+
+
+
+
+
+
+
+// Assistant Panel
+Route::middleware(['auth:sanctum'])->prefix('assistant')->group(function () {
+    // Gestion des Absences
+    Route::get('/attendances/sessions', [AssistantAttendanceController::class, 'getSessions']);
+    Route::post('/attendances/save', [AssistantAttendanceController::class, 'saveAttendance']);
+    Route::get('/attendances/groups', [AssistantAttendanceController::class, 'getGroups']);
+    
+    // Justifications
+    Route::get('/justifications', [AssistantJustificationController::class, 'index']);
+    Route::post('/justifications/{id}/approve', [AssistantJustificationController::class, 'approve']);
+    Route::post('/justifications/{id}/reject', [AssistantJustificationController::class, 'reject']);
+    Route::get('/justifications/{id}/download', [AssistantJustificationController::class, 'download']);
+    Route::get('/justifications/groups', [AssistantJustificationController::class, 'getGroups']);
+    
+    // Schedules
+    Route::get('/schedules', [AssistantScheduleController::class, 'index']);
+    Route::get('/schedules/groups', [AssistantScheduleController::class, 'getGroups']);
+    Route::get('/schedules/professors', [AssistantScheduleController::class, 'getProfessors']);
+    // Reports
+    Route::get('/reports/stats', [AssistantReportController::class, 'getStats']);
+    Route::post('/reports/generate', [AssistantReportController::class, 'generate']);
+    Route::get('/reports/recent', [AssistantReportController::class, 'getRecent']);
+    Route::get('/reports/groups', [AssistantReportController::class, 'getGroups']);
+     // Delays
+    Route::get('/delays', [AssistantDelayController::class, 'index']);
+    Route::post('/delays/{id}/justify', [AssistantDelayController::class, 'justify']);
+    Route::get('/delays/groups', [AssistantDelayController::class, 'getGroups']);
+     // Settings
+    Route::get('/settings/profile', [AssistantSettingsController::class, 'getProfile']);
+    Route::put('/settings/profile', [AssistantSettingsController::class, 'updateProfile']);
+    Route::post('/settings/avatar', [AssistantSettingsController::class, 'uploadAvatar']);
+    Route::post('/settings/password', [AssistantSettingsController::class, 'changePassword']);
+    Route::get('/settings/notifications', [AssistantSettingsController::class, 'getNotifications']);
+    Route::put('/settings/notifications', [AssistantSettingsController::class, 'updateNotifications']);
+    // Dashboard
+    Route::get('/dashboard/stats', [AssistantDashboardController::class, 'getStats']);
+    Route::get('/dashboard/today-absences', [AssistantDashboardController::class, 'getTodayAbsences']);
+    Route::get('/dashboard/pending-justifications', [AssistantDashboardController::class, 'getPendingJustifications']);
+    Route::get('/dashboard/top-absent-students', [AssistantDashboardController::class, 'getTopAbsentStudents']);
+    Route::get('/dashboard/weekly-stats', [AssistantDashboardController::class, 'getWeeklyStats']);
 });

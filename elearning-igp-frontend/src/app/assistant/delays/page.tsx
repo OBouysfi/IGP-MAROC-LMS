@@ -1,112 +1,91 @@
-// src/app/assistant/delays/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Search, User, Calendar, Filter, AlertTriangle, CheckCircle } from 'lucide-react';
 import AssistantLayout from '@/components/layouts/AssistantLayout';
-
-interface Delay {
-  id: number;
-  student_name: string;
-  student_email: string;
-  group: string;
-  course: string;
-  date: string;
-  scheduled_time: string;
-  arrival_time: string;
-  delay_minutes: number;
-  justified: boolean;
-  reason: string;
-}
+import { assistantDelayApi, Delay, Group } from '@/lib/api/assistant/delays';
+import Swal from 'sweetalert2';
 
 export default function AssistantDelaysPage() {
+  const [delays, setDelays] = useState<Delay[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterGroup, setFilterGroup] = useState('');
+  const [filterGroup, setFilterGroup] = useState<number | null>(null);
   const [filterDate, setFilterDate] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const delays: Delay[] = [
-    {
-      id: 1,
-      student_name: 'Rachid Tazi',
-      student_email: 'rachid.tazi@student.igp.edu',
-      group: 'DEV-M2-A',
-      course: 'React.js Avancé',
-      date: '2024-11-18',
-      scheduled_time: '09:00',
-      arrival_time: '09:25',
-      delay_minutes: 25,
-      justified: false,
-      reason: '',
-    },
-    {
-      id: 2,
-      student_name: 'Salma Idrissi',
-      student_email: 'salma.idrissi@student.igp.edu',
-      group: 'DEV-M2-A',
-      course: 'Node.js & Express',
-      date: '2024-11-17',
-      scheduled_time: '14:00',
-      arrival_time: '14:15',
-      delay_minutes: 15,
-      justified: true,
-      reason: 'Problème de transport',
-    },
-    {
-      id: 3,
-      student_name: 'Mohamed Alaoui',
-      student_email: 'mohamed.alaoui@student.igp.edu',
-      group: 'DEV-M1-A',
-      course: 'JavaScript Moderne',
-      date: '2024-11-16',
-      scheduled_time: '10:00',
-      arrival_time: '10:40',
-      delay_minutes: 40,
-      justified: false,
-      reason: '',
-    },
-    {
-      id: 4,
-      student_name: 'Khadija Amrani',
-      student_email: 'khadija.amrani@student.igp.edu',
-      group: 'DEV-L2-A',
-      course: 'Base de données NoSQL',
-      date: '2024-11-15',
-      scheduled_time: '09:00',
-      arrival_time: '09:10',
-      delay_minutes: 10,
-      justified: true,
-      reason: 'Rendez-vous médical',
-    },
-    {
-      id: 5,
-      student_name: 'Omar Tazi',
-      student_email: 'omar.tazi@student.igp.edu',
-      group: 'DEV-L1-A',
-      course: 'Introduction au Web',
-      date: '2024-11-14',
-      scheduled_time: '14:00',
-      arrival_time: '14:30',
-      delay_minutes: 30,
-      justified: false,
-      reason: '',
-    },
-  ];
+  useEffect(() => {
+    fetchGroups();
+  }, []);
 
-  const groups = ['DEV-M2-A', 'DEV-M1-A', 'DEV-L2-A', 'DEV-L1-A'];
+  useEffect(() => {
+    fetchDelays();
+  }, [filterGroup, filterDate]);
+
+  const fetchGroups = async () => {
+    try {
+      const data = await assistantDelayApi.getGroups();
+      setGroups(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les groupes',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const fetchDelays = async () => {
+    try {
+      setLoading(true);
+      const data = await assistantDelayApi.getAll(filterGroup || undefined, filterDate || undefined);
+      setDelays(data);
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les retards',
+        confirmButtonColor: '#C1272D',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsJustified = async (id: number) => {
+    try {
+      await assistantDelayApi.justify(id);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Retard marqué comme justifié',
+        confirmButtonColor: '#257035',
+      });
+      
+      fetchDelays();
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de justifier le retard',
+        confirmButtonColor: '#C1272D',
+      });
+    }
+  };
+
+  const filteredDelays = delays.filter(delay => {
+    if (searchTerm && !delay.student_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
 
   const stats = {
     total_delays: delays.length,
     justified: delays.filter(d => d.justified).length,
     unjustified: delays.filter(d => !d.justified).length,
-    average_delay: Math.round(delays.reduce((sum, d) => sum + d.delay_minutes, 0) / delays.length),
+    average_delay: delays.length > 0 ? Math.round(delays.reduce((sum, d) => sum + d.delay_minutes, 0) / delays.length) : 0,
   };
-
-  const filteredDelays = delays.filter(delay => {
-    if (searchTerm && !delay.student_name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    if (filterGroup && delay.group !== filterGroup) return false;
-    if (filterDate && delay.date !== filterDate) return false;
-    return true;
-  });
 
   const getDelayColor = (minutes: number) => {
     if (minutes <= 10) return 'bg-yellow-100 text-yellow-700';
@@ -114,9 +93,15 @@ export default function AssistantDelaysPage() {
     return 'bg-red-100 text-red-700';
   };
 
-  const markAsJustified = (id: number) => {
-    alert('Retard marqué comme justifié');
-  };
+  if (loading) {
+    return (
+      <AssistantLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C1272D]"></div>
+        </div>
+      </AssistantLayout>
+    );
+  }
 
   return (
     <AssistantLayout>
@@ -126,7 +111,6 @@ export default function AssistantDelaysPage() {
           <p className="text-gray-500">Suivez et gérez les retards des étudiants.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -177,7 +161,6 @@ export default function AssistantDelaysPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -191,13 +174,13 @@ export default function AssistantDelaysPage() {
               />
             </div>
             <select
-              value={filterGroup}
-              onChange={(e) => setFilterGroup(e.target.value)}
+              value={filterGroup || ''}
+              onChange={(e) => setFilterGroup(e.target.value ? parseInt(e.target.value) : null)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#C1272D] focus:border-transparent"
             >
               <option value="">Tous les groupes</option>
               {groups.map((group) => (
-                <option key={group} value={group}>{group}</option>
+                <option key={group.id} value={group.id}>{group.name}</option>
               ))}
             </select>
             <input
@@ -209,7 +192,6 @@ export default function AssistantDelaysPage() {
           </div>
         </div>
 
-        {/* Delays Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <table className="w-full">
             <thead>
