@@ -21,12 +21,22 @@ class TwoFactorCodeNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $notifiable->refresh();
+        
+        $fullName = trim(($notifiable->first_name ?? '') . ' ' . ($notifiable->last_name ?? ''));
+        
+        // Fallback si vide
+        if (empty($fullName)) {
+            $fullName = $notifiable->email;
+        }
+        
         return (new MailMessage)
-            ->subject('Code de vérification IGP-Maroc')
-            ->greeting('Bonjour ' . $notifiable->full_name)
-            ->line('Votre code de vérification à deux facteurs est:')
+            ->subject('Code de vérification - IGP Maroc')
+            ->greeting('Bonjour ' . $fullName . ',')
+            ->line('Votre code de vérification à deux facteurs est :')
             ->line('**' . $this->code . '**')
             ->line('Ce code expire dans 10 minutes.')
-            ->line('Si vous n\'avez pas demandé ce code, ignorez ce message.');
+            ->line('Si vous n\'avez pas demandé ce code, ignorez cet email.')
+            ->salutation('Cordialement, L\'équipe IGP Maroc');
     }
 }

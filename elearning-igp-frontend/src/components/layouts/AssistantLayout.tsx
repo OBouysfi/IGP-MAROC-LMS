@@ -1,12 +1,13 @@
 // src/components/layouts/AssistantLayout.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api/auth';
 import { usePathname } from 'next/navigation';
+import { assistantSettingsApi } from '@/lib/api/assistant/settings';
 import { 
   LayoutDashboard, 
   UserCheck, 
@@ -21,7 +22,6 @@ import {
   Settings,
   ChevronDown,
   ClipboardList,
-  AlertTriangle
 } from 'lucide-react';
 
 interface AssistantLayoutProps {
@@ -33,18 +33,32 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await assistantSettingsApi.getProfile();
+      setUserProfile(response.data.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
   const handleLogout = async () => {
-        try {
-          await authApi.logout();
-          router.push('/login');
-        } catch (error) {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-          router.push('/login');
-        }
-      };
+    try {
+      await authApi.logout();
+      router.push('/login');
+    } catch (error) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      router.push('/login');
+    }
+  };
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/assistant/dashboard' },
@@ -61,8 +75,20 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
     { id: 3, message: 'Rapport mensuel généré', time: 'Il y a 3h', read: true },
   ];
 
+  const getInitials = () => {
+    if (!userProfile) return 'SE';
+    const firstName = userProfile.first_name || '';
+    const lastName = userProfile.last_name || '';
+    return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
+  };
+
+  const getUserName = () => {
+    if (!userProfile) return 'Assistante';
+    return `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Assistante';
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-[#C1272D] text-white transition-all duration-300 fixed h-full z-40`}>
         {/* Logo */}
@@ -128,21 +154,21 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
             href="/assistant/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-700 transition-colors"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-5 h-5 flex-shrink-0" />
             {sidebarOpen && <span>Paramètres</span>}
           </Link>
           <button 
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-red-600 transition-colors w-full mt-2"
-            >
-              <LogOut className="w-5 h-5" />
-              {sidebarOpen && <span>Déconnexion</span>}
-            </button>
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-100 hover:bg-red-600 transition-colors w-full mt-2"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {sidebarOpen && <span>Déconnexion</span>}
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300 flex flex-col overflow-hidden`}>
         {/* Top Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between px-6 py-4">
@@ -165,7 +191,10 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
               {/* Notifications */}
               <div className="relative">
                 <button
-                  onClick={() => setShowNotifications(!showNotifications)}
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setShowProfileMenu(false);
+                  }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
                 >
                   <Bell className="w-5 h-5 text-gray-600" />
@@ -204,14 +233,25 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
               {/* Profile Menu */}
               <div className="relative">
                 <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setShowNotifications(false);
+                  }}
                   className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <div className="w-10 h-10 bg-[#C1272D] rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
+                  {userProfile?.avatar ? (
+                    <img 
+                      src={userProfile.avatar}
+                      alt="Avatar" 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-[#C1272D] rounded-full flex items-center justify-center">
+                      <span className="text-white text-sm font-bold">{getInitials()}</span>
+                    </div>
+                  )}
                   <div className="text-left hidden md:block">
-                    <p className="text-sm font-medium text-gray-800">Sara El Amrani</p>
+                    <p className="text-sm font-medium text-gray-800">{getUserName()}</p>
                     <p className="text-xs text-gray-500">Assistante Scolarité</p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -222,6 +262,7 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
                     <Link
                       href="/assistant/profile"
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowProfileMenu(false)}
                     >
                       <User className="w-4 h-4" />
                       Mon Profil
@@ -229,6 +270,7 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
                     <Link
                       href="/assistant/settings"
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setShowProfileMenu(false)}
                     >
                       <Settings className="w-4 h-4" />
                       Paramètres
@@ -236,7 +278,7 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
                     <hr className="my-1" />
                     <button 
                       onClick={handleLogout}
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full"
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full text-left"
                     >
                       <LogOut className="w-4 h-4" />
                       Déconnexion
@@ -249,7 +291,7 @@ export default function AssistantLayout({ children }: AssistantLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="min-h-[calc(100vh-73px)]">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

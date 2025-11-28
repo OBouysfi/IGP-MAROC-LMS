@@ -72,11 +72,23 @@ export default function AssistantSettingsPage() {
     }
   };
 
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       try {
-        await assistantSettingsApi.uploadAvatar(file);
+        const response = await assistantSettingsApi.uploadAvatar(file);
+        
+        // Mettre à jour localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          user.avatar = response.data.avatar_url; // URL complète depuis le backend
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+        
+        window.dispatchEvent(new Event('storage'));
+        
         Swal.fire({
           icon: 'success',
           title: 'Succès',
@@ -84,6 +96,7 @@ export default function AssistantSettingsPage() {
           confirmButtonColor: '#257035',
           timer: 2000,
         });
+        
         fetchData();
       } catch (error: any) {
         Swal.fire({
