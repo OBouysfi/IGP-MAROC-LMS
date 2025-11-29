@@ -120,6 +120,7 @@ class User extends Authenticatable
 
     public function sendPasswordResetNotification($token)
     {
+        \Log::info('Sending password reset email to: ' . $this->email);
         $this->notify(new \App\Notifications\ResetPasswordNotification($token));
     }
 }

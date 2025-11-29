@@ -19,13 +19,14 @@ class ResetPasswordNotification extends Notification
 
     public function toMail($notifiable): MailMessage
     {
-        $url = config('app.frontend_url') . '/reset-password?token=' . $this->token . '&email=' . urlencode($notifiable->email);
+        $frontendUrl = env('APP_FRONTEND_URL', 'http://localhost:3000');
+        $resetUrl = $frontendUrl . '/reset-password?token=' . $this->token . '&email=' . urlencode($notifiable->email);
 
         return (new MailMessage)
             ->subject('🔐 Réinitialisation de mot de passe - IGP Maroc')
             ->view('emails.reset-password', [
-                'userName' => $notifiable->first_name . ' ' . $notifiable->last_name,
-                'resetUrl' => $url,
+                'userName' => trim($notifiable->first_name . ' ' . $notifiable->last_name),
+                'resetUrl' => $resetUrl,
             ]);
     }
 }

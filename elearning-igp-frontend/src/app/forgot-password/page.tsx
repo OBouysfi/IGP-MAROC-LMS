@@ -7,23 +7,38 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants/routes';
+import { authApi } from '@/lib/api/auth';
+import Swal from 'sweetalert2';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setMessage('');
 
-    // TODO: Implement forgot password API call
-
-    setTimeout(() => {
-      setMessage('Un lien de réinitialisation a été envoyé à votre email');
+    try {
+      const response = await authApi.forgotPassword(email);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Email envoyé!',
+        text: response.message || 'Un lien de réinitialisation a été envoyé à votre email',
+        confirmButtonColor: '#3b82f6',
+      });
+      
+      setEmail('');
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Une erreur est survenue',
+        confirmButtonColor: '#3b82f6',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -44,12 +59,6 @@ export default function ForgotPasswordPage() {
           <p className="text-center text-gray-600 mb-8">
             Entrez votre email pour recevoir un lien de réinitialisation
           </p>
-
-          {message && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-6">
-              {message}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
