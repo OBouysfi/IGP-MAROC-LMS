@@ -84,10 +84,11 @@ class PayrollController extends Controller
 
                 // Calculer les heures travaillées depuis les schedules
                 $schedules = Schedule::where('professor_id', $professor->id)
-                    ->whereMonth('date', $month)
-                    ->whereYear('date', $year)
+                    ->whereMonth('start_date', $month)
+                    ->whereYear('start_date', $year)
                     ->with(['course', 'group'])
                     ->get();
+
 
                 $totalHours = 0;
                 $courseDetails = [];

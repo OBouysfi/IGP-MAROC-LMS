@@ -11,8 +11,10 @@ return new class extends Migration
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
 
-            // Morph relation (professor or student)
-            $table->morphs('attendable'); // attendable_id + attendable_type
+            // 🔥 On remplace morphs par une relation simple
+            $table->foreignId('student_id')
+                ->constrained()
+                ->onDelete('cascade');
 
             // Schedule link (optional)
             $table->foreignId('schedule_id')

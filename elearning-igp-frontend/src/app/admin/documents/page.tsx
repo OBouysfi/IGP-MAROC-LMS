@@ -181,13 +181,27 @@ export default function DocumentsPage() {
   const handleDownload = async (documentId: number) => {
     try {
       const response = await documentsApi.download(documentId);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = "document";
+
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+
+      const blob = new Blob([response.data], { type: response.headers['content-type'] });
+      const url = window.URL.createObjectURL(blob);
+
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'document.pdf');
+      link.setAttribute('download', filename);  // ⬅ Téléchargement direct
       document.body.appendChild(link);
       link.click();
       link.remove();
+
+      window.URL.revokeObjectURL(url);
+
     } catch (error) {
       console.error('Error downloading document:', error);
       Swal.fire({
@@ -198,7 +212,6 @@ export default function DocumentsPage() {
       });
     }
   };
-
   const resetUploadForm = () => {
     setUploadForm({
       student_id: 0,
@@ -656,11 +669,8 @@ export default function DocumentsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between">
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Download className="w-4 h-4" />
-                  Télécharger Tout
-                </button>
+              {/* <div className="flex items-end justify-end">
+                
                 <div className="flex gap-2">
                   <button className="px-4 py-2 border border-[#0D529C] text-[#0D529C] rounded-lg hover:bg-blue-50 transition-colors">
                     Envoyer Rappel
@@ -670,7 +680,7 @@ export default function DocumentsPage() {
                     Générer Attestation
                   </button>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

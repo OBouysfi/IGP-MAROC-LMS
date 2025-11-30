@@ -179,22 +179,31 @@ class StudentDocumentController extends Controller
     public function download($id)
     {
         $document = StudentDocument::findOrFail($id);
-        
+
         if (!$document->file_path) {
             return response()->json(['message' => 'Fichier non trouvé'], 404);
         }
 
         $path = Storage::disk('public')->path($document->file_path);
-        
+
         if (!file_exists($path)) {
             return response()->json(['message' => 'Fichier non trouvé'], 404);
         }
 
-        return response()->download($path);
+        $mime = mime_content_type($path); // <-- essentiel
+
+        return response()->download(
+            $path,
+            $document->name . '.' . pathinfo($path, PATHINFO_EXTENSION), // filename propre
+            ['Content-Type' => $mime] // <-- MIME correct
+        );
     }
+
+
 
     public function getRequiredDocuments(): JsonResponse
     {
         return response()->json(['data' => $this->requiredDocuments]);
     }
+
 }
