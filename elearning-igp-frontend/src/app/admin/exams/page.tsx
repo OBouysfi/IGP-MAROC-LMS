@@ -524,8 +524,12 @@ export default function ExamsPage() {
                           </td>
                           <td className="py-4 px-4 text-sm">
                             <div>
-                              <p className="font-medium">{new Date(exam.date).toLocaleDateString('fr-FR')}</p>
-                              <p className="text-xs text-gray-500">{exam.time} • {exam.duration}</p>
+                              <p className="font-medium">
+                                {new Date(exam.date).toLocaleDateString('fr-FR')}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {exam.time}{exam.duration ? ` • ${exam.duration}` : ''}
+                              </p>
                             </div>
                           </td>
                           <td className="py-4 px-4">

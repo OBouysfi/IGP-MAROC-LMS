@@ -31,7 +31,7 @@ class Exam extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'time' => 'datetime:H:i',
         'duration_minutes' => 'integer',
         'total_students' => 'integer',
