@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('absence_justifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('attendance_id')->nullable()->constrained('attendance')->onDelete('cascade');
+            $table->foreignId('attendance_id')->nullable()->constrained('attendances')->onDelete('cascade');
             $table->date('absence_date');
             $table->string('absence_course');
             $table->text('reason');

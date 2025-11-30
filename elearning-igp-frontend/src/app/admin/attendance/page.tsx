@@ -851,179 +851,270 @@ export default function AttendancePage() {
       )}
 
       {/* Add Absence Modal */}
-      {showAddAbsenceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[#0D529C]">Marquer une Absence</h2>
-                <button onClick={() => { setShowAddAbsenceModal(false); resetAbsenceForm(); }} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
+      {/* Add Absence Modal */}
+{showAddAbsenceModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
+      
+      {/* HEADER */}
+      <div className="p-5 border-b flex items-center justify-between bg-[#0D529C] rounded-t-2xl">
+        <h2 className="text-xl font-bold text-white">Marquer une Absence</h2>
+        <button
+          onClick={() => {
+            setShowAddAbsenceModal(false);
+            resetAbsenceForm();
+          }}
+          className="p-2 hover:bg-white/20 rounded-lg"
+        >
+          <X className="w-6 h-6 text-white" />
+        </button>
+      </div>
+
+      {/* FORM */}
+      <form onSubmit={handleAddAbsence} className="p-6 space-y-6">
+
+        {/* GRID PRINCIPALE */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* TYPE */}
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Type</label>
+            <select
+              value={absenceForm.user_type}
+              onChange={(e) =>
+                setAbsenceForm({ ...absenceForm, user_type: e.target.value })
+              }
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="student">Étudiant</option>
+              <option value="professor">Professeur</option>
+            </select>
+          </div>
+
+          {/* ÉTUDIANT */}
+          {absenceForm.user_type === "student" && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Groupe *</label>
+                <select
+                  required
+                  value={absenceForm.group_id}
+                  onChange={(e) =>
+                    setAbsenceForm({
+                      ...absenceForm,
+                      group_id: parseInt(e.target.value),
+                      attendable_id: 0,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value={0}>Sélectionner un groupe...</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Étudiant *
+                </label>
+                <select
+                  required
+                  value={absenceForm.attendable_id}
+                  onChange={(e) =>
+                    setAbsenceForm({
+                      ...absenceForm,
+                      attendable_id: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                  disabled={!absenceForm.group_id}
+                >
+                  <option value={0}>Sélectionner...</option>
+                  {groupStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* PROFESSEUR */}
+          {absenceForm.user_type === "professor" && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Département *
+                </label>
+                <select
+                  required
+                  value={absenceForm.department}
+                  onChange={(e) =>
+                    setAbsenceForm({
+                      ...absenceForm,
+                      department: e.target.value,
+                      attendable_id: 0,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Sélectionner...</option>
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Professeur *
+                </label>
+                <select
+                  required
+                  value={absenceForm.attendable_id}
+                  onChange={(e) =>
+                    setAbsenceForm({
+                      ...absenceForm,
+                      attendable_id: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                  disabled={!absenceForm.department}
+                >
+                  <option value={0}>Sélectionner...</option>
+                  {departmentProfessors.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* COURS */}
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Cours *</label>
+            <select
+              required
+              value={absenceForm.course_name}
+              onChange={(e) =>
+                setAbsenceForm({ ...absenceForm, course_name: e.target.value })
+              }
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="">Sélectionner...</option>
+              {courses.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* DATE + HEURES */}
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Date & Horaire *</label>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="date"
+                required
+                value={absenceForm.date}
+                onChange={(e) => setAbsenceForm({ ...absenceForm, date: e.target.value })}
+                className="px-3 py-2 border rounded-lg"
+              />
+
+              <input
+                type="time"
+                required
+                value={absenceForm.start_time}
+                onChange={(e) =>
+                  setAbsenceForm({ ...absenceForm, start_time: e.target.value })
+                }
+                className="px-3 py-2 border rounded-lg"
+              />
+
+              <input
+                type="time"
+                required
+                value={absenceForm.end_time}
+                onChange={(e) =>
+                  setAbsenceForm({ ...absenceForm, end_time: e.target.value })
+                }
+                className="px-3 py-2 border rounded-lg"
+              />
             </div>
-            <form onSubmit={handleAddAbsence} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Type</label>
-                <select
-                  value={absenceForm.user_type}
-                  onChange={(e) => setAbsenceForm({ ...absenceForm, user_type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                >
-                  <option value="student">Étudiant</option>
-                  <option value="professor">Professeur</option>
-                </select>
-              </div>
-              
-              {absenceForm.user_type === 'student' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Groupe *</label>
-                    <select
-                      required
-                      value={absenceForm.group_id}
-                      onChange={(e) => setAbsenceForm({ ...absenceForm, group_id: parseInt(e.target.value), attendable_id: 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    >
-                      <option value={0}>Sélectionner un groupe...</option>
-                      {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Étudiant *</label>
-                    <select
-                      required
-                      value={absenceForm.attendable_id}
-                      onChange={(e) => setAbsenceForm({ ...absenceForm, attendable_id: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                      disabled={!absenceForm.group_id}
-                    >
-                      <option value={0}>Sélectionner un étudiant...</option>
-                      {groupStudents.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Département *</label>
-                    <select
-                      required
-                      value={absenceForm.department}
-                      onChange={(e) => setAbsenceForm({ ...absenceForm, department: e.target.value, attendable_id: 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    >
-                      <option value="">Sélectionner un département...</option>
-                      {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Professeur *</label>
-                    <select
-                      required
-                      value={absenceForm.attendable_id}
-                      onChange={(e) => setAbsenceForm({ ...absenceForm, attendable_id: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                      disabled={!absenceForm.department}
-                    >
-                      <option value={0}>Sélectionner un professeur...</option>
-                      {departmentProfessors.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Cours *</label>
-                <select
-                  required
-                  value={absenceForm.course_name}
-                  onChange={(e) => setAbsenceForm({ ...absenceForm, course_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                >
-                  <option value="">Sélectionner le cours...</option>
-                  {courses.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={absenceForm.date}
-                  onChange={(e) => setAbsenceForm({ ...absenceForm, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Heure début *</label>
-                  <input
-                    type="time"
-                    required
-                    value={absenceForm.start_time}
-                    onChange={(e) => setAbsenceForm({ ...absenceForm, start_time: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Heure fin *</label>
-                  <input
-                    type="time"
-                    required
-                    value={absenceForm.end_time}
-                    onChange={(e) => setAbsenceForm({ ...absenceForm, end_time: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Type d'absence *</label>
-                <select
-                  required
-                  value={absenceForm.type}
-                  onChange={(e) => setAbsenceForm({ ...absenceForm, type: e.target.value as 'absent' | 'retard' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                >
-                  <option value="absent">Absent</option>
-                  <option value="retard">Retard</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Commentaire (optionnel)</label>
-                <textarea
-                  value={absenceForm.comment}
-                  onChange={(e) => setAbsenceForm({ ...absenceForm, comment: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent resize-none"
-                  rows={3}
-                  placeholder="Ajouter un commentaire..."
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowAddAbsenceModal(false); resetAbsenceForm(); }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700"
-                >
-                  <UserX className="w-4 h-4" />
-                  Marquer Absent
-                </button>
-              </div>
-            </form>
+          </div>
+
+          {/* TYPE ABSENCE */}
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Type d'absence *
+            </label>
+            <select
+              value={absenceForm.type}
+              onChange={(e) =>
+                setAbsenceForm({
+                  ...absenceForm,
+                  type: e.target.value as "absent" | "retard",
+                })
+              }
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="absent">Absent</option>
+              <option value="retard">Retard</option>
+            </select>
+          </div>
+
+          {/* COMMENTAIRE */}
+          <div className="col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Commentaire</label>
+            <textarea
+              rows={3}
+              value={absenceForm.comment}
+              onChange={(e) =>
+                setAbsenceForm({ ...absenceForm, comment: e.target.value })
+              }
+              className="w-full px-3 py-2 border rounded-lg resize-none"
+              placeholder="Ajouter un commentaire..."
+            />
           </div>
         </div>
-      )}
+
+        {/* BUTTONS */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddAbsenceModal(false);
+              resetAbsenceForm();
+            }}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-100"
+          >
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            className="flex items-center gap-2 px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700"
+          >
+            <UserX className="w-4 h-4" />
+            Marquer Absent
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
 
       {/* Justify Absence Modal */}
       {showJustifyModal && absenceToJustify && (

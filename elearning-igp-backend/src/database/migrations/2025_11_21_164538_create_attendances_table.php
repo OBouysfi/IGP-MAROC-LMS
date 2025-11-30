@@ -10,17 +10,34 @@ return new class extends Migration
     {
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
-            $table->morphs('attendable'); // student ou professor
-            $table->foreignId('schedule_id')->nullable()->constrained()->onDelete('set null');
+
+            // Morph relation (professor or student)
+            $table->morphs('attendable'); // attendable_id + attendable_type
+
+            // Schedule link (optional)
+            $table->foreignId('schedule_id')
+                ->nullable()
+                ->constrained()
+                ->onDelete('set null');
+
+            // Course details
             $table->string('course_name');
             $table->date('date');
             $table->time('start_time');
             $table->time('end_time');
-            $table->enum('type', ['absent', 'retard', 'justifié'])->default('absent');
+
+            // Attendance type
+            $table->enum('type', ['absent', 'retard', 'justifié'])
+                ->default('absent');
+
+            // Justification
             $table->text('justification')->nullable();
             $table->string('justification_file')->nullable();
             $table->timestamp('justified_at')->nullable();
+
+            // Comment
             $table->text('comment')->nullable();
+
             $table->timestamps();
         });
     }
