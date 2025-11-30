@@ -71,11 +71,11 @@ class ScheduleController extends Controller
 
     public function getProfessors(): JsonResponse
     {
-        $professors = Professor::with('user:id,name')
+        $professors = Professor::with('user:id,first_name,last_name')
             ->get()
             ->map(fn($prof) => [
                 'id' => $prof->id,
-                'name' => $prof->user->name,
+                'name' => $prof->user->first_name . ' ' . $prof->user->last_name,
             ]);
         return response()->json(['data' => $professors]);
     }

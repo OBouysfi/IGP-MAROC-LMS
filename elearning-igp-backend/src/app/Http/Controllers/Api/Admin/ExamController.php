@@ -79,8 +79,11 @@ class ExamController extends Controller
         
         // Get total students from group
         $group = \App\Models\Group::withCount('students')->find($data['group_id']);
-        $data['total_students'] = $group->students_count;
-
+        $data['total_students'] = $group->students_count ?? 0;
+        
+        // Parse duration to minutes
+        $data['duration'] = $request->duration; // Garde le texte "2h00"
+        $data['duration_minutes'] = $this->parseDuration($data['duration']); // Stocke aussi les minutes
         $exam = Exam::create($data);
         $exam->load(['course', 'group', 'professor.user']);
 
@@ -96,7 +99,14 @@ class ExamController extends Controller
     public function update(ExamRequest $request, $id): JsonResponse
     {
         $exam = Exam::findOrFail($id);
-        $exam->update($request->validated());
+        $data = $request->validated();
+        
+        // Parse duration to minutes if duration is updated
+        if (isset($data['duration'])) {
+            $data['duration_minutes'] = $this->parseDuration($data['duration']);
+        }
+        
+        $exam->update($data);
         $exam->load(['course', 'group', 'professor.user']);
 
         return response()->json(['data' => new ExamResource($exam)]);
@@ -143,5 +153,29 @@ class ExamController extends Controller
         $exam->save();
 
         return response()->json(['data' => new ExamResource($exam)]);
+    }
+
+    /**
+     * Parse duration string to minutes
+     * Formats: "2h00", "2h30", "1h", "90min", "120 min"
+     */
+    private function parseDuration(string $duration): int
+    {
+        $duration = strtolower(trim($duration));
+        
+        // Pattern: "2h00", "2h30", "1h"
+        if (preg_match('/(\d+)h(\d+)?/', $duration, $matches)) {
+            $hours = (int) $matches[1];
+            $minutes = isset($matches[2]) ? (int) $matches[2] : 0;
+            return ($hours * 60) + $minutes;
+        }
+        
+        // Pattern: "90min", "120 min"
+        if (preg_match('/(\d+)\s*min/', $duration, $matches)) {
+            return (int) $matches[1];
+        }
+        
+        // Default: 2 hours
+        return 120;
     }
 }

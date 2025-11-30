@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { examsApi, Exam, ExamStats } from '@/lib/api/admin/exams';
+import { coursesApi, Course } from '@/lib/api/admin/courses';
+import { groupsApi, Group } from '@/lib/api/admin/groups';
 import { FileText, CheckCircle, Clock, AlertTriangle, Search, Filter, Eye, Download, X, Users, Calendar, Award, TrendingUp, BarChart3, Plus, Edit2, Trash2 } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
@@ -16,11 +18,26 @@ export default function ExamsPage() {
   const [filiereStats, setFiliereStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [professors, setProfessors] = useState<any[]>([]);
   
   const [filters, setFilters] = useState({
     status: '',
     filiere: '',
     type: '',
+  });
+
+  const [formData, setFormData] = useState({
+    course_id: '',
+    group_id: '',
+    professor_id: '',
+    type: 'partiel',
+    date: '',
+    time: '',
+    duration: '',
+    room: '',
+    coefficient: '',
   });
 
   const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
@@ -29,7 +46,35 @@ export default function ExamsPage() {
 
   useEffect(() => {
     fetchData();
+    fetchFormData();
   }, [filters, searchTerm]);
+
+  const fetchFormData = async () => {
+    try {
+      const [coursesRes, groupsRes] = await Promise.all([
+        coursesApi.getAll(),
+        groupsApi.getAll(),
+      ]);
+      
+      const coursesData = coursesRes.data.data || coursesRes.data;
+      const groupsData = groupsRes.data.data || groupsRes.data;
+      
+      setCourses(coursesData);
+      setGroups(groupsData);
+      
+      // Extraire les professeurs uniques des cours
+      const uniqueProfessors = coursesData
+        .filter((course: Course) => course.professor)
+        .map((course: Course) => course.professor)
+        .filter((prof: any, index: number, self: any[]) => 
+          index === self.findIndex((p: any) => p.id === prof.id)
+        );
+      
+      setProfessors(uniqueProfessors);
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -40,9 +85,9 @@ export default function ExamsPage() {
         examsApi.getStatsByFiliere()
       ]);
       
-      setExams(examsRes.data.data);
+      setExams(examsRes.data.data || examsRes.data);
       setStats(statsRes.data);
-      setFiliereStats(filiereStatsRes.data.data);
+      setFiliereStats(filiereStatsRes.data.data || filiereStatsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       Swal.fire({
@@ -56,10 +101,51 @@ export default function ExamsPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      await examsApi.create(formData);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Succès',
+        text: 'Examen créé avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      
+      setShowModal(false);
+      resetForm();
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Impossible de créer l\'examen',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      course_id: '',
+      group_id: '',
+      professor_id: '',
+      type: 'partiel',
+      date: '',
+      time: '',
+      duration: '',
+      room: '',
+      coefficient: '',
+    });
+  };
+
   const handleViewExam = async (exam: Exam) => {
     try {
       const response = await examsApi.show(exam.id);
-      setSelectedExam(response.data.data);
+      setSelectedExam(response.data.data || response.data);
     } catch (error) {
       console.error('Error fetching exam details:', error);
       Swal.fire({
@@ -501,7 +587,6 @@ export default function ExamsPage() {
 
             {activeTab === 'grades' && (
               <div className="space-y-6">
-                {/* Résultats par Filière */}
                 {filiereStats.map((filiere) => (
                   <div key={filiere.filiere} className="bg-gray-50 rounded-xl p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -539,11 +624,206 @@ export default function ExamsPage() {
         </div>
       </div>
 
+      {/* Add Exam Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
+              <h2 className="text-xl font-bold">Planifier un Examen</h2>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  resetForm();
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cours <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.course_id}
+                    onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Sélectionner un cours</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.name} ({course.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Groupe <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.group_id}
+                    onChange={(e) => setFormData({ ...formData, group_id: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Sélectionner un groupe</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Professeur <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.professor_id}
+                    onChange={(e) => setFormData({ ...formData, professor_id: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Sélectionner un professeur</option>
+                    {professors.map((prof) => (
+                      <option key={prof.id} value={prof.id}>
+                        {prof.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type d'examen <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  >
+                    {examTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {getTypeLabel(type)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Heure <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Durée <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ex: 2h00"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Salle <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ex: Salle A101"
+                    value={formData.room}
+                    onChange={(e) => setFormData({ ...formData, room: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Coefficient <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    max="5"
+                    placeholder="ex: 2"
+                    value={formData.coefficient}
+                    onChange={(e) => setFormData({ ...formData, coefficient: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> L'examen sera créé avec le statut "Planifié". 
+                  Les étudiants seront notifiés automatiquement.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-4 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    resetForm();
+                  }}
+                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Planifier l'Examen
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Exam Detail Modal */}
       {selectedExam && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="sticky top-0 bg-[#0D529C] text-white p-6 rounded-t-2xl flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-3 mb-2">
@@ -566,7 +846,6 @@ export default function ExamsPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Informations Examen */}
               <div className="bg-gray-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#0D529C] mb-4">Informations de l'Examen</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -589,7 +868,6 @@ export default function ExamsPage() {
                 </div>
               </div>
 
-              {/* Statistiques */}
               {selectedExam.average !== null && (
                 <div className="bg-blue-50 rounded-xl p-6">
                   <h3 className="text-lg font-bold text-[#0D529C] mb-4">Statistiques des Résultats</h3>
@@ -618,7 +896,6 @@ export default function ExamsPage() {
                 </div>
               )}
 
-              {/* Liste des Notes */}
               {selectedExam.grades && selectedExam.grades.length > 0 && (
                 <div className="bg-green-50 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -661,7 +938,6 @@ export default function ExamsPage() {
                 </div>
               )}
 
-              {/* Actions */}
               {selectedExam.status === 'notes_saisies' && (
                 <div className="flex items-center justify-end gap-4">
                   <button className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
