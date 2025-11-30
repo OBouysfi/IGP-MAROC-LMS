@@ -5,6 +5,8 @@ import { payrollsApi, ProfessorPayroll, PayrollStats, PaymentHistory } from '@/l
 import { DollarSign, Clock, Users, CheckCircle, Search, Filter, Eye, Download, X, Calendar, FileText, CreditCard, TrendingUp, Printer } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
+import html2pdf from 'html2pdf.js';
+import Image from "next/image";
 
 export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
@@ -109,6 +111,22 @@ export default function PayrollPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+
+  const downloadPDF = () => {
+    const receipt = document.getElementById("receipt");
+    if (!receipt) return;
+
+    const options = {
+      margin: 10,
+      filename: `${paymentToConfirm?.payment_reference || 'recu'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+
+    html2pdf().from(receipt).set(options).save();
   };
 
   const handleGeneratePayrolls = async () => {
@@ -788,10 +806,13 @@ export default function PayrollPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-[#0D529C]">Reçu de Paiement</h2>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700">
-                    <Download className="w-4 h-4" />
-                    Télécharger PDF
-                  </button>
+                  <button 
+                      onClick={downloadPDF}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Download className="w-4 h-4" />
+                      Télécharger PDF
+                    </button>
                   <button onClick={() => setShowReceiptModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                     <X className="w-5 h-5" />
                   </button>
@@ -804,8 +825,14 @@ export default function PayrollPage() {
               {/* Header with Logo */}
               <div className="flex items-center justify-between border-b-2 border-[#0D529C] pb-6 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 bg-[#0D529C] rounded-lg flex items-center justify-center text-white font-bold text-2xl">
-                    IGP
+                  <div className="w-20 h-20 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
+                    <Image
+                      src="/images/logo_igp.png"
+                      alt="IGP Logo"
+                      width={80}
+                      height={80}
+                      className="rounded-lg object-contain"
+                    />
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold text-[#0D529C]">IGP Maroc</h1>
@@ -816,7 +843,7 @@ export default function PayrollPage() {
                 </div>
                 <div className="text-right">
                   <h2 className="text-xl font-bold text-gray-800">REÇU DE PAIEMENT</h2>
-                  <p className="text-sm text-gray-600">N°: {paymentToConfirm.payment_reference || 'VIR-2024-11-XXX'}</p>
+                  {/* <p className="text-sm text-gray-600">N°: {paymentToConfirm.payment_reference || 'VIR-2024-11-XXX'}</p> */}
                   <p className="text-sm text-gray-600">Date: {new Date(paymentToConfirm.payment_date || new Date()).toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
@@ -896,11 +923,11 @@ export default function PayrollPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Compte Bancaire</p>
-                    <p className="font-medium">{paymentToConfirm.bank_info || 'N/A'}</p>
+                    <p className="font-medium">{paymentToConfirm.bank_info || ' - '}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Référence</p>
-                    <p className="font-medium font-mono">{paymentToConfirm.payment_reference || 'VIR-2024-11-XXX'}</p>
+                    <p className="font-medium font-mono">{paymentToConfirm.payment_reference || 'VIR-2026-01-13'}</p>
                   </div>
                 </div>
               </div>

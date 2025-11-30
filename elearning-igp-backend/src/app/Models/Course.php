@@ -16,12 +16,35 @@ class Course extends Model
         'name',
         'description',
         'credits',
-        'hours',
-        'hours_per_session',
+        'semester',
+        'is_active',
         'professor_id',
         'group_id',
-        'filiere_id',
-        'program_id',
+        
+        // ✅ Colonnes TEXTE directes (pas de relations)
+        'program',
+        'level',
+        'filiere',
+        
+        // ✅ Autres champs de votre table
+        'students_count',
+        'max_students',
+        'hours_total',
+        'hours_completed',
+        'start_date',
+        'end_date',
+        'schedule',
+        'status',
+        'materials',
+        'completion_rate',
+    ];
+
+    protected $casts = [
+        'schedule' => 'array',
+        'materials' => 'array',
+        'is_active' => 'boolean',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     public function professor(): BelongsTo
@@ -34,15 +57,16 @@ class Course extends Model
         return $this->belongsTo(Group::class);
     }
 
-    public function filiere(): BelongsTo
-    {
-        return $this->belongsTo(Filiere::class);
-    }
-
-    public function program(): BelongsTo
-    {
-        return $this->belongsTo(Program::class);
-    }
+    // ❌ SUPPRIMEZ ces relations si vous n'avez pas program_id et filiere_id
+    // public function filiere(): BelongsTo
+    // {
+    //     return $this->belongsTo(Filiere::class);
+    // }
+    
+    // public function program(): BelongsTo
+    // {
+    //     return $this->belongsTo(Program::class);
+    // }
 
     public function schedules(): HasMany
     {
@@ -52,11 +76,6 @@ class Course extends Model
     public function resources(): HasMany
     {
         return $this->hasMany(CourseResource::class);
-    }
-
-    public function attendances(): HasMany
-    {
-        return $this->hasMany(Attendance::class);
     }
 
     public function exams(): HasMany

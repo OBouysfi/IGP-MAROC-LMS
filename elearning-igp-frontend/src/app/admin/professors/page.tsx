@@ -66,13 +66,21 @@ export default function ProfessorsPage() {
   const [qualificationInput, setQualificationInput] = useState('');
   const [editQualificationInput, setEditQualificationInput] = useState('');
 
-  const departments = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion', 'Langues', 'Droit'];
+  const departments = [
+    'Informatique',
+    'Marketing',
+    'Gestion & Finance',
+    'Ressources Humaines',
+    'Commerce',
+    'PME / Entrepreneuriat',
+    'E-Business',
+    'Management Stratégique et Économique',
+  ];
+  
   const nationalities = [
     'Marocaine',
-    'Algérienne',
     'Tunisienne',
     'Libyenne',
-    'Égyptienne',
     'Sénégalaise',
     'Ivoirienne',
     'Camerounaise',
@@ -83,7 +91,6 @@ export default function ProfessorsPage() {
     'Malienne',
     'Mauritanienne',
     'Nigérienne',
-    'Tchadienne',
     'Gabonaise',
     'Française',
     'Autre'

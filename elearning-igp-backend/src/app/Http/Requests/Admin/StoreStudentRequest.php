@@ -25,7 +25,7 @@ class StoreStudentRequest extends FormRequest
             'address' => 'nullable|string|max:500',
             'enrolled_date' => 'nullable|date',
             'filiere' => 'nullable|string|max:100',
-            'program' => 'nullable|in:DEUG,Licence,Master',
+            'program' => 'nullable|in:DEES,Bachelor,Master',
             'level' => 'nullable|string|max:50',
             'group' => 'nullable|string|max:50',
             'inscription_amount' => 'nullable|numeric|min:0',

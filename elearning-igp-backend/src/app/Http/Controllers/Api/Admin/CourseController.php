@@ -13,13 +13,13 @@ class CourseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Course::with('professor.user');
+        $query = Course::with(['professor.user']);
 
         if ($request->program) {
-            $query->where('program', $request->program);
+            $query->where('program_id', $request->program);
         }
         if ($request->filiere) {
-            $query->where('filiere', $request->filiere);
+            $query->where('filiere_id', $request->filiere);
         }
         if ($request->status) {
             $query->where('status', $request->status);
@@ -29,11 +29,11 @@ class CourseController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhereHas('professor.user', function($q) use ($search) {
-                      $q->where('first_name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$search}%")
+                ->orWhereHas('professor.user', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%");
-                  });
+                });
             });
         }
 

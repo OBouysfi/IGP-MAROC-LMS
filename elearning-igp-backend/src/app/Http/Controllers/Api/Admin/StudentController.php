@@ -154,7 +154,7 @@ class StudentController extends Controller
                 'nationality' => 'nullable|string',
                 'address' => 'nullable|string',
                 'filiere' => 'nullable|string',
-                'program' => 'nullable|in:DEUG,Licence,Master',
+                'program' => 'nullable|in:DEES,Bachelor,Master',
                 'level' => 'nullable|string',
                 'group' => 'nullable|string',
                 'inscription_amount' => 'nullable|numeric',

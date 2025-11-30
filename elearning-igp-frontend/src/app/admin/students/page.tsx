@@ -61,13 +61,30 @@ export default function StudentsPage() {
     monthly_amount: '',
   });
 
-  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
+  const filieres = [
+    // DEES
+    'DEES Marketing',
+    'DEES Gestion & Finance',
+    'DEES Ressources Humaines',
+    'DEES Informatique',
+
+    // Bachelor
+    'Bachelor PME',
+    'Bachelor Marketing Digital',
+    'Bachelor GRH',
+
+    // Master
+    'Master RH',
+    'Master Informatique',
+    'Master E-Business',
+    'Master MSE',
+  ];
+
+  // const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
   const nationalities = [
     'Marocaine',
-    'Algérienne',
     'Tunisienne',
     'Libyenne',
-    'Égyptienne',
     'Sénégalaise',
     'Ivoirienne',
     'Camerounaise',
@@ -78,13 +95,30 @@ export default function StudentsPage() {
     'Malienne',
     'Mauritanienne',
     'Nigérienne',
-    'Tchadienne',
     'Gabonaise',
     'Française',
     'Autre'
   ];  
-  const programs = ['DEUG', 'Licence', 'Master'];  
+  const programs = ['DEES', 'Bachelor', 'Master'];  
   const statuses = ['Actif', 'Inactif'];
+
+  const levels = [
+    "1ère année",
+    "2ème année",
+    "3ème année",
+    "Master 1",
+    "Master 2",
+  ];
+
+  const groups = [
+    "DEV-M1-A",
+    "DEV-M1-B",
+    "MKD-B1-A",
+    "MKD-B1-B",
+    "RH-DEES-A",
+    "RH-DEES-B",
+    "Finance-Bachelor-A",
+  ];
 
   useEffect(() => {
     fetchData();
@@ -694,23 +728,31 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.level}
                       onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                      placeholder="1ère année"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
+                    >
+                      <option value="">Sélectionner</option>
+                      {levels.map((lvl) => (
+                        <option key={lvl} value={lvl}>{lvl}</option>
+                      ))}
+                    </select>
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Groupe</label>
-                    <input
-                      type="text"
+                    <select
                       value={formData.group}
                       onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                      placeholder="DEV-M1-A"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
+                    >
+                      <option value="">Sélectionner</option>
+                      {groups.map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+
                   </div>
                 </div>
               </div>
@@ -890,27 +932,34 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
-                    <input
-                      type="text"
+                    <select
                       value={editFormData.level}
                       onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
-                      placeholder="1ère année"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
+                    >
+                      <option value="">Sélectionner</option>
+                      {levels.map((lvl) => (
+                        <option key={lvl} value={lvl}>{lvl}</option>
+                      ))}
+                    </select>
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Groupe</label>
-                    <input
-                      type="text"
+                    <select
                       value={editFormData.group}
                       onChange={(e) => setEditFormData({ ...editFormData, group: e.target.value })}
-                      placeholder="DEV-M1-A"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-                    />
-                  </div>
+                    >
+                      <option value="">Sélectionner</option>
+                      {groups.map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+
                 </div>
               </div>
-
+              </div>
               <div className="bg-green-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#257035] mb-4">Finance</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

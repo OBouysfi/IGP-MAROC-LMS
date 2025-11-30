@@ -69,11 +69,46 @@ export default function CoursesPage() {
   const [editScheduleInput, setEditScheduleInput] = useState({ day: '', time: '', room: '' });
   const [materialInput, setMaterialInput] = useState('');
   const [editMaterialInput, setEditMaterialInput] = useState('');
+  const programs = ['DEES', 'Bachelor', 'Master'];  
+  const filieres = [
+    // DEES
+    'DEES Marketing',
+    'DEES Gestion & Finance',
+    'DEES Ressources Humaines',
+    'DEES Informatique',
 
-  const programs = ['DEUG', 'Licence', 'Master'];
-  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion', 'Langues', 'Droit'];
+    // Bachelor
+    'Bachelor PME',
+    'Bachelor Marketing Digital',
+    'Bachelor GRH',
+
+    // Master
+    'Master RH',
+    'Master Informatique',
+    'Master E-Business',
+    'Master MSE',
+  ];
   const statuses = ['À venir', 'En cours', 'Terminé'];
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
+  const levels = [
+    "1ère année",
+    "2ème année",
+    "3ème année",
+    "Master 1",
+    "Master 2",
+  ];
+  const timeSlots = [
+    "08:00 - 10:00",
+    "09:00 - 11:00",
+    "09:00 - 13:00",
+    "10:00 - 12:00",
+    "11:00 - 13:00",
+    "14:00 - 17:00",
+    "15:00 - 18:00",
+  ];
+
+  const rooms = Array.from({ length: 15 }, (_, i) => `Salle ${i + 1}`);
 
   useEffect(() => {
     fetchData();
@@ -662,13 +697,16 @@ export default function CoursesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
-              <input
-                type="text"
+              <select
                 value={formData.level}
                 onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                placeholder="Ex: 2ème année"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C]"
+              >
+                <option value="">Sélectionner</option>
+                {levels.map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Filière</label>
@@ -802,23 +840,29 @@ export default function CoursesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Horaire</label>
-              <input
-                type="text"
+              <select
                 value={scheduleInput.time}
                 onChange={(e) => setScheduleInput({ ...scheduleInput, time: e.target.value })}
-                placeholder="Ex: 09:00 - 12:00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Sélectionner</option>
+                {timeSlots.map((slot) => (
+                  <option key={slot} value={slot}>{slot}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Salle</label>
-              <input
-                type="text"
+              <select
                 value={scheduleInput.room}
                 onChange={(e) => setScheduleInput({ ...scheduleInput, room: e.target.value })}
-                placeholder="Ex: Salle A12"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Sélectionner</option>
+                {rooms.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button
@@ -985,12 +1029,16 @@ export default function CoursesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
-              <input
-                type="text"
+              <select
                 value={editFormData.level}
                 onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C]"
+              >
+                <option value="">Sélectionner</option>
+                {levels.map((lvl) => (
+                  <option key={lvl} value={lvl}>{lvl}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Filière</label>
@@ -1124,23 +1172,29 @@ export default function CoursesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Horaire</label>
-              <input
-                type="text"
+              <select
                 value={editScheduleInput.time}
                 onChange={(e) => setEditScheduleInput({ ...editScheduleInput, time: e.target.value })}
-                placeholder="Ex: 09:00 - 12:00"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Sélectionner</option>
+                {timeSlots.map((slot) => (
+                  <option key={slot} value={slot}>{slot}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Salle</label>
-              <input
-                type="text"
+              <select
                 value={editScheduleInput.room}
                 onChange={(e) => setEditScheduleInput({ ...editScheduleInput, room: e.target.value })}
-                placeholder="Ex: Salle A12"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
-              />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Sélectionner</option>
+                {rooms.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
             </div>
           </div>
           <button
