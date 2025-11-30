@@ -33,11 +33,11 @@ interface AdminLayoutProps {
 
 const menuItems = [
   { name: 'Dashboard', icon: Home, path: '/admin/dashboard' },
+  { name: 'Programmes', icon: GraduationCap, path: '/admin/programs' },
+  { name: 'Groupes', icon: Users, path: '/admin/groups' },
   { name: 'Étudiants', icon: Users, path: '/admin/students' },
   { name: 'Professeurs', icon: GraduationCap, path: '/admin/professors' },
   { name: 'Cours', icon: BookOpen, path: '/admin/courses' },
-  { name: 'Groupes', icon: Users, path: '/admin/groups' },
-  { name: 'Programmes', icon: GraduationCap, path: '/admin/programs' },
   { name: 'Planning', icon: Calendar, path: '/admin/schedule' },
   { name: 'Examens', icon: FileText, path: '/admin/exams' },
   { name: 'Absences', icon: UserX, path: '/admin/attendance' },
@@ -45,7 +45,7 @@ const menuItems = [
   { name: 'Paie', icon: DollarSign, path: '/admin/payroll' },
   // { name: 'Support', icon: MessageSquare, path: '/admin/support' },
   { name: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
-  // { name: 'Paramètres', icon: Settings, path: '/admin/settings' },
+  { name: 'Paramètres', icon: Settings, path: '/admin/settings' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
