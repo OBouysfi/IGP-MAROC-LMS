@@ -590,7 +590,7 @@ export default function DocumentsPage() {
                   <h3 className="text-lg font-bold text-[#0D529C]">Documents du Dossier</h3>
                   <button
                     onClick={() => {
-                      setUploadForm({ ...uploadForm, student_id: selectedDossier.student_id });
+                      setUploadForm({ ...uploadForm, student_id: selectedDossier.id });
                       setShowUploadModal(true);
                     }}
                     className="flex items-center gap-2 px-3 py-1 bg-[#0D529C] text-white rounded-lg text-sm hover:bg-blue-700"
@@ -654,7 +654,7 @@ export default function DocumentsPage() {
                         {doc.status === 'manquant' && (
                           <button
                             onClick={() => {
-                              setUploadForm({ ...uploadForm, student_id: selectedDossier.student_id, type: doc.type, name: doc.name });
+                              setUploadForm({ ...uploadForm, student_id: selectedDossier.id, type: doc.type, name: doc.name });
                               setShowUploadModal(true);
                             }}
                             className="p-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
