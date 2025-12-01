@@ -6,9 +6,9 @@ export interface Course {
   name: string;
   code: string;
   description: string | null;
-  program: string | null;
+  program?: string | { id: number; name: string };
+  filiere?: string | { id: number; name: string };
   level: string | null;
-  filiere: string | null;
   professor: {
     id: number;
     name: string;

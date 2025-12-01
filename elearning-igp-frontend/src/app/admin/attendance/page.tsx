@@ -108,7 +108,7 @@ export default function AttendancePage() {
       setLoading(true);
       const response = await attendancesApi.getStudentsAttendance({
         search: searchTerm,
-        ...filters
+        ...filters  // ← Ceci inclut date_from et date_to
       });
       setStudentsAttendance(response.data.data);
     } catch (error) {
@@ -152,48 +152,51 @@ export default function AttendancePage() {
   };
 
   const handleAddAbsence = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const data = {
-        attendable_type: absenceForm.user_type === 'student' ? 'App\\Models\\User' : 'App\\Models\\Professor',
-        attendable_id: absenceForm.attendable_id,
-        course_name: absenceForm.course_name,
-        date: absenceForm.date,
-        start_time: absenceForm.start_time,
-        end_time: absenceForm.end_time,
-        type: absenceForm.type,
-        comment: absenceForm.comment,
-      };
+  e.preventDefault();
+  
+  try {
+    const data = {
+      student_id: absenceForm.attendable_id, // ✅ Changed from attendable_id
+      schedule_id: null, // Optional
+      course_name: absenceForm.course_name,
+      date: absenceForm.date,
+      start_time: absenceForm.start_time,
+      end_time: absenceForm.end_time,
+      type: absenceForm.type,
+      comment: absenceForm.comment,
+    };
 
-      await attendancesApi.create(data);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Succès',
-        text: 'Absence enregistrée avec succès',
-        confirmButtonColor: '#0D529C',
-        timer: 2000,
-      });
-      
-      setShowAddAbsenceModal(false);
-      resetAbsenceForm();
-      fetchInitialData();
-      if (activeTab === 'students') {
-        fetchStudentsAttendance();
-      } else {
-        fetchProfessorsAttendance();
-      }
-    } catch (error: any) {
-      console.error('Error adding absence:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: error.response?.data?.message || 'Impossible d\'enregistrer l\'absence',
-        confirmButtonColor: '#0D529C',
-      });
+    console.log('Sending data:', data); // Debug log
+
+    await attendancesApi.create(data);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès',
+      text: 'Absence enregistrée avec succès',
+      confirmButtonColor: '#0D529C',
+      timer: 2000,
+    });
+    
+    setShowAddAbsenceModal(false);
+    resetAbsenceForm();
+    fetchInitialData();
+    if (activeTab === 'students') {
+      fetchStudentsAttendance();
+    } else {
+      fetchProfessorsAttendance();
     }
-  };
+  } catch (error: any) {
+    console.error('Error adding absence:', error);
+    console.error('Error response:', error.response?.data); // Debug log
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: error.response?.data?.message || 'Impossible d\'enregistrer l\'absence',
+      confirmButtonColor: '#0D529C',
+    });
+  }
+};
 
   const handleJustifyAbsence = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources\Admin;
 
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class StudentResource extends JsonResource
 {
-    public function toArray($request)
+    public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
@@ -24,17 +25,34 @@ class StudentResource extends JsonResource
             'nationality' => $this->nationality,
             'address' => $this->address,
             'enrolled_date' => $this->enrolled_date,
-            'filiere' => $this->filiere,
-            'program' => $this->program,
+            'filiere_id' => $this->filiere_id,
+            'filiere' => $this->filiere ? [
+                'id' => $this->filiere->id,
+                'name' => $this->filiere->name,
+            ] : null,
+            'program_id' => $this->program_id,
+            'program' => $this->program ? [
+                'id' => $this->program->id,
+                'name' => $this->program->name,
+            ] : null,
             'level' => $this->level,
-            'group' => $this->group,
-            'inscription_amount' => (float) $this->inscription_amount,
-            'monthly_amount' => (float) $this->monthly_amount,
-            'payment_status' => $this->payment_status ?? 'À jour',
-            'dossier_status' => $this->dossier_status ?? 'Incomplet',
+            'groups' => $this->whenLoaded('groups', function() {
+                return $this->groups->map(fn($g) => [
+                    'id' => $g->id,
+                    'name' => $g->name,
+                ]);
+            }),
+            'group_ids' => $this->whenLoaded('groups', function() {
+                return $this->groups->pluck('id');
+            }),
+            'dossier_status' => $this->dossier_status,
+            'documents' => $this->documents,
             'admin_comments' => $this->admin_comments,
-            'documents' => $this->documents ?? [],
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
+            'inscription_amount' => $this->inscription_amount,
+            'monthly_amount' => $this->monthly_amount,
+            'payment_status' => $this->payment_status,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
         ];
     }
 }

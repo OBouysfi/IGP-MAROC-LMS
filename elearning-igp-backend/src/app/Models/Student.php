@@ -17,10 +17,9 @@ class Student extends Model
         'nationality',
         'address',
         'enrolled_date',
-        'filiere',
-        'program',
+        'filiere_id',
+        'program_id',
         'level',
-        'group',
         'dossier_status',
         'documents',
         'admin_comments',
@@ -42,7 +41,38 @@ class Student extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Générer le code étudiant automatiquement
+    public function filiere()
+    {
+        return $this->belongsTo(Filiere::class);
+    }
+
+    public function program()
+    {
+        return $this->belongsTo(Program::class);
+    }
+
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'group_student');
+    }
+
+    // Helper method to get the primary/first group
+    public function group()
+    {
+        return $this->groups()->first();
+    }
+
+    // Alternative: Define as an attribute accessor
+    public function getGroupAttribute()
+    {
+        return $this->groups()->first();
+    }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'student_id');
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -54,15 +84,5 @@ class Student extends Model
                 $student->student_code = 'STU-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
             }
         });
-    }
-    
-    public function group()
-    {
-        return $this->belongsTo(Group::class);
-    }
-
-    public function attendances()
-    {
-        return $this->hasMany(Attendance::class, 'student_id');
     }
 }

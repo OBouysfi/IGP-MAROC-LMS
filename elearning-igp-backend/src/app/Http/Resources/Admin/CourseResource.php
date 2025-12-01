@@ -13,12 +13,9 @@ class CourseResource extends JsonResource
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
-            
-            // ✅ Lire directement depuis les colonnes texte
             'program' => $this->program,
             'level' => $this->level,
             'filiere' => $this->filiere,
-            
             'professor' => $this->professor ? [
                 'id' => $this->professor->id,
                 'name' => $this->professor->user->first_name . ' ' . $this->professor->user->last_name,
@@ -33,7 +30,9 @@ class CourseResource extends JsonResource
             'schedule' => $this->schedule ?? [],
             'status' => $this->status,
             'materials' => $this->materials ?? [],
-            'completion_rate' => $this->completion_rate ?? 0,
+            'completion_rate' => $this->hours_total > 0 
+                ? round(($this->hours_completed / $this->hours_total) * 100) 
+                : 0,
             'credits' => $this->credits ?? 0,
             'created_at' => $this->created_at->format('Y-m-d H:i:s'),
         ];

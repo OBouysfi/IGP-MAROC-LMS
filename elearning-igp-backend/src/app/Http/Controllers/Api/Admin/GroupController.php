@@ -13,14 +13,15 @@ class GroupController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Group::withCount(['students', 'courses']);
+        $query = Group::with(['program', 'filiere'])
+            ->withCount(['students', 'courses']);
 
-        if ($request->filled('program')) {
-            $query->where('program', $request->program);
+        if ($request->filled('program_id')) {
+            $query->where('program_id', $request->program_id);
         }
 
-        if ($request->filled('filiere')) {
-            $query->where('filiere', $request->filiere);
+        if ($request->filled('filiere_id')) {
+            $query->where('filiere_id', $request->filiere_id);
         }
 
         if ($request->filled('level')) {
@@ -65,9 +66,9 @@ class GroupController extends Controller
         $groupData = [
             'name' => $data['name'],
             'code' => $data['code'],
-            'program' => $data['program'],
+            'program_id' => $data['program_id'],
+            'filiere_id' => $data['filiere_id'],
             'level' => $data['level'],
-            'filiere' => $data['filiere'],
             'max_students' => $data['max_students'],
             'delegate' => $data['delegate'] ?? null,
             'delegate_email' => $data['delegate_email'] ?? null,
@@ -87,7 +88,7 @@ class GroupController extends Controller
             $group->courses()->sync($coursesData);
         }
 
-        $group->load(['students', 'courses.professor.user']);
+        $group->load(['program', 'filiere', 'students', 'courses']);
         $group->loadCount(['students', 'courses']);
 
         return response()->json(['data' => new GroupResource($group)], 201);
@@ -95,7 +96,7 @@ class GroupController extends Controller
 
     public function show($id): JsonResponse
     {
-        $group = Group::with(['students', 'courses.professor.user'])
+        $group = Group::with(['program', 'filiere', 'students.user', 'courses'])
             ->withCount(['students', 'courses'])
             ->findOrFail($id);
 
@@ -110,9 +111,9 @@ class GroupController extends Controller
         $groupData = [
             'name' => $data['name'],
             'code' => $data['code'],
-            'program' => $data['program'],
+            'program_id' => $data['program_id'],
+            'filiere_id' => $data['filiere_id'],
             'level' => $data['level'],
-            'filiere' => $data['filiere'],
             'max_students' => $data['max_students'],
             'delegate' => $data['delegate'] ?? null,
             'delegate_email' => $data['delegate_email'] ?? null,
@@ -132,7 +133,7 @@ class GroupController extends Controller
             $group->courses()->sync($coursesData);
         }
 
-        $group->load(['students', 'courses.professor.user']);
+        $group->load(['program', 'filiere', 'students', 'courses']);
         $group->loadCount(['students', 'courses']);
 
         return response()->json(['data' => new GroupResource($group)]);

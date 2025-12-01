@@ -16,10 +16,10 @@ class CourseController extends Controller
         $query = Course::with(['professor.user']);
 
         if ($request->program) {
-            $query->where('program_id', $request->program);
+            $query->where('program', $request->program);
         }
         if ($request->filiere) {
-            $query->where('filiere_id', $request->filiere);
+            $query->where('filiere', $request->filiere);
         }
         if ($request->status) {
             $query->where('status', $request->status);
@@ -78,7 +78,6 @@ class CourseController extends Controller
         try {
             DB::beginTransaction();
 
-            // ✅ Gérer professor_id vide
             $data = $request->all();
             if (empty($data['professor_id'])) {
                 $data['professor_id'] = null;
@@ -104,6 +103,7 @@ class CourseController extends Controller
             ], 500);
         }
     }
+    
     public function update(CourseRequest $request, $id)
     {
         try {
@@ -154,5 +154,4 @@ class CourseController extends Controller
             ], 500);
         }
     }
-  
 }

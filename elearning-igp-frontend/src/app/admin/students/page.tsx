@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, UserX, GraduationCap, Plus, Search,CheckCircle,XCircle, Filter, SquarePen, Trash2, Eye, EyeOff, X, Phone, Mail, MapPin, Calendar, BookOpen, CreditCard, FileText, User } from 'lucide-react';
+import { Users, UserCheck, UserX, GraduationCap, Plus, Search, Filter, SquarePen, Trash2, Eye, EyeOff, X, Phone, Mail, MapPin, Calendar, BookOpen, CreditCard, FileText, User } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import { studentsApi, Student, StudentStats } from '@/lib/api/admin/students';
+import { programsApi, filieresApi } from '@/lib/api/admin/programs';
 import Swal from 'sweetalert2';
+import { groupsApi } from '@/lib/api/admin/groups';
 
 export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,19 +16,26 @@ export default function StudentsPage() {
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [filieres, setFilieres] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  
   const [stats, setStats] = useState<StudentStats>({
     total_students: 0,
     active_students: 0,
     inactive_students: 0,
     new_this_month: 0,
   });
-  const [loading, setLoading] = useState(true);
+  
   const [filters, setFilters] = useState({
-    filiere: '',
+    filiere_id: '',
     nationality: '',
     status: '',
-    program: '',
+    program_id: '',
   });
+  
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -37,13 +46,14 @@ export default function StudentsPage() {
     birth_date: '',
     nationality: '',
     address: '',
-    filiere: '',
-    program: '',
+    filiere_id: '',
+    program_id: '',
     level: '',
-    group: '',
+    group_ids: [] as number[],
     inscription_amount: '',
     monthly_amount: '',
   });
+  
   const [editFormData, setEditFormData] = useState({
     first_name: '',
     last_name: '',
@@ -53,103 +63,80 @@ export default function StudentsPage() {
     birth_date: '',
     nationality: '',
     address: '',
-    filiere: '',
-    program: '',
+    filiere_id: '',
+    program_id: '',
     level: '',
-    group: '',
+    group_ids: [] as number[],
     inscription_amount: '',
     monthly_amount: '',
   });
 
-  const filieres = [
-    // DEES
-    'DEES Marketing',
-    'DEES Gestion & Finance',
-    'DEES Ressources Humaines',
-    'DEES Informatique',
-
-    // Bachelor
-    'Bachelor PME',
-    'Bachelor Marketing Digital',
-    'Bachelor GRH',
-
-    // Master
-    'Master RH',
-    'Master Informatique',
-    'Master E-Business',
-    'Master MSE',
-  ];
-
-  // const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
   const nationalities = [
-    'Marocaine',
-    'Tunisienne',
-    'Libyenne',
-    'Sénégalaise',
-    'Ivoirienne',
-    'Camerounaise',
-    'Congolaise',
-    'Guinéenne',
-    'Ghanéenne',
-    'Burkinabé',
-    'Malienne',
-    'Mauritanienne',
-    'Nigérienne',
-    'Gabonaise',
-    'Française',
-    'Autre'
-  ];  
-  const programs = ['DEES', 'Bachelor', 'Master'];  
+    'Marocaine', 'Tunisienne', 'Libyenne', 'Sénégalaise', 'Ivoirienne',
+    'Camerounaise', 'Congolaise', 'Guinéenne', 'Ghanéenne', 'Burkinabé',
+    'Malienne', 'Mauritanienne', 'Nigérienne', 'Gabonaise', 'Française', 'Autre'
+  ];
+  
   const statuses = ['Actif', 'Inactif'];
-
-  const levels = [
-    "1ère année",
-    "2ème année",
-    "3ème année",
-    "Master 1",
-    "Master 2",
-  ];
-
-  const groups = [
-    "DEV-M1-A",
-    "DEV-M1-B",
-    "MKD-B1-A",
-    "MKD-B1-B",
-    "RH-DEES-A",
-    "RH-DEES-B",
-    "Finance-Bachelor-A",
-  ];
+  const levels = ['1ère année', '2ème année', '3ème année', 'Master 1', 'Master 2'];
 
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) fetchStudents();
   }, [searchTerm, filters]);
 
-  const fetchData = async () => {
+ const fetchInitialData = async () => {
+  try {
+    setLoading(true);
+    
+    const [studentsResponse, statsResponse, programsRes, filieresRes, groupsRes] = await Promise.all([
+      studentsApi.getAll({
+        search: searchTerm,
+        filiere_id: filters.filiere_id,
+        nationality: filters.nationality,
+        program_id: filters.program_id,
+        status: filters.status,
+      }),
+      studentsApi.getStats(),
+      programsApi.getAll(),
+      filieresApi.getAll(),
+      groupsApi.getAll(),
+    ]);
+    
+    setStudents(studentsResponse.data.data || studentsResponse.data || []);
+    setStats(statsResponse.data.data || statsResponse.data);
+    setPrograms(programsRes.data.data || []);
+    setFilieres(filieresRes.data.data || []);
+    setGroups(groupsRes.data.data || []); // ✅ Change ici
+    
+  } catch (error) {
+    console.error('Erreur:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Impossible de charger les données',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const fetchStudents = async () => {
     try {
-      setLoading(true);
-      const [studentsResponse, statsResponse] = await Promise.all([
-        studentsApi.getAll({
-          search: searchTerm,
-          filiere: filters.filiere,
-          nationality: filters.nationality,
-          program: filters.program,
-          status: filters.status,
-        }),
-        studentsApi.getStats()
-      ]);
+      const response = await studentsApi.getAll({
+        search: searchTerm,
+        filiere_id: filters.filiere_id,
+        nationality: filters.nationality,
+        program_id: filters.program_id,
+        status: filters.status,
+      });
       
-      // ✅ CHANGE ICI
-      setStudents(studentsResponse.data.data || studentsResponse.data || []);
-      setStats(statsResponse.data.data || statsResponse.data);
+      setStudents(response.data.data || response.data || []);
     } catch (error) {
       console.error('Erreur:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Impossible de charger les données',
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -169,24 +156,13 @@ export default function StudentsPage() {
       
       setShowAddModal(false);
       setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        password: '',
-        gender: '',
-        birth_date: '',
-        nationality: '',
-        address: '',
-        filiere: '',
-        program: '',
-        level: '',
-        group: '',
-        inscription_amount: '',
-        monthly_amount: '',
+        first_name: '', last_name: '', email: '', phone: '', password: '',
+        gender: '', birth_date: '', nationality: '', address: '',
+        filiere_id: '', program_id: '', level: '', group_ids: [],
+        inscription_amount: '', monthly_amount: '',
       });
       
-      fetchData();
+      fetchStudents();
     } catch (error: any) {
       Swal.fire({
         icon: 'error',
@@ -204,13 +180,13 @@ export default function StudentsPage() {
       email: student.user.email,
       phone: student.user.phone || '',
       gender: student.gender || '',
-      birth_date: student.birth_date ? student.birth_date.split('T')[0] : '', // ✅ Format YYYY-MM-DD
+      birth_date: student.birth_date ? student.birth_date.split('T')[0] : '',
       nationality: student.nationality || '',
       address: student.address || '',
-      filiere: student.filiere || '',
-      program: student.program || '',
+      filiere_id: student.filiere_id?.toString() || '',
+      program_id: student.program_id?.toString() || '',
       level: student.level || '',
-      group: student.group || '',
+      group_ids: student.group_ids || [],
       inscription_amount: student.inscription_amount.toString(),
       monthly_amount: student.monthly_amount.toString(),
     });
@@ -218,7 +194,6 @@ export default function StudentsPage() {
 
   const handleUpdateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!editStudent) return;
     
     try {
@@ -233,7 +208,7 @@ export default function StudentsPage() {
       });
       
       setEditStudent(null);
-      fetchData();
+      fetchStudents();
     } catch (error: any) {
       Swal.fire({
         icon: 'error',
@@ -271,7 +246,7 @@ export default function StudentsPage() {
           showConfirmButton: false
         });
         
-        fetchData();
+        fetchStudents();
       } catch (error) {
         Swal.fire({
           icon: 'error',
@@ -294,7 +269,7 @@ export default function StudentsPage() {
         showConfirmButton: false
       });
       
-      fetchData();
+      fetchStudents();
     } catch (error) {
       Swal.fire({
         icon: 'error',
@@ -305,7 +280,7 @@ export default function StudentsPage() {
   };
 
   const resetFilters = () => {
-    setFilters({ filiere: '', nationality: '', status: '', program: '' });
+    setFilters({ filiere_id: '', nationality: '', status: '', program_id: '' });
     setSearchTerm('');
   };
 
@@ -317,7 +292,6 @@ export default function StudentsPage() {
           <p className="text-gray-500">Gérez tous les étudiants inscrits dans le système.</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 border border-gray-200 border-l-4 border-l-[#0D529C] shadow-sm">
             <div className="flex items-start justify-between mb-4">
@@ -372,7 +346,6 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        {/* Table Section */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
@@ -388,7 +361,6 @@ export default function StudentsPage() {
             </button>
           </div>
 
-          {/* Search & Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -411,7 +383,6 @@ export default function StudentsPage() {
             </button>
           </div>
 
-          {/* Filter Panel */}
           {showFilters && (
             <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
@@ -424,13 +395,13 @@ export default function StudentsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Filière</label>
                   <select
-                    value={filters.filiere}
-                    onChange={(e) => setFilters({ ...filters, filiere: e.target.value })}
+                    value={filters.filiere_id}
+                    onChange={(e) => setFilters({ ...filters, filiere_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Toutes les filières</option>
                     {filieres.map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                      <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
                   </select>
                 </div>
@@ -450,13 +421,13 @@ export default function StudentsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Programme</label>
                   <select
-                    value={filters.program}
-                    onChange={(e) => setFilters({ ...filters, program: e.target.value })}
+                    value={filters.program_id}
+                    onChange={(e) => setFilters({ ...filters, program_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Tous les programmes</option>
                     {programs.map((p) => (
-                      <option key={p} value={p}>{p}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>
@@ -477,7 +448,6 @@ export default function StudentsPage() {
             </div>
           )}
 
-          {/* Table */}
           {loading ? (
             <div className="text-center py-12 text-gray-500">Chargement...</div>
           ) : students.filter(student => student.user !== null).length === 0 ? (
@@ -513,12 +483,12 @@ export default function StudentsPage() {
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.email}</td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
-                            {student.filiere || '-'}
+                            {student.filiere?.name || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
-                            {student.program || '-'}
+                            {student.program?.name || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center">
@@ -548,7 +518,6 @@ export default function StudentsPage() {
                           </button>
                         </td>
                         <td className="py-4 px-4 text-right">
-                          {/* ✅ Actions séparées */}
                           <button
                             onClick={() => setSelectedStudent(student)}
                             className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-blue-500 hover:text-white transition-colors"
@@ -580,7 +549,7 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Add Student Modal */}
+      {/* Add Modal - Continue dans le prochain message car trop long */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -703,26 +672,26 @@ export default function StudentsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Filière</label>
                     <select
-                      value={formData.filiere}
-                      onChange={(e) => setFormData({ ...formData, filiere: e.target.value })}
+                      value={formData.filiere_id}
+                      onChange={(e) => setFormData({ ...formData, filiere_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {filieres.map((f) => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Programme</label>
                     <select
-                      value={formData.program}
-                      onChange={(e) => setFormData({ ...formData, program: e.target.value })}
+                      value={formData.program_id}
+                      onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {programs.map((p) => (
-                        <option key={p} value={p}>{p}</option>
+                        <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
                   </div>
@@ -738,21 +707,19 @@ export default function StudentsPage() {
                         <option key={lvl} value={lvl}>{lvl}</option>
                       ))}
                     </select>
-
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Groupe</label>
                     <select
-                      value={formData.group}
-                      onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                      value={formData.group_ids[0] || ''}
+                      onChange={(e) => setFormData({ ...formData, group_ids: e.target.value ? [Number(e.target.value)] : [] })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {groups.map((g) => (
-                        <option key={g} value={g}>{g}</option>
+                        <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
-
                   </div>
                 </div>
               </div>
@@ -907,26 +874,26 @@ export default function StudentsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Filière</label>
                     <select
-                      value={editFormData.filiere}
-                      onChange={(e) => setEditFormData({ ...editFormData, filiere: e.target.value })}
+                      value={editFormData.filiere_id}
+                      onChange={(e) => setEditFormData({ ...editFormData, filiere_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {filieres.map((f) => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Programme</label>
                     <select
-                      value={editFormData.program}
-                      onChange={(e) => setEditFormData({ ...editFormData, program: e.target.value })}
+                      value={editFormData.program_id}
+                      onChange={(e) => setEditFormData({ ...editFormData, program_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {programs.map((p) => (
-                        <option key={p} value={p}>{p}</option>
+                        <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
                   </div>
@@ -942,24 +909,23 @@ export default function StudentsPage() {
                         <option key={lvl} value={lvl}>{lvl}</option>
                       ))}
                     </select>
-
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Groupe</label>
                     <select
-                      value={editFormData.group}
-                      onChange={(e) => setEditFormData({ ...editFormData, group: e.target.value })}
+                      value={editFormData.group_ids[0] || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, group_ids: e.target.value ? [Number(e.target.value)] : [] })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {groups.map((g) => (
-                        <option key={g} value={g}>{g}</option>
+                        <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
-
+                  </div>
                 </div>
               </div>
-              </div>
+
               <div className="bg-green-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#257035] mb-4">Finance</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1014,7 +980,9 @@ export default function StudentsPage() {
                   <User className="w-8 h-8 text-[#0D529C]" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">{selectedStudent.user.first_name} {selectedStudent.user.last_name}</h2>
+                  <h2 className="text-2xl font-bold">
+                    {selectedStudent.user.first_name} {selectedStudent.user.last_name}
+                  </h2>
                   <p className="text-blue-200">ID: {selectedStudent.student_code}</p>
                 </div>
               </div>
@@ -1035,7 +1003,9 @@ export default function StudentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Nom Complet</p>
-                    <p className="font-medium">{selectedStudent.user.first_name} {selectedStudent.user.last_name}</p>
+                    <p className="font-medium">
+                      {selectedStudent.user.first_name} {selectedStudent.user.last_name}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Email</p>
@@ -1059,7 +1029,9 @@ export default function StudentsPage() {
                     <p className="text-sm text-gray-500">Date de Naissance</p>
                     <p className="font-medium flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      {selectedStudent.birth_date ? new Date(selectedStudent.birth_date).toLocaleDateString('fr-FR') : '-'}
+                      {selectedStudent.birth_date
+                        ? new Date(selectedStudent.birth_date).toLocaleDateString('fr-FR')
+                        : '-'}
                     </p>
                   </div>
                   <div>
@@ -1075,7 +1047,11 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date d'Inscription</p>
-                    <p className="font-medium">{selectedStudent.enrolled_date ? new Date(selectedStudent.enrolled_date).toLocaleDateString('fr-FR') : '-'}</p>
+                    <p className="font-medium">
+                      {selectedStudent.enrolled_date
+                        ? new Date(selectedStudent.enrolled_date).toLocaleDateString('fr-FR')
+                        : '-'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1089,13 +1065,13 @@ export default function StudentsPage() {
                   <div>
                     <p className="text-sm text-gray-500">Filière</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white mt-1">
-                      {selectedStudent.filiere || '-'}
+                      {selectedStudent.filiere?.name || '-'}
                     </span>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Programme</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white mt-1">
-                      {selectedStudent.program || '-'}
+                      {selectedStudent.program?.name || '-'}
                     </span>
                   </div>
                   <div>
@@ -1104,13 +1080,25 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Groupe</p>
-                    <p className="font-medium">{selectedStudent.group || '-'}</p>
+                    {selectedStudent.groups && selectedStudent.groups.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedStudent.groups.map((group: any) => (
+                          <span key={group.id} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white">
+                            {group.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="font-medium">-</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Statut Étudiant</p>
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
-                      selectedStudent.user.is_active ? 'bg-[#257035] text-white' : 'bg-[#C1272D] text-white'
-                    }`}>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
+                        selectedStudent.user.is_active ? 'bg-[#257035] text-white' : 'bg-[#C1272D] text-white'
+                      }`}
+                    >
                       {selectedStudent.user.is_active ? 'Actif' : 'Inactif'}
                     </span>
                   </div>
@@ -1125,9 +1113,13 @@ export default function StudentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Statut du Dossier</p>
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
-                      selectedStudent.dossier_status === 'Complet' ? 'bg-[#257035] text-white' : 'bg-orange-500 text-white'
-                    }`}>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
+                        selectedStudent.dossier_status === 'Complet'
+                          ? 'bg-[#257035] text-white'
+                          : 'bg-orange-500 text-white'
+                      }`}
+                    >
                       {selectedStudent.dossier_status}
                     </span>
                   </div>
@@ -1135,7 +1127,7 @@ export default function StudentsPage() {
                     <p className="text-sm text-gray-500">Documents Fournis</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {selectedStudent.documents && selectedStudent.documents.length > 0 ? (
-                        selectedStudent.documents.map((doc) => (
+                        selectedStudent.documents.map((doc: string) => (
                           <span key={doc} className="inline-flex px-2 py-1 text-xs bg-gray-200 rounded">
                             {doc}
                           </span>
@@ -1162,17 +1154,25 @@ export default function StudentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Montant Inscription</p>
-                    <p className="font-bold text-lg">{selectedStudent.inscription_amount.toLocaleString()} MAD</p>
+                    <p className="font-bold text-lg">
+                      {selectedStudent.inscription_amount.toLocaleString()} MAD
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Montant Mensuel</p>
-                    <p className="font-bold text-lg">{selectedStudent.monthly_amount.toLocaleString()} MAD</p>
+                    <p className="font-bold text-lg">
+                      {selectedStudent.monthly_amount.toLocaleString()} MAD
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Statut Paiement</p>
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
-                      selectedStudent.payment_status === 'À jour' ? 'bg-[#257035] text-white' : 'bg-[#C1272D] text-white'
-                    }`}>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full mt-1 ${
+                        selectedStudent.payment_status === 'À jour'
+                          ? 'bg-[#257035] text-white'
+                          : 'bg-[#C1272D] text-white'
+                      }`}
+                    >
                       {selectedStudent.payment_status}
                     </span>
                   </div>

@@ -20,13 +20,9 @@ class Course extends Model
         'is_active',
         'professor_id',
         'group_id',
-        
-        // ✅ Colonnes TEXTE directes (pas de relations)
-        'program',
+        'program_id',  // ✅ Changé
+        'filiere_id',  // ✅ Changé
         'level',
-        'filiere',
-        
-        // ✅ Autres champs de votre table
         'students_count',
         'max_students',
         'hours_total',
@@ -57,16 +53,16 @@ class Course extends Model
         return $this->belongsTo(Group::class);
     }
 
-    // ❌ SUPPRIMEZ ces relations si vous n'avez pas program_id et filiere_id
-    // public function filiere(): BelongsTo
-    // {
-    //     return $this->belongsTo(Filiere::class);
-    // }
-    
-    // public function program(): BelongsTo
-    // {
-    //     return $this->belongsTo(Program::class);
-    // }
+    // ✅ Ajoute ces relations
+    public function program(): BelongsTo
+    {
+        return $this->belongsTo(Program::class);
+    }
+
+    public function filiere(): BelongsTo
+    {
+        return $this->belongsTo(Filiere::class);
+    }
 
     public function schedules(): HasMany
     {

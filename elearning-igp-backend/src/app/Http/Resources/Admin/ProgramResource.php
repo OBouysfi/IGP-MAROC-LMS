@@ -9,8 +9,8 @@ class ProgramResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $totalStudents = \DB::table('students')->where('program', $this->name)->count();
-        $totalGroups = \DB::table('groups')->where('program', $this->name)->count();
+        $totalStudents = \DB::table('students')->where('program_id', $this->id)->count();
+        $totalGroups = \DB::table('groups')->where('program_id', $this->id)->count();
 
         return [
             'id' => $this->id,

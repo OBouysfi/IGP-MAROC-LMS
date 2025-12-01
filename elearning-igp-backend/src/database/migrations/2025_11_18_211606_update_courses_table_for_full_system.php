@@ -24,8 +24,8 @@ return new class extends Migration
             $table->json('materials')->nullable()->after('status');
             $table->integer('completion_rate')->default(0)->after('materials');
             
-            // $table->dropForeign(['year_id']);
-            // $table->dropColumn('year_id');
+            $table->dropForeign(['year_id']);
+            $table->dropColumn('year_id');
         });
     }
 

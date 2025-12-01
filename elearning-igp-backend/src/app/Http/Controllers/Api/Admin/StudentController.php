@@ -16,17 +16,16 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Student::with('user');
+        $query = Student::with(['user', 'filiere', 'program', 'groups']);
 
-        // Filtres
-        if ($request->filiere) {
-            $query->where('filiere', $request->filiere);
+        if ($request->filiere_id) {
+            $query->where('filiere_id', $request->filiere_id);
         }
         if ($request->nationality) {
             $query->where('nationality', $request->nationality);
         }
-        if ($request->program) {
-            $query->where('program', $request->program);
+        if ($request->program_id) {
+            $query->where('program_id', $request->program_id);
         }
         if ($request->status) {
             $isActive = $request->status === 'Actif';
@@ -35,7 +34,6 @@ class StudentController extends Controller
             });
         }
 
-        // Recherche
         if ($request->search) {
             $search = $request->search;
             $query->whereHas('user', function($q) use ($search) {
@@ -76,7 +74,7 @@ class StudentController extends Controller
 
     public function show($id)
     {
-        $student = Student::with('user')->findOrFail($id);
+        $student = Student::with(['user', 'filiere', 'program', 'groups'])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -89,7 +87,6 @@ class StudentController extends Controller
         try {
             DB::beginTransaction();
 
-            // Créer l'utilisateur
             $user = User::create([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -99,10 +96,8 @@ class StudentController extends Controller
                 'is_active' => true,
             ]);
 
-            // Assigner le rôle student
             $user->assignRole('student');
 
-            // Créer le profil étudiant
             $student = Student::create([
                 'user_id' => $user->id,
                 'gender' => $request->gender,
@@ -110,20 +105,23 @@ class StudentController extends Controller
                 'nationality' => $request->nationality,
                 'address' => $request->address,
                 'enrolled_date' => $request->enrolled_date ?? now(),
-                'filiere' => $request->filiere,
-                'program' => $request->program,
+                'filiere_id' => $request->filiere_id,
+                'program_id' => $request->program_id,
                 'level' => $request->level,
-                'group' => $request->group,
                 'inscription_amount' => $request->inscription_amount ?? 0,
                 'monthly_amount' => $request->monthly_amount ?? 0,
             ]);
+
+            if ($request->group_ids) {
+                $student->groups()->sync($request->group_ids);
+            }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Étudiant créé avec succès',
-                'data' => new StudentResource($student->load('user'))
+                'data' => new StudentResource($student->load(['user', 'filiere', 'program', 'groups']))
             ], 201);
 
         } catch (\Exception $e) {
@@ -139,10 +137,7 @@ class StudentController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            \Log::info("Update student ID: " . $id);
-            
             $student = Student::findOrFail($id);
-            \Log::info("Student trouvé: " . $student->id);
             
             $validated = $request->validate([
                 'first_name' => 'sometimes|string|max:255',
@@ -153,18 +148,15 @@ class StudentController extends Controller
                 'birth_date' => 'nullable|date',
                 'nationality' => 'nullable|string',
                 'address' => 'nullable|string',
-                'filiere' => 'nullable|string',
-                'program' => 'nullable|in:DEES,Bachelor,Master',
+                'filiere_id' => 'nullable|exists:filieres,id',
+                'program_id' => 'nullable|exists:programs,id',
                 'level' => 'nullable|string',
-                'group' => 'nullable|string',
+                'group_ids' => 'nullable|array',
+                'group_ids.*' => 'exists:groups,id',
                 'inscription_amount' => 'nullable|numeric',
                 'monthly_amount' => 'nullable|numeric',
-            ], [
-                'email.unique' => 'Cet email est déjà utilisé.',
-                'program.in' => 'Le programme sélectionné n\'est pas valide.',
             ]);
 
-            // Mettre à jour user
             if (isset($validated['first_name']) || isset($validated['last_name']) || 
                 isset($validated['email']) || isset($validated['phone'])) {
                 
@@ -176,19 +168,20 @@ class StudentController extends Controller
                 ]);
             }
 
-            // Mettre à jour student
-            $studentData = array_diff_key($validated, array_flip(['first_name', 'last_name', 'email', 'phone']));
+            $studentData = array_diff_key($validated, array_flip(['first_name', 'last_name', 'email', 'phone', 'group_ids']));
             $student->update($studentData);
+
+            if (isset($validated['group_ids'])) {
+                $student->groups()->sync($validated['group_ids']);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Étudiant mis à jour avec succès',
-                'data' => $student->load('user')
+                'data' => new StudentResource($student->load(['user', 'filiere', 'program', 'groups']))
             ]);
 
         } catch (\Exception $e) {
-            \Log::error("Erreur update: " . $e->getMessage());
-            
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur: ' . $e->getMessage()

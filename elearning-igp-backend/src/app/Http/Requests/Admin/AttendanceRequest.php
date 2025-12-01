@@ -11,18 +11,58 @@ class AttendanceRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation()
+    {
+        if ($this->has('studentId') && !$this->has('student_id')) {
+            $this->merge(['student_id' => $this->studentId]);
+        }
+        
+        if ($this->has('scheduleId') && !$this->has('schedule_id')) {
+            $this->merge(['schedule_id' => $this->scheduleId]);
+        }
+
+        if ($this->has('courseName') && !$this->has('course_name')) {
+            $this->merge(['course_name' => $this->courseName]);
+        }
+
+        if ($this->has('startTime') && !$this->has('start_time')) {
+            $this->merge(['start_time' => $this->startTime]);
+        }
+
+        if ($this->has('endTime') && !$this->has('end_time')) {
+            $this->merge(['end_time' => $this->endTime]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'attendable_type' => ['required', 'in:App\Models\User,App\Models\Professor'],
-            'attendable_id' => ['required', 'integer'],
-            'schedule_id' => ['nullable', 'exists:schedules,id'],
+            'student_id' => ['required', 'integer', 'exists:students,id'], // ✅ Changed from users to students
+            'schedule_id' => ['nullable', 'integer', 'exists:schedules,id'],
             'course_name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'type' => ['required', 'in:absent,retard,justifié'],
+            'justification' => ['nullable', 'string'],
+            'justification_file' => ['nullable', 'string', 'max:255'],
+            'justified_at' => ['nullable', 'date'],
             'comment' => ['nullable', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'student_id.required' => 'L\'étudiant est requis.',
+            'student_id.exists' => 'L\'étudiant sélectionné n\'existe pas.',
+            'course_name.required' => 'Le nom du cours est requis.',
+            'date.required' => 'La date est requise.',
+            'start_time.required' => 'L\'heure de début est requise.',
+            'end_time.required' => 'L\'heure de fin est requise.',
+            'end_time.after' => 'L\'heure de fin doit être après l\'heure de début.',
+            'type.required' => 'Le type d\'absence est requis.',
+            'type.in' => 'Le type doit être: absent, retard ou justifié.',
         ];
     }
 }

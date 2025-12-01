@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { groupsApi, Group, GroupStats } from '@/lib/api/admin/groups';
-import { Plus, Edit2, Trash2, Search, Filter, Eye, X, Users, BookOpen, Calendar, GraduationCap, User, Clock } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, Eye, X, Users, BookOpen, Calendar, GraduationCap, User } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
+import { programsApi, filieresApi } from '@/lib/api/admin/programs';
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -15,18 +16,17 @@ export default function GroupsPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [filters, setFilters] = useState({ program: '', filiere: '', level: '' });
-
-  const programs = ['Master', 'Licence'];
-  const filieres = ['Développement', 'Commerce', 'Marketing', 'Finance', 'RH', 'Gestion'];
-  const levels = ['1ère année', '2ème année', '3ème année'];
+  const [filters, setFilters] = useState({ program_id: '', filiere_id: '', level: '' });
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [filieres, setFilieres] = useState<any[]>([]);
+  const levels = ['1ère année', '2ème année', '3ème année', 'Master 1', 'Master 2'];
 
   const [formData, setFormData] = useState({
     name: '',
     code: '',
-    program: '',
+    program_id: '',
+    filiere_id: '',
     level: '',
-    filiere: '',
     max_students: 30,
     delegate: '',
     delegate_email: '',
@@ -34,28 +34,47 @@ export default function GroupsPage() {
   });
 
   useEffect(() => {
-    fetchGroups();
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) fetchGroups();
   }, [filters, searchTerm]);
+
+  const fetchInitialData = async () => {
+  try {
+    setLoading(true);
+
+    const [groupsRes, statsRes, programsRes, filieresRes] = await Promise.all([
+      groupsApi.getAll({ ...filters, search: searchTerm }),
+      groupsApi.getStats(),
+      programsApi.getAll(),
+      filieresApi.getAll(),
+    ]);
+
+    setGroups(groupsRes.data.data);
+    setStats(statsRes.data);
+    setPrograms(programsRes.data.data || []);
+    setFilieres(filieresRes.data.data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Impossible de charger les données',
+      confirmButtonColor: '#0D529C',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchGroups = async () => {
     try {
-      setLoading(true);
-      const [groupsRes, statsRes] = await Promise.all([
-        groupsApi.getAll({ ...filters, search: searchTerm }),
-        groupsApi.getStats()
-      ]);
+      const groupsRes = await groupsApi.getAll({ ...filters, search: searchTerm });
       setGroups(groupsRes.data.data);
-      setStats(statsRes.data);
     } catch (error) {
-      console.error('Error fetching groups:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Impossible de charger les groupes',
-        confirmButtonColor: '#0D529C',
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error:', error);
     }
   };
 
@@ -85,7 +104,7 @@ export default function GroupsPage() {
       resetForm();
       fetchGroups();
     } catch (error: any) {
-      console.error('Error saving group:', error);
+      console.error('Error:', error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
@@ -119,7 +138,7 @@ export default function GroupsPage() {
         });
         fetchGroups();
       } catch (error) {
-        console.error('Error deleting group:', error);
+        console.error('Error:', error);
         Swal.fire({
           icon: 'error',
           title: 'Erreur',
@@ -136,11 +155,11 @@ export default function GroupsPage() {
       setSelectedGroup(response.data.data);
       setShowDetailModal(true);
     } catch (error) {
-      console.error('Error fetching group details:', error);
+      console.error('Error:', error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
-        text: 'Impossible de charger les détails du groupe',
+        text: 'Impossible de charger les détails',
         confirmButtonColor: '#0D529C',
       });
     }
@@ -151,9 +170,9 @@ export default function GroupsPage() {
     setFormData({
       name: group.name,
       code: group.code,
-      program: group.program,
+      program_id: group.program_id?.toString() || '',
+      filiere_id: group.filiere_id?.toString() || '',
       level: group.level,
-      filiere: group.filiere,
       max_students: group.max_students,
       delegate: group.delegate || '',
       delegate_email: group.delegate_email || '',
@@ -166,9 +185,9 @@ export default function GroupsPage() {
     setFormData({
       name: '',
       code: '',
-      program: '',
+      program_id: '',
+      filiere_id: '',
       level: '',
-      filiere: '',
       max_students: 30,
       delegate: '',
       delegate_email: '',
@@ -178,7 +197,7 @@ export default function GroupsPage() {
   };
 
   const resetFilters = () => {
-    setFilters({ program: '', filiere: '', level: '' });
+    setFilters({ program_id: '', filiere_id: '', level: '' });
   };
 
   return (
@@ -292,26 +311,26 @@ export default function GroupsPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Programme</label>
                   <select
-                    value={filters.program}
-                    onChange={(e) => setFilters({ ...filters, program: e.target.value })}
+                    value={filters.program_id}
+                    onChange={(e) => setFilters({ ...filters, program_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Tous les programmes</option>
                     {programs.map((p) => (
-                      <option key={p} value={p}>{p}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">Filière</label>
                   <select
-                    value={filters.filiere}
-                    onChange={(e) => setFilters({ ...filters, filiere: e.target.value })}
+                    value={filters.filiere_id}
+                    onChange={(e) => setFilters({ ...filters, filiere_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Toutes les filières</option>
                     {filieres.map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                      <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
                   </select>
                 </div>
@@ -332,80 +351,84 @@ export default function GroupsPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Code</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom du Groupe</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Filière</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Programme</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Étudiants</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Cours</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group) => (
-                  <tr key={group.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <span className="inline-flex px-3 py-1 text-xs font-bold rounded bg-gray-100 text-gray-700">
-                        {group.code}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm">{group.name}</p>
-                        <p className="text-xs text-gray-500">{group.level}</p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
-                        {group.filiere}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
-                        {group.program}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium">{group.students_count || 0}/{group.max_students}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{group.courses_count || 0} cours</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <button
-                        onClick={() => handleView(group)}
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openEditModal(group)}
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(group)}
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+          {loading ? (
+            <div className="text-center py-12 text-gray-500">Chargement...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Code</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom du Groupe</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Filière</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Programme</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Étudiants</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Cours</th>
+                    <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {groups.map((group) => (
+                    <tr key={group.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="py-4 px-4">
+                        <span className="inline-flex px-3 py-1 text-xs font-bold rounded bg-gray-100 text-gray-700">
+                          {group.code}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{group.name}</p>
+                          <p className="text-xs text-gray-500">{group.level}</p>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
+                          {group.filiere}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
+                          {group.program}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium">{group.students_count || 0}/{group.max_students}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm">{group.courses_count || 0} cours</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <button
+                          onClick={() => handleView(group)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-blue-500 hover:text-white transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEditModal(group)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-yellow-500 hover:text-white transition-colors ml-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(group)}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors ml-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -448,13 +471,13 @@ export default function GroupsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Programme *</label>
                     <select
                       required
-                      value={formData.program}
-                      onChange={(e) => setFormData({ ...formData, program: e.target.value })}
+                      value={formData.program_id}
+                      onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {programs.map((p) => (
-                        <option key={p} value={p}>{p}</option>
+                        <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
                   </div>
@@ -462,13 +485,13 @@ export default function GroupsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Filière *</label>
                     <select
                       required
-                      value={formData.filiere}
-                      onChange={(e) => setFormData({ ...formData, filiere: e.target.value })}
+                      value={formData.filiere_id}
+                      onChange={(e) => setFormData({ ...formData, filiere_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
                       {filieres.map((f) => (
-                        <option key={f} value={f}>{f}</option>
+                        <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
                   </div>
@@ -660,46 +683,6 @@ export default function GroupsPage() {
                             <td className="py-2 px-3 text-center">
                               <span className="inline-flex px-2 py-1 text-xs font-semibold rounded bg-orange-100 text-orange-700">
                                 {course.hours_week}h
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {selectedGroup.schedule && selectedGroup.schedule.length > 0 && (
-                <div className="bg-purple-50 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-purple-600 mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" />
-                    Emploi du Temps
-                  </h3>
-                  <div className="bg-white rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Jour</th>
-                          <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Horaire</th>
-                          <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Cours</th>
-                          <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Salle</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedGroup.schedule.map((slot, index) => (
-                          <tr key={index} className="border-t border-gray-100">
-                            <td className="py-2 px-3 text-sm font-medium">{slot.day}</td>
-                            <td className="py-2 px-3 text-sm">
-                              <span className="inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-gray-400" />
-                                {slot.time}
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 text-sm">{slot.course}</td>
-                            <td className="py-2 px-3 text-sm">
-                              <span className="inline-flex px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">
-                                {slot.room}
                               </span>
                             </td>
                           </tr>

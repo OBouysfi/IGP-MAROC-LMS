@@ -33,15 +33,17 @@ class ProgramController extends Controller
     public function stats(): JsonResponse
     {
         $totalStudents = \DB::table('students')->count();
+        
+        // ✅ FIX: program_id au lieu de program
         $totalRevenue = \DB::table('students')
-            ->join('programs', 'students.program', '=', 'programs.name')
+            ->join('programs', 'students.program_id', '=', 'programs.id')
             ->sum(\DB::raw('programs.inscription_fee + (programs.monthly_fee * 10)'));
 
         $stats = [
             'total_programs' => Program::count(),
             'active_programs' => Program::where('is_active', true)->count(),
             'total_students' => $totalStudents,
-            'total_revenue' => $totalRevenue,
+            'total_revenue' => $totalRevenue ?? 0,
         ];
 
         return response()->json($stats);

@@ -11,7 +11,12 @@ return new class extends Migration
         Schema::create('students', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('student_code')->unique(); // Code étudiant unique (ex: STU-00001)
+            $table->string('student_code')->unique();
+            
+            // Relations OBLIGATOIRES
+            $table->foreignId('filiere_id')->nullable()->constrained('filieres')->onDelete('set null');
+            $table->foreignId('program_id')->nullable()->constrained('programs')->onDelete('set null');
+            
             $table->enum('gender', ['Homme', 'Femme'])->nullable();
             $table->date('birth_date')->nullable();
             $table->string('nationality')->nullable();
@@ -19,14 +24,11 @@ return new class extends Migration
             $table->date('enrolled_date')->nullable();
             
             // Académique
-            $table->string('filiere')->nullable();
-            $table->string('program')->nullable(); // Master, Licence
-            $table->string('level')->nullable(); // 1ère année, 2ème année, etc.
-            $table->string('group')->nullable(); // Groupe classe
+            $table->string('level')->nullable();
             
             // Administration
             $table->enum('dossier_status', ['Complet', 'Incomplet'])->default('Incomplet');
-            $table->json('documents')->nullable(); // Liste des documents fournis
+            $table->json('documents')->nullable();
             $table->text('admin_comments')->nullable();
             
             // Finance

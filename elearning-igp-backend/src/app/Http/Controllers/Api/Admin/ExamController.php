@@ -63,11 +63,13 @@ class ExamController extends Controller
     {
         $filieres = \DB::table('exams')
             ->join('courses', 'exams.course_id', '=', 'courses.id')
-            ->select('courses.filiere')
-            ->selectRaw('AVG(exams.average) as avg_grade')
-            ->selectRaw('AVG(exams.pass_rate) as avg_pass_rate')
+            ->join('filieres', 'courses.filiere_id', '=', 'filieres.id')
+            ->select('filieres.id', 'filieres.name')
+            ->selectRaw('ROUND(AVG(exams.average), 2) as avg_grade')
+            ->selectRaw('ROUND(AVG(exams.pass_rate), 2) as avg_pass_rate')
             ->selectRaw('COUNT(DISTINCT exams.id) as total_exams')
-            ->groupBy('courses.filiere')
+            ->whereNotNull('exams.average')
+            ->groupBy('filieres.id', 'filieres.name')
             ->get();
 
         return response()->json(['data' => $filieres]);

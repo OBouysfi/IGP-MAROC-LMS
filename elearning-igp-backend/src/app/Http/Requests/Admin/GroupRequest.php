@@ -14,20 +14,19 @@ class GroupRequest extends FormRequest
 
     public function rules(): array
     {
-        // Récupérer l'ID depuis l'URL
         $groupId = $this->route('id');
 
         return [
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', Rule::unique('groups')->ignore($groupId)],
-            'program' => ['required', 'string', 'max:100'],
+            'program_id' => ['required', 'integer', 'exists:programs,id'],
+            'filiere_id' => ['required', 'integer', 'exists:filieres,id'],
             'level' => ['required', 'string', 'max:100'],
-            'filiere' => ['required', 'string', 'max:100'],
             'max_students' => ['required', 'integer', 'min:1'],
             'delegate' => ['nullable', 'string', 'max:255'],
             'delegate_email' => ['nullable', 'email', 'max:255'],
             'student_ids' => ['sometimes', 'array'],
-            'student_ids.*' => ['integer', 'exists:users,id'],
+            'student_ids.*' => ['integer', 'exists:students,id'],
             'course_ids' => ['sometimes', 'array'],
             'course_ids.*' => ['integer', 'exists:courses,id'],
             'schedule' => ['nullable', 'array'],

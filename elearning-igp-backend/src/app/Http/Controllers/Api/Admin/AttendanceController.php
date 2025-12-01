@@ -8,12 +8,10 @@ use App\Http\Requests\Admin\JustifyAbsenceRequest;
 use App\Http\Resources\Admin\AttendanceResource;
 use App\Models\Attendance;
 use App\Models\User;
-use App\Models\Student;
 use App\Models\Professor;
 use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 class AttendanceController extends Controller
 {
@@ -21,28 +19,31 @@ class AttendanceController extends Controller
     {
         $today = now()->format('Y-m-d');
         
-        // Utiliser Spatie au lieu de where('role', ...)
+        // Total students
         $totalStudents = User::role('student')->count();
         
-        $absentToday = Attendance::where('attendable_type', User::class)
-            ->where('date', $today)
+        // Absences and lates today
+        $absentToday = Attendance::where('date', $today)
             ->where('type', 'absent')
-            ->count();
+            ->distinct('student_id')
+            ->count('student_id');
         
-        $lateToday = Attendance::where('attendable_type', User::class)
-            ->where('date', $today)
+        $lateToday = Attendance::where('date', $today)
             ->where('type', 'retard')
-            ->count();
+            ->distinct('student_id')
+            ->count('student_id');
 
+        // Present = total - absent
         $presentToday = $totalStudents - $absentToday;
 
-        $totalAttendances = Attendance::where('attendable_type', User::class)->count();
-        $totalAbsences = Attendance::where('attendable_type', User::class)
-            ->where('type', 'absent')
-            ->count();
+        // Calculate global attendance rate
+        $totalAbsenceRecords = Attendance::where('type', 'absent')->count();
+        $totalRecords = Attendance::count();
         
-        $globalAttendanceRate = $totalAttendances > 0 
-            ? (($totalAttendances - $totalAbsences) / $totalAttendances) * 100 
+        // Estimate total expected attendances (assuming ~20 sessions per student per month)
+        $estimatedTotalSessions = $totalStudents * 20;
+        $globalAttendanceRate = $estimatedTotalSessions > 0 
+            ? ((($estimatedTotalSessions - $totalAbsenceRecords) / $estimatedTotalSessions) * 100)
             : 100;
 
         $stats = [
@@ -50,7 +51,7 @@ class AttendanceController extends Controller
             'present_today' => $presentToday,
             'absent_today' => $absentToday,
             'late_today' => $lateToday,
-            'global_attendance_rate' => round($globalAttendanceRate, 1),
+            'global_attendance_rate' => round(max(0, min(100, $globalAttendanceRate)), 1),
         ];
 
         return response()->json($stats);
@@ -58,15 +59,14 @@ class AttendanceController extends Controller
 
     public function studentsAttendance(Request $request): JsonResponse
     {
-        // Utiliser Spatie
-        $query = User::role('student')->with(['student.group']);
+        $query = User::role('student')->with(['student.groups.filiere', 'student.filiere']);
 
         if ($request->filled('group')) {
-            $query->whereHas('student', fn($q) => $q->where('group_id', $request->group));
+            $query->whereHas('student.groups', fn($q) => $q->where('groups.id', $request->group));
         }
 
         if ($request->filled('filiere')) {
-            $query->whereHas('student.group', fn($q) => $q->where('filiere_id', $request->filiere));
+            $query->whereHas('student', fn($q) => $q->where('filiere_id', $request->filiere));
         }
 
         if ($request->filled('search')) {
@@ -79,8 +79,8 @@ class AttendanceController extends Controller
         }
 
         $students = $query->get()->map(function($user) use ($request) {
-            $attendanceQuery = Attendance::where('attendable_type', User::class)
-                ->where('attendable_id', $user->id);
+            // Get attendance records (absences/lates) with date filtering
+            $attendanceQuery = Attendance::where('student_id', $user->id);
 
             if ($request->filled('date_from')) {
                 $attendanceQuery->where('date', '>=', $request->date_from);
@@ -89,27 +89,34 @@ class AttendanceController extends Controller
                 $attendanceQuery->where('date', '<=', $request->date_to);
             }
 
-            $absences = $attendanceQuery->get();
-            $totalAbsences = $absences->where('type', 'absent')->count();
-            $totalRetards = $absences->where('type', 'retard')->count();
-            $justifiedAbsences = $absences->where('type', 'justifié')->count();
+            $attendances = $attendanceQuery->get();
             
-            $totalSessions = 100;
-            $attendanceRate = $totalSessions > 0 
-                ? (($totalSessions - $totalAbsences) / $totalSessions) * 100 
+            // Calculate statistics
+            $totalAbsences = $attendances->where('type', 'absent')->count();
+            $totalRetards = $attendances->where('type', 'retard')->count();
+            $justifiedAbsences = $attendances->where('type', 'justifié')->count();
+            
+            // Estimate total sessions (could be improved by counting actual schedules)
+            $dateFrom = $request->filled('date_from') ? $request->date_from : now()->subDays(30)->format('Y-m-d');
+            $dateTo = $request->filled('date_to') ? $request->date_to : now()->format('Y-m-d');
+            $daysDiff = \Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo)) + 1;
+            $estimatedSessions = $daysDiff; // Assume 1 session per day
+            
+            $attendanceRate = $estimatedSessions > 0 
+                ? ((($estimatedSessions - $totalAbsences) / $estimatedSessions) * 100) 
                 : 100;
 
             return [
                 'id' => $user->id,
                 'student_name' => $user->first_name . ' ' . $user->last_name,
                 'student_email' => $user->email,
-                'group' => $user->student?->group?->name ?? '-',
-                'filiere' => $user->student?->group?->filiere?->name ?? '-',
+                'group' => $user->student?->groups?->first()?->name ?? '-',
+                'filiere' => $user->student?->filiere?->name ?? '-',
                 'total_absences' => $totalAbsences,
                 'total_retards' => $totalRetards,
                 'justified_absences' => $justifiedAbsences,
-                'attendance_rate' => round($attendanceRate, 0),
-                'absences' => AttendanceResource::collection($absences),
+                'attendance_rate' => round($attendanceRate, 1),
+                'absences' => AttendanceResource::collection($attendances),
             ];
         });
 
@@ -132,18 +139,27 @@ class AttendanceController extends Controller
             );
         }
 
-        $professors = $query->get()->map(function($professor) {
-            $absences = Attendance::where('attendable_type', Professor::class)
-                ->where('attendable_id', $professor->id)
-                ->get();
-
-            $totalAbsences = $absences->where('type', 'absent')->count();
-            $totalRetards = $absences->where('type', 'retard')->count();
-            $justifiedAbsences = $absences->where('type', 'justifié')->count();
+        $professors = $query->get()->map(function($professor) use ($request) {
+            // Get courses taught by this professor
+            $coursesQuery = \App\Models\Course::where('professor_id', $professor->id);
             
-            $totalSessions = 100;
-            $attendanceRate = $totalSessions > 0 
-                ? (($totalSessions - $totalAbsences) / $totalSessions) * 100 
+            if ($request->filled('date_from') || $request->filled('date_to')) {
+                $coursesQuery->where(function($q) use ($request) {
+                    if ($request->filled('date_from')) {
+                        $q->where('start_date', '>=', $request->date_from);
+                    }
+                    if ($request->filled('date_to')) {
+                        $q->where('end_date', '<=', $request->date_to);
+                    }
+                });
+            }
+            
+            $courses = $coursesQuery->get();
+            $totalCourses = $courses->count();
+            $activeCourses = $courses->where('status', 'active')->count();
+
+            $attendanceRate = $totalCourses > 0 
+                ? (($activeCourses / $totalCourses) * 100) 
                 : 100;
 
             return [
@@ -151,11 +167,17 @@ class AttendanceController extends Controller
                 'professor_name' => $professor->user->first_name . ' ' . $professor->user->last_name,
                 'professor_email' => $professor->user->email,
                 'department' => $professor->department,
-                'total_absences' => $totalAbsences,
-                'total_retards' => $totalRetards,
-                'justified_absences' => $justifiedAbsences,
-                'attendance_rate' => round($attendanceRate, 0),
-                'absences' => AttendanceResource::collection($absences),
+                'total_courses' => $totalCourses,
+                'active_courses' => $activeCourses,
+                'attendance_rate' => round($attendanceRate, 1),
+                'courses' => $courses->map(fn($c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'code' => $c->code,
+                    'status' => $c->status ?? 'active',
+                    'start_date' => $c->start_date,
+                    'end_date' => $c->end_date,
+                ]),
             ];
         });
 
@@ -164,16 +186,55 @@ class AttendanceController extends Controller
 
     public function store(AttendanceRequest $request): JsonResponse
     {
+        // Temporary debug - remove after fixing
+        \Log::info('Attendance Request Data:', $request->all());
+        
         $data = $request->validated();
         $attendance = Attendance::create($data);
+        $attendance->load('student', 'schedule');
 
         return response()->json(['data' => new AttendanceResource($attendance)], 201);
+    }
+
+    public function storeBulk(Request $request): JsonResponse
+    {
+        $request->validate([
+            'student_ids' => ['required', 'array'],
+            'student_ids.*' => ['required', 'integer', 'exists:users,id'],
+            'schedule_id' => ['nullable', 'integer', 'exists:schedules,id'],
+            'course_name' => ['required', 'string', 'max:255'],
+            'date' => ['required', 'date'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'type' => ['required', 'in:absent,retard,justifié'],
+            'comment' => ['nullable', 'string'],
+        ]);
+
+        $attendances = [];
+        foreach ($request->student_ids as $studentId) {
+            $attendances[] = Attendance::create([
+                'student_id' => $studentId,
+                'schedule_id' => $request->schedule_id,
+                'course_name' => $request->course_name,
+                'date' => $request->date,
+                'start_time' => $request->start_time,
+                'end_time' => $request->end_time,
+                'type' => $request->type,
+                'comment' => $request->comment,
+            ]);
+        }
+
+        return response()->json([
+            'message' => count($attendances) . ' attendance records created',
+            'data' => AttendanceResource::collection($attendances)
+        ], 201);
     }
 
     public function update(AttendanceRequest $request, $id): JsonResponse
     {
         $attendance = Attendance::findOrFail($id);
         $attendance->update($request->validated());
+        $attendance->load('student', 'schedule');
 
         return response()->json(['data' => new AttendanceResource($attendance)]);
     }
@@ -204,6 +265,7 @@ class AttendanceController extends Controller
         }
 
         $attendance->update($data);
+        $attendance->load('student', 'schedule');
 
         return response()->json(['data' => new AttendanceResource($attendance)]);
     }
@@ -222,12 +284,13 @@ class AttendanceController extends Controller
 
     public function getStudentsByGroup($groupId): JsonResponse
     {
-        // Utiliser Spatie
         $students = User::role('student')
-            ->whereHas('student', fn($q) => $q->where('group_id', $groupId))
+            ->with('student') // ✅ Eager load student relationship
+            ->whereHas('student.groups', fn($q) => $q->where('groups.id', $groupId))
             ->get()
             ->map(fn($user) => [
-                'id' => $user->id,
+                'id' => $user->student->id, // ✅ Return student.id, not user.id
+                'user_id' => $user->id,
                 'name' => $user->first_name . ' ' . $user->last_name,
                 'email' => $user->email,
             ]);

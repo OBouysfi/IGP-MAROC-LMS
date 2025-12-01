@@ -5,6 +5,7 @@ import { BookOpen, Users, Clock, Award, Plus, Search, Filter, SquarePen, Trash2,
 import AdminLayout from '@/components/layouts/AdminLayout';
 import { coursesApi, Course, CourseStats } from '@/lib/api/admin/courses';
 import { professorsApi } from '@/lib/api/admin/professors';
+import { programsApi, filieresApi } from '@/lib/api/admin/programs';
 import Swal from 'sweetalert2';
 
 export default function CoursesPage() {
@@ -15,6 +16,8 @@ export default function CoursesPage() {
   const [editCourse, setEditCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [professors, setProfessors] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [filieres, setFilieres] = useState<any[]>([]);
   const [stats, setStats] = useState<CourseStats>({
     total_courses: 0,
     active_courses: 0,
@@ -69,51 +72,33 @@ export default function CoursesPage() {
   const [editScheduleInput, setEditScheduleInput] = useState({ day: '', time: '', room: '' });
   const [materialInput, setMaterialInput] = useState('');
   const [editMaterialInput, setEditMaterialInput] = useState('');
-  const programs = ['DEES', 'Bachelor', 'Master'];  
-  const filieres = [
-    // DEES
-    'DEES Marketing',
-    'DEES Gestion & Finance',
-    'DEES Ressources Humaines',
-    'DEES Informatique',
-
-    // Bachelor
-    'Bachelor PME',
-    'Bachelor Marketing Digital',
-    'Bachelor GRH',
-
-    // Master
-    'Master RH',
-    'Master Informatique',
-    'Master E-Business',
-    'Master MSE',
-  ];
+  
   const statuses = ['À venir', 'En cours', 'Terminé'];
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-
-  const levels = [
-    "1ère année",
-    "2ème année",
-    "3ème année",
-    "Master 1",
-    "Master 2",
-  ];
-  const timeSlots = [
-    "08:00 - 10:00",
-    "09:00 - 11:00",
-    "09:00 - 13:00",
-    "10:00 - 12:00",
-    "11:00 - 13:00",
-    "14:00 - 17:00",
-    "15:00 - 18:00",
-  ];
-
+  const levels = ["1ère année", "2ème année", "3ème année", "Master 1", "Master 2"];
+  const timeSlots = ["08:00 - 10:00", "09:00 - 11:00", "09:00 - 13:00", "10:00 - 12:00", "11:00 - 13:00", "14:00 - 17:00", "15:00 - 18:00"];
   const rooms = Array.from({ length: 15 }, (_, i) => `Salle ${i + 1}`);
 
   useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
     fetchData();
-    fetchProfessors();
   }, [searchTerm, filters]);
+
+  const fetchInitialData = async () => {
+    try {
+      const [programsRes, filieresRes] = await Promise.all([
+        programsApi.getAll(),
+        filieresApi.getAll(),
+      ]);
+      setPrograms(programsRes.data.data || []);
+      setFilieres(filieresRes.data.data || []);
+    } catch (error) {
+      console.error('Erreur chargement données initiales:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -151,104 +136,127 @@ export default function CoursesPage() {
     }
   };
 
+  useEffect(() => {
+    if (showAddModal || editCourse) {
+      fetchProfessors();
+    }
+  }, [showAddModal, editCourse]);
+
   const handleAddCourse = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  try {
+    // ✅ Créer un nouvel objet sans program et filiere
+    const { program, filiere, ...rest } = formData;
     
-    try {
-      await coursesApi.create(formData);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Succès !',
-        text: 'Cours ajouté avec succès.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      
-      setShowAddModal(false);
-      setFormData({
-        name: '',
-        code: '',
-        description: '',
-        program: '',
-        level: '',
-        filiere: '',
-        professor_id: '',
-        students_count: '0',
-        max_students: '30',
-        hours_total: '0',
-        hours_completed: '0',
-        start_date: '',
-        end_date: '',
-        schedule: [],
-        status: 'À venir',
-        materials: [],
-        credits: '0',
-      });
-      setScheduleInput({ day: '', time: '', room: '' });
-      setMaterialInput('');
-      
-      fetchData();
-    } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: error.response?.data?.message || 'Impossible d\'ajouter le cours',
-      });
-    }
-  };
-
-  const handleEditClick = (course: Course) => {
-    setEditCourse(course);
-    setEditFormData({
-      name: course.name,
-      code: course.code,
-      description: course.description || '',
-      program: course.program || '',
-      level: course.level || '',
-      filiere: course.filiere || '',
-      professor_id: course.professor?.id.toString() || '',
-      students_count: course.students_count.toString(),
-      max_students: course.max_students.toString(),
-      hours_total: course.hours_total.toString(),
-      hours_completed: course.hours_completed.toString(),
-      start_date: course.start_date ? course.start_date.split('T')[0] : '',
-      end_date: course.end_date ? course.end_date.split('T')[0] : '',
-      schedule: course.schedule || [],
-      status: course.status || 'À venir',
-      materials: course.materials || [],
-      credits: course.credits.toString(),
+    const dataToSend = {
+      ...rest,
+      program_id: program ? programs.find(p => p.name === program)?.id : null,
+      filiere_id: filiere ? filieres.find(f => f.name === filiere)?.id : null,
+    };
+    
+    await coursesApi.create(dataToSend);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès !',
+      text: 'Cours ajouté avec succès.',
+      timer: 2000,
+      showConfirmButton: false
     });
-    setEditScheduleInput({ day: '', time: '', room: '' });
-    setEditMaterialInput('');
-  };
+    
+    setShowAddModal(false);
+    setFormData({
+      name: '',
+      code: '',
+      description: '',
+      program: '',
+      level: '',
+      filiere: '',
+      professor_id: '',
+      students_count: '0',
+      max_students: '30',
+      hours_total: '0',
+      hours_completed: '0',
+      start_date: '',
+      end_date: '',
+      schedule: [],
+      status: 'À venir',
+      materials: [],
+      credits: '0',
+    });
+    setScheduleInput({ day: '', time: '', room: '' });
+    setMaterialInput('');
+    
+    fetchData();
+  } catch (error: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: error.response?.data?.message || 'Impossible d\'ajouter le cours',
+    });
+  }
+};
 
-  const handleUpdateCourse = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleEditClick = (course: Course) => {
+  setEditCourse(course);
+  setEditFormData({
+    name: course.name,
+    code: course.code,
+    description: course.description || '',
+    program: typeof course.program === 'string' ? course.program : (course.program?.name || ''), // ✅ Fix
+    level: course.level || '',
+    filiere: typeof course.filiere === 'string' ? course.filiere : (course.filiere?.name || ''), // ✅ Fix
+    professor_id: course.professor?.id.toString() || '',
+    students_count: course.students_count.toString(),
+    max_students: course.max_students.toString(),
+    hours_total: course.hours_total.toString(),
+    hours_completed: course.hours_completed.toString(),
+    start_date: course.start_date ? course.start_date.split('T')[0] : '',
+    end_date: course.end_date ? course.end_date.split('T')[0] : '',
+    schedule: course.schedule || [],
+    status: course.status || 'À venir',
+    materials: course.materials || [],
+    credits: course.credits.toString(),
+  });
+  setEditScheduleInput({ day: '', time: '', room: '' });
+  setEditMaterialInput('');
+};
+const handleUpdateCourse = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!editCourse) return;
+  
+  try {
+    // ✅ Créer un nouvel objet sans program et filiere
+    const { program, filiere, ...rest } = editFormData;
     
-    if (!editCourse) return;
+    const dataToSend = {
+      ...rest,
+      program_id: program ? programs.find(p => p.name === program)?.id : null,
+      filiere_id: filiere ? filieres.find(f => f.name === filiere)?.id : null,
+    };
     
-    try {
-      await coursesApi.update(editCourse.id, editFormData);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Succès !',
-        text: 'Cours modifié avec succès.',
-        timer: 2000,
-        showConfirmButton: false
-      });
-      
-      setEditCourse(null);
-      fetchData();
-    } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: error.response?.data?.message || 'Impossible de modifier le cours',
-      });
-    }
-  };
+    await coursesApi.update(editCourse.id, dataToSend);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès !',
+      text: 'Cours modifié avec succès.',
+      timer: 2000,
+      showConfirmButton: false
+    });
+    
+    setEditCourse(null);
+    fetchData();
+  } catch (error: any) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: error.response?.data?.message || 'Impossible de modifier le cours',
+    });
+  }
+};
 
   const handleDelete = async (course: Course) => {
     const result = await Swal.fire({
@@ -492,7 +500,7 @@ export default function CoursesPage() {
                   >
                     <option value="">Tous les programmes</option>
                     {programs.map((p) => (
-                      <option key={p} value={p}>{p}</option>
+                      <option key={p.id} value={p.name}>{p.name}</option>
                     ))}
                   </select>
                 </div>
@@ -505,7 +513,7 @@ export default function CoursesPage() {
                   >
                     <option value="">Toutes les filières</option>
                     {filieres.map((f) => (
-                      <option key={f} value={f}>{f}</option>
+                      <option key={f.id} value={f.name}>{f.name}</option>
                     ))}
                   </select>
                 </div>
@@ -562,15 +570,15 @@ export default function CoursesPage() {
                         {course.professor ? course.professor.name : '-'}
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white w-fit">
-                            {course.program || '-'}
-                          </span>
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white w-fit">
-                            {course.filiere || '-'}
-                          </span>
-                        </div>
-                      </td>
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white w-fit">
+                              {course.program?.name || course.program || '-'}
+                            </span>
+                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white w-fit">
+                              {course.filiere?.name || course.filiere || '-'}
+                            </span>
+                          </div>
+                        </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-gray-400" />
@@ -691,7 +699,7 @@ export default function CoursesPage() {
               >
                 <option value="">Sélectionner</option>
                 {programs.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p.id} value={p.name}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -717,7 +725,7 @@ export default function CoursesPage() {
               >
                 <option value="">Sélectionner</option>
                 {filieres.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f.id} value={f.name}>{f.name}</option>
                 ))}
               </select>
             </div>
@@ -1023,7 +1031,7 @@ export default function CoursesPage() {
               >
                 <option value="">Sélectionner</option>
                 {programs.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p.id} value={p.name}>{p.name}</option>
                 ))}
               </select>
             </div>
@@ -1049,7 +1057,7 @@ export default function CoursesPage() {
               >
                 <option value="">Sélectionner</option>
                 {filieres.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f.id} value={f.name}>{f.name}</option>
                 ))}
               </select>
             </div>
@@ -1336,13 +1344,12 @@ export default function CoursesPage() {
             <div>
               <p className="text-sm text-gray-500">Programme</p>
               <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white mt-1">
-                {selectedCourse.program || '-'}
-              </span>
+              {typeof selectedCourse.program === 'string' ? selectedCourse.program : (selectedCourse.program?.name || '-')}              </span>
             </div>
             <div>
               <p className="text-sm text-gray-500">Filière</p>
               <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white mt-1">
-                {selectedCourse.filiere || '-'}
+              {typeof selectedCourse.filiere === 'string' ? selectedCourse.filiere : (selectedCourse.filiere?.name || '-')}
               </span>
             </div>
             <div>

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Exam extends Model
 {
@@ -60,6 +61,19 @@ class Exam extends Model
     public function grades(): HasMany
     {
         return $this->hasMany(Grade::class);
+    }
+
+    // Access filiere through course
+    public function filiere(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Filiere::class,
+            Course::class,
+            'id', // Foreign key on courses table
+            'id', // Foreign key on filieres table
+            'course_id', // Local key on exams table
+            'filiere_id' // Local key on courses table
+        );
     }
 
     public function calculateStats(): void

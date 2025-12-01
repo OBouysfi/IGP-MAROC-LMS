@@ -12,9 +12,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('code')->unique();
-            $table->string('program');
+            
+            // Relations
+            $table->foreignId('program_id')->nullable()->constrained('programs')->onDelete('set null');
+            $table->foreignId('filiere_id')->nullable()->constrained('filieres')->onDelete('set null');
+            
             $table->string('level');
-            $table->string('filiere');
             $table->integer('max_students')->default(30);
             $table->string('delegate')->nullable();
             $table->string('delegate_email')->nullable();
@@ -25,7 +28,7 @@ return new class extends Migration
         Schema::create('group_student', function (Blueprint $table) {
             $table->id();
             $table->foreignId('group_id')->constrained()->onDelete('cascade');
-            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('student_id')->constrained('students')->onDelete('cascade'); // ✅ students pas users
             $table->timestamps();
         });
 

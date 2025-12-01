@@ -9,8 +9,8 @@ class FiliereResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $totalStudents = \DB::table('students')->where('filiere', $this->name)->count();
-        $totalCourses = \DB::table('courses')->where('filiere', $this->name)->count();
+        $totalStudents = \DB::table('students')->where('filiere_id', $this->id)->count();
+        $totalCourses = \DB::table('courses')->where('filiere_id', $this->id)->count();
 
         $programs = [];
         if ($this->program_ids) {
