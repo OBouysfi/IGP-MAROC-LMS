@@ -12,6 +12,7 @@ use App\Models\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PayrollController extends Controller
 {
@@ -56,7 +57,10 @@ class PayrollController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('professor.user', fn($q) => $q->where('name', 'like', "%{$search}%"));
+            $query->whereHas('professor.user', function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%");
+            });
         }
 
         $payrolls = $query->get();
@@ -69,37 +73,59 @@ class PayrollController extends Controller
         $month = $request->get('month', now()->month);
         $year = $request->get('year', now()->year);
 
-        $professors = Professor::with('user')->get();
+        Log::info("🚀 Génération paie: Mois={$month}, Année={$year}");
+
+        $professors = Professor::with('user')->where('hourly_rate', '>', 0)->get();
+        
+        Log::info("👨‍🏫 {$professors->count()} professeurs trouvés");
 
         DB::beginTransaction();
         try {
+            $generatedCount = 0;
+            $skippedCount = 0;
+            
             foreach ($professors as $professor) {
-                // Vérifier si la paie existe déjà
-                $existingPayroll = Payroll::where('professor_id', $professor->id)
+                // Vérifier si existe déjà
+                $existing = Payroll::where('professor_id', $professor->id)
                     ->where('month', $month)
                     ->where('year', $year)
                     ->first();
 
-                if ($existingPayroll) continue;
+                if ($existing) {
+                    $skippedCount++;
+                    continue;
+                }
 
-                // Calculer les heures travaillées depuis les schedules
+                // ✅ CORRECTION: Utiliser start_date au lieu de start_time
                 $schedules = Schedule::where('professor_id', $professor->id)
-                    ->whereMonth('start_date', $month)
                     ->whereYear('start_date', $year)
+                    ->whereMonth('start_date', $month)
                     ->with(['course', 'group'])
                     ->get();
-
+                
+                Log::info("📅 Prof #{$professor->id}: {$schedules->count()} schedules trouvés");
 
                 $totalHours = 0;
                 $courseDetails = [];
 
                 foreach ($schedules as $schedule) {
+                    // Parse les heures (format H:i)
                     $startTime = \Carbon\Carbon::parse($schedule->start_time);
                     $endTime = \Carbon\Carbon::parse($schedule->end_time);
-                    $hours = $endTime->diffInMinutes($startTime) / 60;
+                    
+                    // Calculer la différence en heures
+                    $hours = $endTime->diffInHours($startTime, true);
+                    
+                    // Si c'est 0, essayer en minutes et diviser par 60
+                    if ($hours == 0) {
+                        $minutes = $endTime->diffInMinutes($startTime);
+                        $hours = $minutes / 60;
+                    }
+                    
                     $totalHours += $hours;
 
-                    $courseKey = $schedule->course_id . '-' . $schedule->group_id;
+                    $courseKey = ($schedule->course_id ?? 0) . '-' . ($schedule->group_id ?? 0);
+                    
                     if (!isset($courseDetails[$courseKey])) {
                         $courseDetails[$courseKey] = [
                             'course_id' => $schedule->course_id,
@@ -108,12 +134,32 @@ class PayrollController extends Controller
                             'hours' => 0,
                         ];
                     }
+                    
                     $courseDetails[$courseKey]['hours'] += $hours;
+                    
+                    Log::info("  ⏰ Schedule #{$schedule->id}: {$schedule->start_time} → {$schedule->end_time} = {$hours}h");
                 }
 
+                // 🔄 FALLBACK: Si pas de schedules, utiliser total_hours_month
+                if ($totalHours == 0 && $professor->total_hours_month > 0) {
+                    $totalHours = $professor->total_hours_month;
+                    Log::info("💼 Utilisation heures profil: {$totalHours}h");
+                    
+                    $courseDetails['default'] = [
+                        'course_id' => null,
+                        'course_name' => 'Enseignement mensuel',
+                        'group_name' => 'Multiple',
+                        'hours' => $totalHours,
+                    ];
+                }
+
+                // 💰 Calcul salaire
                 $grossSalary = $totalHours * $professor->hourly_rate;
                 $netSalary = $grossSalary;
 
+                Log::info("💵 Total: {$totalHours}h × {$professor->hourly_rate} MAD = {$netSalary} MAD");
+
+                // ✅ Créer la fiche de paie
                 $payroll = Payroll::create([
                     'professor_id' => $professor->id,
                     'month' => $month,
@@ -127,6 +173,7 @@ class PayrollController extends Controller
                     'payment_status' => 'en_attente',
                 ]);
 
+                // Créer les détails
                 foreach ($courseDetails as $detail) {
                     PayrollDetail::create([
                         'payroll_id' => $payroll->id,
@@ -137,12 +184,24 @@ class PayrollController extends Controller
                         'amount' => $detail['hours'] * $professor->hourly_rate,
                     ]);
                 }
+
+                $generatedCount++;
             }
 
             DB::commit();
-            return response()->json(['message' => 'Fiches de paie générées avec succès']);
+            
+            Log::info("✅ Terminé: {$generatedCount} créés, {$skippedCount} ignorés");
+            
+            return response()->json([
+                'message' => "{$generatedCount} fiche(s) de paie générée(s)",
+                'generated' => $generatedCount,
+                'skipped' => $skippedCount,
+            ]);
+            
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error("❌ ERREUR: " . $e->getMessage());
+            Log::error($e->getTraceAsString());
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }
@@ -197,7 +256,7 @@ class PayrollController extends Controller
 
         $payrolls = Payroll::whereIn('id', $validated['ids'])->get();
 
-        foreach ($payrolls as $index => $payroll) {
+        foreach ($payrolls as $payroll) {
             $payroll->update([
                 'payment_status' => 'payé',
                 'payment_date' => $validated['payment_date'],
@@ -223,7 +282,7 @@ class PayrollController extends Controller
             'id' => $p->id,
             'month' => $this->getMonthName($p->month),
             'year' => $p->year,
-            'professor_name' => $p->professor->user->name,
+            'professor_name' => $p->professor->user->first_name . ' ' . $p->professor->user->last_name,
             'amount' => (float) $p->net_salary,
             'payment_date' => $p->payment_date->format('Y-m-d'),
             'reference' => $p->payment_reference,
@@ -234,7 +293,7 @@ class PayrollController extends Controller
 
     public function getDepartments(): JsonResponse
     {
-        $departments = Professor::distinct()->pluck('department')->sort()->values();
+        $departments = Professor::distinct()->pluck('department')->filter()->sort()->values();
         return response()->json(['data' => $departments]);
     }
 
