@@ -26,8 +26,9 @@ class StudentDocument extends Model
         'validated_at' => 'datetime',
     ];
 
+    // ✅ Doit référencer Student, pas User
     public function student(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'student_id');
+        return $this->belongsTo(Student::class, 'student_id');
     }
 }

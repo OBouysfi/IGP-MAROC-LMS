@@ -27,17 +27,24 @@ class StudentDocumentController extends Controller
 
     public function stats(): JsonResponse
     {
-        // Utiliser Spatie
+        // Total students
         $totalStudents = User::role('student')->count();
         
+        // Students with all documents validated
         $completeCount = User::role('student')
-            ->whereHas('documents', function($q) {
-                $q->where('status', 'validé');
-            }, '=', count($this->requiredDocuments))
+            ->get()
+            ->filter(function($user) {
+                $validatedDocs = StudentDocument::where('student_id', $user->student->id ?? 0)
+                    ->where('status', 'validé')
+                    ->count();
+                return $validatedDocs >= count($this->requiredDocuments);
+            })
             ->count();
         
+        // Pending documents
         $pendingCount = StudentDocument::where('status', 'en_attente')->count();
         
+        // Incomplete dossiers
         $incompleteCount = $totalStudents - $completeCount;
 
         $stats = [
@@ -52,35 +59,49 @@ class StudentDocumentController extends Controller
 
     public function dossiers(Request $request): JsonResponse
     {
-        // Utiliser Spatie
         $query = User::role('student')
-            ->with(['student.group.filiere', 'student.group.program', 'documents']);
+            ->with(['student.groups', 'student.filiere', 'student.program']);
 
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
         if ($request->filled('filiere')) {
-            $query->whereHas('student.group', fn($q) => $q->where('filiere_id', $request->filiere));
+            $query->whereHas('student', fn($q) => $q->where('filiere_id', $request->filiere));
         }
 
         if ($request->filled('program')) {
-            $query->whereHas('student.group', fn($q) => $q->where('program_id', $request->program));
+            $query->whereHas('student', fn($q) => $q->where('program_id', $request->program));
         }
 
         $students = $query->get()->map(function($user) {
-            $documents = $user->documents ?? collect();
+            // ✅ Charger les VRAIS documents depuis la base de données
+            $studentId = $user->student->id ?? null;
             
-            // Créer les documents manquants
+            if (!$studentId) {
+                return null; // Skip si pas de profil étudiant
+            }
+
+            $documents = StudentDocument::where('student_id', $studentId)->get();
+            
+            // Créer les documents manquants (qui n'existent pas en base)
             $existingTypes = $documents->pluck('type')->toArray();
+            $allDocuments = collect();
+            
             foreach ($this->requiredDocuments as $type => $name) {
-                if (!in_array($type, $existingTypes)) {
-                    $documents->push(new StudentDocument([
+                $existingDoc = $documents->firstWhere('type', $type);
+                
+                if ($existingDoc) {
+                    // Document existe en base
+                    $allDocuments->push($existingDoc);
+                } else {
+                    // Document manquant
+                    $allDocuments->push(new StudentDocument([
                         'id' => null,
                         'name' => $name,
                         'type' => $type,
@@ -93,35 +114,35 @@ class StudentDocumentController extends Controller
             }
 
             $documentsRequired = count($this->requiredDocuments);
-            $documentsProvided = $documents->whereNotIn('status', ['manquant'])->count();
-            $documentsValidated = $documents->where('status', 'validé')->count();
+            $documentsProvided = $allDocuments->whereNotIn('status', ['manquant'])->count();
+            $documentsValidated = $allDocuments->where('status', 'validé')->count();
 
             $dossierStatus = 'incomplet';
             if ($documentsValidated === $documentsRequired) {
                 $dossierStatus = 'complet';
-            } elseif ($documents->where('status', 'en_attente')->count() > 0) {
+            } elseif ($allDocuments->where('status', 'en_attente')->count() > 0) {
                 $dossierStatus = 'en_attente';
             }
 
             return [
                 'id' => $user->id,
+                'student_id' => $studentId, // ✅ ID de la table students
                 'student_name' => $user->first_name . ' ' . $user->last_name,
                 'student_email' => $user->email,
-                'program' => $user->student?->group?->program?->name ?? '-',
-                'filiere' => $user->student?->group?->filiere?->name ?? '-',
-                'group' => $user->student?->group?->name ?? '-',
+                'program' => $user->student?->program?->name ?? '-',
+                'filiere' => $user->student?->filiere?->name ?? '-',
+                'group' => $user->student?->groups?->first()?->name ?? '-',
                 'dossier_status' => $dossierStatus,
                 'documents_required' => $documentsRequired,
                 'documents_provided' => $documentsProvided,
                 'documents_validated' => $documentsValidated,
-                'last_update' => $documents->max('updated_at')?->format('Y-m-d') ?? $user->updated_at->format('Y-m-d'),
-                'documents' => StudentDocumentResource::collection($documents),
+                'last_update' => $allDocuments->max('updated_at')?->format('Y-m-d') ?? $user->updated_at->format('Y-m-d'),
+                'documents' => StudentDocumentResource::collection($allDocuments),
             ];
-        });
+        })->filter(); // ✅ Enlever les null
 
-        return response()->json(['data' => $students]);
+        return response()->json(['data' => $students->values()]);
     }
-
     public function upload(StudentDocumentRequest $request): JsonResponse
     {
         $file = $request->file('file');
