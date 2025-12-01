@@ -1229,13 +1229,13 @@ export default function ProfessorsPage() {
               </div>
 
               {/* Cours Assignés - STATIC */}
-              <div className="bg-purple-50 rounded-xl p-6">
+              {/* <div className="bg-purple-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-purple-600 mb-4 flex items-center gap-2">
                   <BookOpen className="w-5 h-5" />
                   Cours Assignés (Static)
                 </h3>
                 <p className="text-sm text-gray-500 italic">Données statiques - À implémenter avec la gestion des cours</p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
