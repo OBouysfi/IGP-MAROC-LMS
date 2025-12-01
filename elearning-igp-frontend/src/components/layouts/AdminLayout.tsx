@@ -33,8 +33,8 @@ interface AdminLayoutProps {
 
 const menuItems = [
   { name: 'Dashboard', icon: Home, path: '/admin/dashboard' },
-  // { name: 'Programmes', icon: GraduationCap, path: '/admin/programs' },
-  // { name: 'Groupes', icon: Users, path: '/admin/groups' },
+  { name: 'Programmes', icon: GraduationCap, path: '/admin/programs' },
+  { name: 'Groupes', icon: Users, path: '/admin/groups' },
   { name: 'Étudiants', icon: Users, path: '/admin/students' },
   { name: 'Professeurs', icon: GraduationCap, path: '/admin/professors' },
   { name: 'Cours', icon: BookOpen, path: '/admin/courses' },
