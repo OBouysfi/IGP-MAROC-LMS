@@ -152,7 +152,7 @@ export default function AdminLoginPage() {
             </p>
             <div className="flex justify-center gap-2 text-sm">
               <a 
-                href={ROUTES.PROFESSOR_LOGIN || '/professor/login'} 
+                href={ROUTES.PROFESSOR_LOGIN || '/login'} 
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 Espace Professeur

@@ -12,7 +12,7 @@ export const ROUTES = {
   ADMIN_DASHBOARD: '/admin/dashboard',
   
   // Professor Routes
-  PROFESSOR_LOGIN: '/professor/login',
+  PROFESSOR_LOGIN: '/login',
   PROFESSOR_DASHBOARD: '/professor/dashboard',
   PROFESSOR_COURSES: '/professor/courses',
   
