@@ -22,17 +22,6 @@ export default function StudentSchedulePage() {
   const fetchSchedule = async () => {
     try {
       const data = await studentScheduleApi.getAll();
-      
-      // 🔍 DEBUG: Afficher les données reçues
-      console.log('📊 Données emploi du temps:', data);
-      console.log('📊 Nombre de séances:', data.length);
-      if (data.length > 0) {
-        console.log('📊 Exemple de séance:', data[0]);
-        console.log('📊 Tous les jours:', data.map(d => d.day));
-        console.log('📊 Heures de début:', data.map(d => d.start_time));
-        console.log('📊 Heures de fin:', data.map(d => d.end_time));
-      }
-      
       setSchedule(data);
     } catch (error) {
       console.error('❌ Erreur chargement emploi du temps:', error);
@@ -95,53 +84,44 @@ export default function StudentSchedulePage() {
     }
   };
 
-  const getEventsForDayAndTime = (day: string, time: string) => {
-    const events = schedule.filter(event => {
-      if (event.day !== day) return false;
-      
-      // Gérer différents formats de start_time
-      let eventTimeStr = event.start_time;
-      
-      // Si c'est un timestamp complet "2025-12-02 09:00:00", extraire l'heure
-      if (eventTimeStr.includes(' ')) {
-        eventTimeStr = eventTimeStr.split(' ')[1];
-      }
-      
-      // Extraire l'heure (format "09:00" ou "09:00:00")
-      const eventStart = parseInt(eventTimeStr.split(':')[0]);
-      const slotTime = parseInt(time.split(':')[0]);
-      
-      // 🔍 DEBUG détaillé
-      console.log(`🔍 Comparaison ${day} ${time}:`, {
-        original: event.start_time,
-        extracted: eventTimeStr,
-        eventStartHour: eventStart,
-        slotHour: slotTime,
-        match: eventStart === slotTime
-      });
-      
-      return eventStart === slotTime;
-    });
+  const isEventInTimeSlot = (event: StudentSchedule, day: string, time: string) => {
+    if (event.day !== day) return false;
     
-    // 🔍 DEBUG: Afficher les événements trouvés
-    if (events.length > 0) {
-      console.log(`✅ Trouvé ${events.length} événement(s) pour ${day} à ${time}:`, events);
-    }
+    let startStr = event.start_time;
+    if (startStr.includes(' ')) startStr = startStr.split(' ')[1];
+    const startHour = parseInt(startStr.split(':')[0]);
     
-    return events;
+    let endStr = event.end_time;
+    if (endStr.includes(' ')) endStr = endStr.split(' ')[1];
+    const endHour = parseInt(endStr.split(':')[0]);
+    
+    const slotHour = parseInt(time.split(':')[0]);
+    
+    return slotHour >= startHour && slotHour < endHour;
   };
 
-  const getEventHeight = (event: StudentSchedule) => {
-    const start = parseInt(event.start_time.split(':')[0]);
-    const end = parseInt(event.end_time.split(':')[0]);
-    const duration = end - start;
-    return duration * 60;
+  const isFirstSlot = (event: StudentSchedule, time: string) => {
+    let startStr = event.start_time;
+    if (startStr.includes(' ')) startStr = startStr.split(' ')[1];
+    const startHour = parseInt(startStr.split(':')[0]);
+    const slotHour = parseInt(time.split(':')[0]);
+    return startHour === slotHour;
+  };
+
+  const getEventsForDayAndTime = (day: string, time: string) => {
+    return schedule.filter(event => isEventInTimeSlot(event, day, time));
   };
 
   const stats = {
     total_hours: schedule.reduce((sum, event) => {
-      const start = parseInt(event.start_time.split(':')[0]);
-      const end = parseInt(event.end_time.split(':')[0]);
+      let startStr = event.start_time;
+      if (startStr.includes(' ')) startStr = startStr.split(' ')[1];
+      const start = parseInt(startStr.split(':')[0]);
+      
+      let endStr = event.end_time;
+      if (endStr.includes(' ')) endStr = endStr.split(' ')[1];
+      const end = parseInt(endStr.split(':')[0]);
+      
       return sum + (end - start);
     }, 0),
     total_courses: new Set(schedule.map(s => s.course)).size,
@@ -153,18 +133,14 @@ export default function StudentSchedulePage() {
     const today = new Date();
     const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
     const todayName = dayNames[today.getDay()];
-    
-    // 🔍 DEBUG
-    console.log('🗓️ Jour actuel:', todayName, '| Jour événement:', event.day);
-    
     return event.day === todayName;
   });
 
-  console.log('📅 Événements aujourd\'hui:', todayEvents.length);
-
   const nextEvent = todayEvents.find(event => {
     const now = new Date();
-    const [hours, minutes] = event.start_time.split(':').map(Number);
+    let timeStr = event.start_time;
+    if (timeStr.includes(' ')) timeStr = timeStr.split(' ')[1];
+    const [hours, minutes] = timeStr.split(':').map(Number);
     const eventTime = new Date();
     eventTime.setHours(hours, minutes, 0);
     return eventTime > now;
@@ -180,7 +156,6 @@ export default function StudentSchedulePage() {
     );
   }
 
-  // 🔍 DEBUG: Afficher si aucune donnée
   if (schedule.length === 0) {
     return (
       <StudentLayout>
@@ -206,14 +181,6 @@ export default function StudentSchedulePage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#257035] mb-2">Mon Emploi du Temps</h1>
           <p className="text-gray-500">Consultez votre planning de cours hebdomadaire.</p>
-        </div>
-
-        {/* 🔍 DEBUG: Badge avec nombre de séances */}
-        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-blue-800 text-sm">
-            📊 <strong>{schedule.length}</strong> séance(s) chargée(s) | 
-            Jours: {[...new Set(schedule.map(s => s.day))].join(', ')}
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -384,19 +351,19 @@ export default function StudentSchedulePage() {
                 </thead>
                 <tbody>
                   {timeSlots.map((time) => (
-                    <tr key={time} className="border-b">
+                    <tr key={time} className="border-b" style={{ height: '64px' }}>
                       <td className="py-2 px-2 text-sm text-gray-500 border-r bg-gray-50 text-center font-medium">
                         {time}
                       </td>
                       {days.map((day) => {
                         const events = getEventsForDayAndTime(day, time);
                         return (
-                          <td key={`${day}-${time}`} className="p-1 align-top h-16 border-r last:border-r-0">
+                          <td key={`${day}-${time}`} className="p-1 align-top border-r last:border-r-0">
                             {events.map((event) => (
                               <div
                                 key={event.id}
                                 className={`${getTypeBgColor(event.type)} rounded p-2 mb-1 cursor-pointer hover:shadow-md transition-shadow`}
-                                style={{ minHeight: `${getEventHeight(event) - 10}px` }}
+                                style={{ minHeight: '56px' }}
                               >
                                 <p className="font-medium text-xs truncate">{event.course}</p>
                                 <p className="text-xs text-gray-600">{event.start_time} - {event.end_time}</p>
