@@ -112,71 +112,87 @@ export default function DocumentsPage() {
   };
 
   const handleValidate = async (documentId: number, status: 'validé' | 'rejeté') => {
-    let comment = '';
-    
-    if (status === 'rejeté') {
-      const result = await Swal.fire({
-        title: 'Motif de rejet',
-        input: 'textarea',
-        inputLabel: 'Veuillez indiquer le motif du rejet',
-        inputPlaceholder: 'Ex: Document illisible, informations manquantes...',
-        showCancelButton: true,
-        confirmButtonColor: '#C1272D',
-        cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Rejeter',
-        cancelButtonText: 'Annuler',
-        inputValidator: (value) => {
-          if (!value) {
-            return 'Vous devez indiquer un motif!';
-          }
-        }
-      });
-
-      if (!result.isConfirmed) return;
-      comment = result.value;
-    } else {
-      const result = await Swal.fire({
-        title: 'Valider le document',
-        text: 'Êtes-vous sûr de vouloir valider ce document ?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#257035',
-        cancelButtonColor: '#6B7280',
-        confirmButtonText: 'Valider',
-        cancelButtonText: 'Annuler',
-      });
-
-      if (!result.isConfirmed) return;
-    }
-
-    try {
-      await documentsApi.validate(documentId, { status, comment });
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Succès',
-        text: status === 'validé' ? 'Document validé avec succès' : 'Document rejeté',
-        confirmButtonColor: '#0D529C',
-        timer: 2000,
-      });
-      
-      fetchData();
-      if (selectedDossier) {
-        const updatedDossier = dossiers.find(d => d.id === selectedDossier.id);
-        if (updatedDossier) {
-          setSelectedDossier(updatedDossier);
+  let comment = '';
+  
+  if (status === 'rejeté') {
+    const result = await Swal.fire({
+      title: 'Motif de rejet',
+      input: 'textarea',
+      inputLabel: 'Veuillez indiquer le motif du rejet',
+      inputPlaceholder: 'Ex: Document illisible, informations manquantes...',
+      showCancelButton: true,
+      confirmButtonColor: '#C1272D',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Rejeter',
+      cancelButtonText: 'Annuler',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Vous devez indiquer un motif!';
         }
       }
-    } catch (error: any) {
-      console.error('Error validating document:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: error.response?.data?.message || 'Impossible de valider le document',
-        confirmButtonColor: '#0D529C',
+    });
+
+    if (!result.isConfirmed) return;
+    comment = result.value;
+  } else {
+    const result = await Swal.fire({
+      title: 'Valider le document',
+      text: 'Êtes-vous sûr de vouloir valider ce document ?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#257035',
+      cancelButtonColor: '#6B7280',
+      confirmButtonText: 'Valider',
+      cancelButtonText: 'Annuler',
+    });
+
+    if (!result.isConfirmed) return;
+  }
+
+  try {
+    await documentsApi.validate(documentId, { status, comment });
+    
+    // ✅ Update le modal IMMÉDIATEMENT (optimistic update)
+    if (selectedDossier) {
+      const updatedDocuments = selectedDossier.documents.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, status, comment: comment || doc.comment }
+          : doc
+      );
+      
+      const validatedCount = updatedDocuments.filter(d => d.status === 'validé').length;
+      
+      setSelectedDossier({
+        ...selectedDossier,
+        documents: updatedDocuments,
+        documents_validated: validatedCount,
+        dossier_status: validatedCount === selectedDossier.documents_required ? 'complet' :
+                       validatedCount > 0 ? 'en_attente' : 'incomplet'
       });
     }
-  };
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès',
+      text: status === 'validé' ? 'Document validé avec succès' : 'Document rejeté',
+      confirmButtonColor: '#0D529C',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    
+    // ✅ Refetch en arrière-plan
+    fetchData();
+    
+  } catch (error: any) {
+    console.error('Error validating document:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: error.response?.data?.message || 'Impossible de valider le document',
+      confirmButtonColor: '#0D529C',
+    });
+  }
+};
 
   const handleDownload = async (documentId: number) => {
     try {
