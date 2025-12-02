@@ -807,12 +807,12 @@ export default function PayrollPage() {
                 <h2 className="text-xl font-bold text-[#0D529C]">Reçu de Paiement</h2>
                 <div className="flex gap-2">
                   <button 
-                      onClick={downloadPDF}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
-                    >
-                      <Download className="w-4 h-4" />
-                      Télécharger PDF
-                    </button>
+                    onClick={downloadPDF}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Download className="w-4 h-4" />
+                    Télécharger PDF
+                  </button>
                   <button onClick={() => setShowReceiptModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                     <X className="w-5 h-5" />
                   </button>
@@ -843,8 +843,8 @@ export default function PayrollPage() {
                 </div>
                 <div className="text-right">
                   <h2 className="text-xl font-bold text-gray-800">REÇU DE PAIEMENT</h2>
-                  {/* <p className="text-sm text-gray-600">N°: {paymentToConfirm.payment_reference || 'VIR-2024-11-XXX'}</p> */}
-                  <p className="text-sm text-gray-600">Date: {new Date(paymentToConfirm.payment_date || new Date()).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-sm text-gray-600">N°: {paymentToConfirm.payment_reference || paymentForm.payment_reference}</p>
+                  <p className="text-sm text-gray-600">Date: {new Date(paymentToConfirm.payment_date || paymentForm.payment_date).toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
 
@@ -914,20 +914,26 @@ export default function PayrollPage() {
                 </table>
               </div>
 
-              {/* Payment Method */}
+              {/* Payment Method - ✅ CORRECTION ICI */}
               <div className="bg-green-50 rounded-lg p-4 mb-6">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Méthode de Paiement</p>
-                    <p className="font-medium capitalize">{paymentToConfirm.payment_method || 'Virement Bancaire'}</p>
+                    <p className="font-medium capitalize">
+                      {paymentToConfirm.payment_method 
+                        ? paymentMethods.find(m => m.value === paymentToConfirm.payment_method)?.label 
+                        : paymentMethods.find(m => m.value === paymentForm.payment_method)?.label}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Compte Bancaire</p>
-                    <p className="font-medium">{paymentToConfirm.bank_info || ' - '}</p>
+                    <p className="font-medium">{paymentToConfirm.bank_info || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Référence</p>
-                    <p className="font-medium font-mono">{paymentToConfirm.payment_reference || 'VIR-2026-01-13'}</p>
+                    <p className="font-medium font-mono">
+                      {paymentToConfirm.payment_reference || paymentForm.payment_reference}
+                    </p>
                   </div>
                 </div>
               </div>

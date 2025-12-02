@@ -10,7 +10,7 @@ class ProfessorCourseResource extends JsonResource
     public function toArray(Request $request): array
     {
         $totalSessions = $this->schedules()->count();
-        $completedSessions = $this->schedules()->where('date', '<', now())->count();
+        $completedSessions = $this->schedules()->where('start_date', '<=', now())->count();
         
         return [
             'id' => $this->id,
@@ -21,12 +21,12 @@ class ProfessorCourseResource extends JsonResource
             'filiere' => $this->filiere?->name ?? '-',
             'program' => $this->program?->name ?? '-',
             'total_students' => $this->group?->students_count ?? 0,
-            'total_hours' => $this->hours ?? 0,
-            'completed_hours' => $completedSessions * ($this->hours_per_session ?? 2),
+            'total_hours' => $this->hours_total ?? 0,
+            'completed_hours' => $this->hours_completed ?? 0,
             'progress' => $totalSessions > 0 ? round(($completedSessions / $totalSessions) * 100) : 0,
             'schedule' => $this->formatSchedule(),
-            'room' => $this->schedules()->latest('date')->first()?->room ?? '-',
-            'next_class' => $this->schedules()->where('date', '>=', now())->orderBy('date')->first()?->date ?? null,
+            'room' => $this->schedules()->orderBy('start_date', 'desc')->first()?->room ?? '-',
+            'next_class' => $this->schedules()->where('start_date', '>=', now())->orderBy('start_date')->first()?->start_date ?? null,
             'average_attendance' => $this->calculateAttendanceRate(),
             'resources' => CourseResourceResource::collection($this->whenLoaded('resources')),
         ];
@@ -35,7 +35,7 @@ class ProfessorCourseResource extends JsonResource
     private function formatSchedule(): string
     {
         $schedules = $this->schedules()
-            ->select('day_of_week', 'start_time', 'end_time')
+            ->select('day', 'start_time', 'end_time')
             ->distinct()
             ->get();
         
@@ -43,19 +43,9 @@ class ProfessorCourseResource extends JsonResource
             return '-';
         }
 
-        $days = [
-            1 => 'Lundi',
-            2 => 'Mardi',
-            3 => 'Mercredi',
-            4 => 'Jeudi',
-            5 => 'Vendredi',
-            6 => 'Samedi',
-        ];
-
-        $formatted = $schedules->map(function($schedule) use ($days) {
-            $day = $days[$schedule->day_of_week] ?? '';
+        $formatted = $schedules->map(function($schedule) {
             $time = substr($schedule->start_time, 0, 5) . '-' . substr($schedule->end_time, 0, 5);
-            return $day;
+            return $schedule->day;
         })->unique()->implode(' & ');
 
         $firstSchedule = $schedules->first();
@@ -66,14 +56,26 @@ class ProfessorCourseResource extends JsonResource
 
     private function calculateAttendanceRate(): int
     {
-        $totalAttendances = $this->attendances()->count();
+        // Compte le nombre total d'étudiants * sessions
+        $totalStudents = $this->group?->students_count ?? 0;
+        $totalSessions = $this->schedules()->where('start_date', '<=', now())->count();
         
-        if ($totalAttendances === 0) {
+        if ($totalStudents === 0 || $totalSessions === 0) {
             return 100;
         }
 
-        $presentCount = $this->attendances()->where('status', 'present')->count();
+        $expectedAttendances = $totalStudents * $totalSessions;
         
-        return round(($presentCount / $totalAttendances) * 100);
+        // Compte les absences pour ce cours
+        $absences = \App\Models\Attendance::whereHas('student.groups', function($q) {
+            $q->where('groups.id', $this->group_id);
+        })
+        ->where('course_name', $this->name)
+        ->where('type', 'absent')
+        ->count();
+        
+        $presentCount = $expectedAttendances - $absences;
+        
+        return round(($presentCount / $expectedAttendances) * 100);
     }
 }

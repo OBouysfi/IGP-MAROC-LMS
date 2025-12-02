@@ -16,8 +16,6 @@ class CourseController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-         \Log::info('User ID: ' . $request->user()->id);
-    \Log::info('Professor: ' . ($request->user()->professor ? 'EXISTS' : 'NULL'));
         $professor = $request->user()->professor;
 
         if (!$professor) {
@@ -106,7 +104,14 @@ class CourseController extends Controller
 
         $totalCourses = $courses->count();
         $totalStudents = $courses->sum(fn($c) => $c->group?->students_count ?? 0);
-        $totalHours = $courses->sum(fn($c) => $c->schedules()->where('date', '<', now())->count() * 2);
+        
+        // ✅ CORRECTION: Utilise start_date au lieu de date
+        $totalHours = $courses->sum(function($course) {
+            return $course->schedules()
+                ->where('start_date', '<=', now())
+                ->count() * 2; // 2 heures par session
+        });
+        
         $totalResources = CourseResource::whereIn('course_id', $courses->pluck('id'))->count();
 
         return response()->json([

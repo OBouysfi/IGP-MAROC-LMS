@@ -28,8 +28,11 @@ class DashboardController extends Controller
         // Stats
         $totalCourses = Course::where('professor_id', $professor->id)->count();
         
-        $totalStudents = Student::whereHas('group.courses', function ($q) use ($professor) {
-            $q->where('professor_id', $professor->id);
+        // ✅ CORRECTION: Utilise 'groups' au lieu de 'group.courses'
+        $totalStudents = Student::whereHas('groups', function ($q) use ($courseIds) {
+            $q->whereHas('courses', function($query) use ($courseIds) {
+                $query->whereIn('courses.id', $courseIds);
+            });
         })->distinct()->count();
 
         $pendingGrades = Exam::whereIn('course_id', $courseIds)
@@ -47,23 +50,22 @@ class DashboardController extends Controller
         foreach ($schedules as $schedule) {
             $start = Carbon::parse($schedule->start_time);
             $end = Carbon::parse($schedule->end_time);
-            $hoursThisMonth += $end->diffInHours($start) * 4; // ~4 weeks per month
+            $hoursThisMonth += $end->diffInHours($start) * 4;
         }
 
         // Average attendance
-        $attendances = Attendance::whereHas('schedule', function ($q) use ($professor) {
-            $q->where('professor_id', $professor->id);
-        })->get();
+        $attendances = Attendance::where('professor_id', $professor->id)->get();
         
-        $averageAttendance = $attendances->count() > 0 
-            ? ($attendances->where('status', 'present')->count() / $attendances->count()) * 100 
-            : 0;
+        $totalAttendances = $attendances->count();
+        $averageAttendance = $totalAttendances > 0 
+            ? (($totalAttendances - $attendances->whereIn('type', ['absent', 'retard'])->count()) / $totalAttendances) * 100 
+            : 100;
 
-        // Today's schedule - day column stores the day name
+        // Today's schedule
         $today = Carbon::now();
         $dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         $dayNamesFr = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-        $todayDayName = $dayNames[$today->dayOfWeek];
+        $todayDayName = $dayNamesFr[$today->dayOfWeek];
         
         $todaySchedule = Schedule::with(['course', 'group'])
             ->where('professor_id', $professor->id)
@@ -73,8 +75,8 @@ class DashboardController extends Controller
             ->map(function ($schedule) {
                 return [
                     'id' => $schedule->id,
-                    'course' => $schedule->course->name,
-                    'group' => $schedule->group->name,
+                    'course' => $schedule->course->name ?? 'N/A',
+                    'group' => $schedule->group->name ?? 'N/A',
                     'time' => substr($schedule->start_time, 0, 5) . ' - ' . substr($schedule->end_time, 0, 5),
                     'room' => $schedule->room ?? 'N/A',
                     'type' => $schedule->type ?? 'Cours',
@@ -92,7 +94,7 @@ class DashboardController extends Controller
             ->map(function ($session) {
                 return [
                     'id' => $session->id,
-                    'course' => $session->course->name,
+                    'course' => $session->course->name ?? 'N/A',
                     'date' => $session->session_date->format('Y-m-d'),
                     'time' => $session->start_time,
                     'topic' => $session->title,
@@ -102,22 +104,22 @@ class DashboardController extends Controller
 
         // Pending tasks
         $pendingTasks = [];
-        
+
         $examsToGrade = Exam::with(['course'])
             ->whereIn('course_id', $courseIds)
             ->whereIn('status', ['en_attente', 'en_cours'])
-            ->orderBy('date', 'asc')
+            ->orderBy('date', 'asc')  // ✅ CORRECTION: 'date' au lieu de 'exam_date'
             ->take(3)
             ->get();
 
         foreach ($examsToGrade as $exam) {
-            $daysUntilDeadline = Carbon::parse($exam->date)->diffInDays(Carbon::now(), false);
+            $daysUntilDeadline = Carbon::parse($exam->date)->diffInDays(Carbon::now(), false);  // ✅ CORRECTION
             $priority = $daysUntilDeadline <= 2 ? 'high' : ($daysUntilDeadline <= 5 ? 'medium' : 'low');
             
             $pendingTasks[] = [
                 'id' => $exam->id,
-                'task' => 'Saisir les notes - ' . $exam->course->name,
-                'deadline' => $exam->date,
+                'task' => 'Saisir les notes - ' . ($exam->course->name ?? 'N/A'),
+                'deadline' => $exam->date,  // ✅ CORRECTION
                 'priority' => $priority,
             ];
         }

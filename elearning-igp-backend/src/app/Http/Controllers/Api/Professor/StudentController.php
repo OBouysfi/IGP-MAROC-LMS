@@ -21,16 +21,19 @@ class StudentController extends Controller
 
         $courseIds = Course::where('professor_id', $professor->id)->pluck('id');
 
-        $students = Student::with(['user', 'group.filiere', 'group.program'])
-            ->whereHas('group.courses', function ($query) use ($courseIds) {
-                $query->whereIn('courses.id', $courseIds);
+        $students = Student::with(['user', 'groups.filiere', 'groups.program'])
+            ->whereHas('groups', function ($query) use ($courseIds) {
+                $query->whereHas('courses', function($q) use ($courseIds) {
+                    $q->whereIn('courses.id', $courseIds);
+                });
             })
             ->get()
             ->map(function ($student) use ($courseIds) {
                 $user = $student->user;
+                $group = $student->groups->first();
                 
                 $courses = Course::whereIn('id', $courseIds)
-                    ->where('group_id', $student->group_id)
+                    ->where('group_id', $group?->id)
                     ->get(['id', 'name'])
                     ->pluck('name')
                     ->toArray();
@@ -45,16 +48,17 @@ class StudentController extends Controller
                 $average = $grades->count() > 0 ? $grades->avg() : 0;
 
                 $attendances = DB::table('attendances')
-                    ->join('schedules', 'attendances.schedule_id', '=', 'schedules.id')
                     ->where('attendances.student_id', $student->id)
-                    ->whereIn('schedules.course_id', $courseIds)
-                    ->select('attendances.status')
+                    ->whereIn('course_name', function($query) use ($courseIds) {
+                        $query->select('name')->from('courses')->whereIn('id', $courseIds);
+                    })
+                    ->select('attendances.type')
                     ->get();
 
                 $totalSessions = $attendances->count();
-                $attended = $attendances->where('status', 'present')->count();
-                $absences = $attendances->whereIn('status', ['absent', 'late'])->count();
-                $attendanceRate = $totalSessions > 0 ? round(($attended / $totalSessions) * 100) : 0;
+                $attended = $totalSessions - $attendances->whereIn('type', ['absent', 'retard'])->count();
+                $absences = $attendances->where('type', 'absent')->count();
+                $attendanceRate = $totalSessions > 0 ? round(($attended / $totalSessions) * 100) : 100;
 
                 $status = 'average';
                 if ($average >= 16 && $attendanceRate >= 90) {
@@ -86,9 +90,9 @@ class StudentController extends Controller
                     'id' => $student->id,
                     'name' => $user->full_name,
                     'email' => $user->email,
-                    'group' => $student->group->name ?? 'N/A',
-                    'filiere' => $student->group->filiere ?? 'N/A',
-                    'program' => $student->group->program ?? 'N/A',
+                    'group' => $group?->name ?? 'N/A',
+                    'filiere' => $group?->filiere?->name ?? 'N/A',
+                    'program' => $group?->program?->name ?? 'N/A',
                     'photo' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                     'courses' => $courses,
                     'average' => round($average, 2),
@@ -140,8 +144,11 @@ class StudentController extends Controller
 
         $courseIds = Course::where('professor_id', $professor->id)->pluck('id');
 
-        $students = Student::whereHas('group.courses', function ($query) use ($courseIds) {
-            $query->whereIn('courses.id', $courseIds);
+        // ✅ CORRECTION ICI AUSSI
+        $students = Student::whereHas('groups', function ($query) use ($courseIds) {
+            $query->whereHas('courses', function($q) use ($courseIds) {
+                $q->whereIn('courses.id', $courseIds);
+            });
         })->get();
 
         $totalStudents = $students->count();
@@ -161,14 +168,12 @@ class StudentController extends Controller
             $avg = $grades->count() > 0 ? $grades->avg() : 0;
 
             $attendances = DB::table('attendances')
-                ->join('schedules', 'attendances.schedule_id', '=', 'schedules.id')
                 ->where('attendances.student_id', $student->id)
-                ->whereIn('schedules.course_id', $courseIds)
                 ->get();
 
             $totalSessions = $attendances->count();
-            $attended = $attendances->where('status', 'present')->count();
-            $rate = $totalSessions > 0 ? ($attended / $totalSessions) * 100 : 0;
+            $attended = $totalSessions - $attendances->whereIn('type', ['absent', 'retard'])->count();
+            $rate = $totalSessions > 0 ? ($attended / $totalSessions) * 100 : 100;
 
             if ($avg >= 16 && $rate >= 90) {
                 $excellent++;
