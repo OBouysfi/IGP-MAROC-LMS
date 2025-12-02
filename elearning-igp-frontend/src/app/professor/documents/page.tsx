@@ -35,52 +35,64 @@ export default function ProfessorDocumentsPage() {
     { value: 'ressource', label: 'Ressource' },
   ];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+useEffect(() => {
+  fetchData();
+}, []);
 
-  useEffect(() => {
+useEffect(() => {
+  // Ne lance fetchDocuments que si myCourses est chargé
+  if (myCourses.length > 0 || searchTerm || filterCourse || filterCategory || filterType) {
     fetchDocuments();
-  }, [searchTerm, filterCourse, filterCategory, filterType]);
+  }
+}, [searchTerm, filterCourse, filterCategory, filterType]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [documentsRes, statsRes, coursesRes] = await Promise.all([
-        professorDocumentsApi.getDocuments(),
-        professorDocumentsApi.getStats(),
-        professorDocumentsApi.getMyCourses(),
-      ]);
-      setDocuments(documentsRes.data.data);
-      setStats(statsRes.data.data);
-      setMyCourses(coursesRes.data.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Erreur lors du chargement des données',
-        confirmButtonColor: '#0D529C',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const [documentsRes, statsRes, coursesRes] = await Promise.all([
+      professorDocumentsApi.getDocuments({}), // ← Ajoute les documents ici
+      professorDocumentsApi.getStats(),
+      professorDocumentsApi.getMyCourses(),
+    ]);
+    setDocuments(documentsRes.data.data);
+    setStats(statsRes.data.data);
+    setMyCourses(coursesRes.data.data);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Erreur lors du chargement des données',
+      confirmButtonColor: '#0D529C',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const fetchDocuments = async () => {
-    try {
-      const documentsRes = await professorDocumentsApi.getDocuments({ 
-        search: searchTerm,
-        course: filterCourse, 
-        category: filterCategory,
-        type: filterType
-      });
-      setDocuments(documentsRes.data.data);
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    }
-  };
-
+const fetchDocuments = async () => {
+  try {
+    console.log('🔍 Fetching documents with filters:', {
+      search: searchTerm,
+      course: filterCourse,
+      category: filterCategory,
+      type: filterType
+    });
+    
+    const documentsRes = await professorDocumentsApi.getDocuments({ 
+      search: searchTerm,
+      course: filterCourse, 
+      category: filterCategory,
+      type: filterType
+    });
+    
+    console.log('📦 Documents received:', documentsRes.data.data);
+    
+    setDocuments(documentsRes.data.data);
+  } catch (error) {
+    console.error('❌ Error fetching documents:', error);
+  }
+};
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -196,14 +208,44 @@ export default function ProfessorDocumentsPage() {
     }
   };
 
-  const handleDownload = async (doc: Document) => {
-    try {
-      const response = await professorDocumentsApi.downloadDocument(doc.id);
-      window.open(response.data.url, '_blank');
-    } catch (error) {
-      console.error('Error downloading:', error);
-    }
-  };
+ const handleDownload = async (doc: Document) => {
+  try {
+    const blob = await professorDocumentsApi.downloadDocument(doc.id);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès',
+      text: 'Document téléchargé',
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    
+    // ❌ ENLÈVE fetchDocuments() d'ici
+    // fetchDocuments(); 
+    
+    // ✅ Met à jour juste le compteur de téléchargements localement
+    setDocuments(documents.map(d => 
+      d.id === doc.id ? { ...d, downloads: d.downloads + 1 } : d
+    ));
+    
+  } catch (error) {
+    console.error('Error downloading:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Impossible de télécharger le document',
+      confirmButtonColor: '#0D529C',
+    });
+  }
+};
 
   const getTypeIcon = (type: string) => {
     switch (type) {

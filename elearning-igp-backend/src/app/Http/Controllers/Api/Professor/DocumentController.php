@@ -57,7 +57,7 @@ class DocumentController extends Controller
                     'uploaded_at' => $doc->created_at->format('Y-m-d'),
                     'downloads' => $doc->downloads,
                     'shared_with_students' => $doc->shared_with_students,
-                    'file_url' => Storage::url($doc->file_path),
+                    'file_url' => url('storage/' . $doc->file_path),
                 ];
             });
 
@@ -171,7 +171,7 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function download(Request $request, $id): JsonResponse
+    public function download(Request $request, $id)
     {
         $document = ProfessorDocument::findOrFail($id);
 
@@ -181,10 +181,12 @@ class DocumentController extends Controller
 
         $document->increment('downloads');
 
-        return response()->json([
-            'message' => 'Download URL',
-            'url' => Storage::url($document->file_path)
-        ]);
+        if (!Storage::disk('public')->exists($document->file_path)) {
+            \Log::error('File not found: ' . $document->file_path);
+            return response()->json(['message' => 'File not found'], 404);
+        }
+
+        return Storage::disk('public')->download($document->file_path, $document->name);
     }
 
     public function destroy(Request $request, $id): JsonResponse

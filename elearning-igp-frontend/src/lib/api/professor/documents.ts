@@ -45,8 +45,12 @@ export const professorDocumentsApi = {
   toggleShare: (id: number) => 
     axiosInstance.post(`/professor/documents/${id}/toggle-share`),
   
-  downloadDocument: (id: number) => 
-    axiosInstance.get(`/professor/documents/${id}/download`),
+  downloadDocument: async (id: number): Promise<Blob> => {
+    const response = await axiosInstance.get(`/professor/documents/${id}/download`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
   
   deleteDocument: (id: number) => 
     axiosInstance.delete(`/professor/documents/${id}`),
