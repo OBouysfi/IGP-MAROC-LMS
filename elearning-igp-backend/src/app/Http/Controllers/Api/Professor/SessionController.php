@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Professor;
 use App\Http\Controllers\Controller;
 use App\Models\JitsiSession;
 use App\Models\Course;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -155,14 +156,23 @@ class SessionController extends Controller
         }
 
         $courses = Course::where('professor_id', $professor->id)
-            ->with('group')
             ->get()
             ->map(function ($course) {
+                $groups = \App\Models\Group::select('id', 'name')
+                    ->get()
+                    ->map(function($group) {
+                        return [
+                            'id' => $group->id,
+                            'name' => $group->name
+                        ];
+                    })
+                    ->toArray();
+
                 return [
                     'id' => $course->id,
                     'name' => $course->name,
                     'code' => $course->code,
-                    'groups' => [$course->group->name ?? 'N/A'],
+                    'groups' => $groups,
                 ];
             });
 

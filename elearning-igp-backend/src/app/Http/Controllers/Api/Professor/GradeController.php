@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Professor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Exam;
-use App\Models\ExamGrade;
+use App\Models\Grade;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +27,7 @@ class GradeController extends Controller
             ->get()
             ->map(function ($exam) {
                 $totalStudents = $exam->group->students()->count();
-                $gradedStudents = ExamGrade::where('exam_id', $exam->id)
+                $gradedStudents = Grade::where('exam_id', $exam->id)
                     ->whereNotNull('grade')
                     ->count();
 
@@ -35,7 +35,7 @@ class GradeController extends Controller
                     ->with('user')
                     ->get()
                     ->map(function ($student) use ($exam) {
-                        $grade = ExamGrade::where('exam_id', $exam->id)
+                        $grade = Grade::where('exam_id', $exam->id)
                             ->where('student_id', $student->id)
                             ->first();
 
@@ -66,7 +66,6 @@ class GradeController extends Controller
                 ];
             });
 
-        // Apply filters
         if ($request->has('course')) {
             $course = $request->course;
             $exams = $exams->filter(function ($exam) use ($course) {
@@ -118,7 +117,7 @@ class GradeController extends Controller
         DB::beginTransaction();
         try {
             foreach ($request->grades as $gradeData) {
-                ExamGrade::updateOrCreate(
+                Grade::updateOrCreate(
                     [
                         'exam_id' => $examId,
                         'student_id' => $gradeData['student_id'],
@@ -130,10 +129,9 @@ class GradeController extends Controller
                 );
             }
 
-            // Update exam status
             $exam = Exam::findOrFail($examId);
             $totalStudents = $exam->group->students()->count();
-            $gradedStudents = ExamGrade::where('exam_id', $examId)
+            $gradedStudents = Grade::where('exam_id', $examId)
                 ->whereNotNull('grade')
                 ->count();
 
@@ -162,7 +160,7 @@ class GradeController extends Controller
     {
         $exam = Exam::findOrFail($examId);
         $totalStudents = $exam->group->students()->count();
-        $gradedStudents = ExamGrade::where('exam_id', $examId)
+        $gradedStudents = Grade::where('exam_id', $examId)
             ->whereNotNull('grade')
             ->count();
 

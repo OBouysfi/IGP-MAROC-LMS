@@ -13,7 +13,8 @@ export default function ProfessorStudentsPage() {
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedGroup, setSelectedGroup] = useState('');
   const [loading, setLoading] = useState(true);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [stats, setStats] = useState<StudentsStats | null>(null);
   const [myCourses, setMyCourses] = useState<string[]>([]);
   const [myGroups, setMyGroups] = useState<string[]>([]);
@@ -23,12 +24,8 @@ export default function ProfessorStudentsPage() {
   }, []);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchStudents();
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, selectedCourse, selectedGroup]);
+    filterStudents();
+  }, [searchTerm, selectedCourse, selectedGroup, allStudents]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -39,7 +36,8 @@ export default function ProfessorStudentsPage() {
         professorStudentsApi.getMyCourses(),
         professorStudentsApi.getMyGroups(),
       ]);
-      setStudents(studentsRes.data.data);
+      setAllStudents(studentsRes.data.data);
+      setFilteredStudents(studentsRes.data.data);
       setStats(statsRes.data.data);
       setMyCourses(coursesRes.data.data);
       setMyGroups(groupsRes.data.data);
@@ -56,17 +54,30 @@ export default function ProfessorStudentsPage() {
     }
   };
 
-  const fetchStudents = async () => {
-    try {
-      const studentsRes = await professorStudentsApi.getStudents({ 
-        search: searchTerm, 
-        course: selectedCourse, 
-        group: selectedGroup 
-      });
-      setStudents(studentsRes.data.data);
-    } catch (error) {
-      console.error('Error fetching students:', error);
+  const filterStudents = () => {
+    let filtered = [...allStudents];
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(student => 
+        student.name.toLowerCase().includes(search) ||
+        student.email.toLowerCase().includes(search)
+      );
     }
+
+    if (selectedCourse) {
+      filtered = filtered.filter(student => 
+        student.courses.includes(selectedCourse)
+      );
+    }
+
+    if (selectedGroup) {
+      filtered = filtered.filter(student => 
+        student.group === selectedGroup
+      );
+    }
+
+    setFilteredStudents(filtered);
   };
 
   const getStatusColor = (status: string) => {
@@ -231,7 +242,7 @@ export default function ProfessorStudentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <tr key={student.id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
@@ -296,7 +307,7 @@ export default function ProfessorStudentsPage() {
               </table>
             </div>
 
-            {students.length === 0 && (
+            {filteredStudents.length === 0 && (
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Aucun étudiant trouvé</p>
@@ -367,22 +378,24 @@ export default function ProfessorStudentsPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-[#0D529C] mb-4">Historique des Notes</h3>
-                <div className="space-y-3">
-                  {selectedStudent.grades.map((grade, index) => (
-                    <div key={index} className="bg-white rounded-lg p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-900">{grade.course}</p>
-                        <p className="text-xs text-gray-500">{grade.type} • {new Date(grade.date).toLocaleDateString('fr-FR')}</p>
+              {selectedStudent.grades.length > 0 && (
+                <div className="bg-blue-50 rounded-xl p-6">
+                  <h3 className="text-lg font-bold text-[#0D529C] mb-4">Historique des Notes</h3>
+                  <div className="space-y-3">
+                    {selectedStudent.grades.map((grade, index) => (
+                      <div key={index} className="bg-white rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{grade.course}</p>
+                          <p className="text-xs text-gray-500">{grade.type} • {new Date(grade.date).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <span className={`inline-flex px-4 py-2 text-lg font-bold rounded ${getGradeColor(grade.grade)}`}>
+                          {grade.grade}/20
+                        </span>
                       </div>
-                      <span className={`inline-flex px-4 py-2 text-lg font-bold rounded ${getGradeColor(grade.grade)}`}>
-                        {grade.grade}/20
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="bg-green-50 rounded-xl p-6">
                 <h3 className="text-lg font-bold text-[#257035] mb-4">Détails de Présence</h3>

@@ -452,9 +452,9 @@ export default function ProfessorSessionsPage() {
                     disabled={!newSession.course_id}
                   >
                     <option value={0}>Sélectionner un groupe</option>
-                    {selectedCourse?.groups.map((group) => (
-                      <option key={group} value={group}>{group}</option>
-                    ))}
+                      {selectedCourse?.groups.map((group) => (
+                        <option key={group.id} value={group.id}>{group.name}</option>
+                      ))}
                   </select>
                 </div>
               </div>
