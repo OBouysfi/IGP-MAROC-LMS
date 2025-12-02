@@ -21,13 +21,21 @@ class StudentCourseController extends Controller
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 
-        $courses = Course::where('group_id', $student->group_id)
+        // ✅ CORRECTION: Utilise groups au lieu de group_id
+        $groupIds = $student->groups->pluck('id');
+
+        $courses = Course::whereIn('group_id', $groupIds)
             ->with(['professor.user', 'group'])
             ->get()
             ->map(function($course) use ($student) {
+                // ✅ CORRECTION: Utilise 'day' au lieu de 'day_of_week'
+                $dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+                $today = Carbon::now();
+                $todayDayName = $dayNames[$today->dayOfWeek];
+
                 $nextSchedule = Schedule::where('course_id', $course->id)
-                    ->where('day_of_week', '>=', now()->dayOfWeek)
-                    ->orderBy('day_of_week')
+                    ->where('start_date', '>=', $today)
+                    ->orderBy('start_date')
                     ->orderBy('start_time')
                     ->first();
 
@@ -45,18 +53,14 @@ class StudentCourseController extends Controller
                     ->where('session_date', '>=', now())
                     ->count();
 
-                $nextClass = null;
-                if ($nextSchedule) {
-                    $nextDay = Carbon::now()->next($nextSchedule->day_of_week);
-                    $nextClass = $nextDay->format('Y-m-d') . ' ' . $nextSchedule->start_time;
-                }
+                $nextClass = $nextSchedule ? $nextSchedule->start_date . ' ' . $nextSchedule->start_time : null;
 
                 return [
                     'id' => $course->id,
                     'name' => $course->name,
                     'code' => $course->code,
-                    'professor' => $course->professor->user->name ?? 'N/A',
-                    'professor_email' => $course->professor->user->email ?? 'N/A',
+                    'professor' => $course->professor?->user?->first_name . ' ' . $course->professor?->user?->last_name ?? 'N/A',
+                    'professor_email' => $course->professor?->user?->email ?? 'N/A',
                     'description' => $course->description ?? 'Pas de description disponible',
                     'credits' => $course->credits ?? 0,
                     'semester' => $course->semester ?? 'S1',
@@ -64,7 +68,7 @@ class StudentCourseController extends Controller
                     'total_hours' => $course->hours_total ?? 0,
                     'completed_hours' => $course->hours_completed ?? 0,
                     'next_class' => $nextClass,
-                    'next_class_room' => $nextSchedule->room ?? 'N/A',
+                    'next_class_room' => $nextSchedule?->room ?? 'N/A',
                     'grade_average' => $average ? round($average, 1) : null,
                     'resources_count' => $resourcesCount,
                     'sessions_count' => $sessionsCount,
@@ -83,14 +87,18 @@ class StudentCourseController extends Controller
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 
+        $groupIds = $student->groups->pluck('id');
+
         $course = Course::where('id', $id)
-            ->where('group_id', $student->group_id)
+            ->whereIn('group_id', $groupIds)
             ->with(['professor.user', 'group'])
             ->firstOrFail();
 
+        $today = Carbon::now();
+
         $nextSchedule = Schedule::where('course_id', $course->id)
-            ->where('day_of_week', '>=', now()->dayOfWeek)
-            ->orderBy('day_of_week')
+            ->where('start_date', '>=', $today)
+            ->orderBy('start_date')
             ->orderBy('start_time')
             ->first();
 
@@ -108,18 +116,14 @@ class StudentCourseController extends Controller
             ->where('session_date', '>=', now())
             ->count();
 
-        $nextClass = null;
-        if ($nextSchedule) {
-            $nextDay = Carbon::now()->next($nextSchedule->day_of_week);
-            $nextClass = $nextDay->format('Y-m-d') . ' ' . $nextSchedule->start_time;
-        }
+        $nextClass = $nextSchedule ? $nextSchedule->start_date . ' ' . $nextSchedule->start_time : null;
 
         return response()->json([
             'id' => $course->id,
             'name' => $course->name,
             'code' => $course->code,
-            'professor' => $course->professor->user->name ?? 'N/A',
-            'professor_email' => $course->professor->user->email ?? 'N/A',
+            'professor' => $course->professor?->user?->first_name . ' ' . $course->professor?->user?->last_name ?? 'N/A',
+            'professor_email' => $course->professor?->user?->email ?? 'N/A',
             'description' => $course->description ?? 'Pas de description disponible',
             'credits' => $course->credits ?? 0,
             'semester' => $course->semester ?? 'S1',
@@ -127,7 +131,7 @@ class StudentCourseController extends Controller
             'total_hours' => $course->hours_total ?? 0,
             'completed_hours' => $course->hours_completed ?? 0,
             'next_class' => $nextClass,
-            'next_class_room' => $nextSchedule->room ?? 'N/A',
+            'next_class_room' => $nextSchedule?->room ?? 'N/A',
             'grade_average' => $average ? round($average, 1) : null,
             'resources_count' => $resourcesCount,
             'sessions_count' => $sessionsCount,
@@ -143,8 +147,10 @@ class StudentCourseController extends Controller
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 
+        $groupIds = $student->groups->pluck('id');
+
         $course = Course::where('id', $id)
-            ->where('group_id', $student->group_id)
+            ->whereIn('group_id', $groupIds)
             ->firstOrFail();
 
         $resources = ProfessorDocument::where('course_id', $course->id)
@@ -162,7 +168,7 @@ class StudentCourseController extends Controller
                     'file_size' => $doc->file_size,
                     'file_type' => $doc->file_type,
                     'shared_at' => $doc->created_at->format('Y-m-d H:i:s'),
-                    'professor' => $doc->professor->user->name ?? 'N/A',
+                    'professor' => $doc->professor?->user?->first_name . ' ' . $doc->professor?->user?->last_name ?? 'N/A',
                 ];
             });
 

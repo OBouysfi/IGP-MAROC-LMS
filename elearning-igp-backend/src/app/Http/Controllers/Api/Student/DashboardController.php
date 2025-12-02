@@ -22,13 +22,16 @@ class DashboardController extends Controller
                 return response()->json(['message' => 'Student profile not found'], 404);
             }
 
+            // ✅ CORRECTION: Utilise groups au lieu de group_id
+            $groupIds = $student->groups->pluck('id');
+
             // Stats
-            $totalCourses = Course::where('group_id', $student->group_id)->count();
+            $totalCourses = Course::whereIn('group_id', $groupIds)->count();
             
-            $grades = Grade::where('student_id', $student->user_id)->get();
+            $grades = Grade::where('student_id', $student->id)->get();
             $averageGrade = $grades->count() > 0 ? round($grades->avg('grade'), 1) : 0;
             
-            $upcomingSessions = JitsiSession::where('group_id', $student->group_id)
+            $upcomingSessions = JitsiSession::whereIn('group_id', $groupIds)
                 ->where('status', 'planifiée')
                 ->where('session_date', '>=', now())
                 ->count();
@@ -44,9 +47,10 @@ class DashboardController extends Controller
 
             // Today's Schedule
             $today = Carbon::now()->locale('fr');
-            $dayName = ucfirst($today->translatedFormat('l'));
+            $dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+            $dayName = $dayNames[$today->dayOfWeek];
             
-            $todaySchedule = Schedule::where('group_id', $student->group_id)
+            $todaySchedule = Schedule::whereIn('group_id', $groupIds)
                 ->where('day', $dayName)
                 ->with(['course', 'professor.user'])
                 ->orderBy('start_time')
@@ -55,7 +59,7 @@ class DashboardController extends Controller
                     return [
                         'id' => $schedule->id,
                         'course' => $schedule->course->name ?? 'N/A',
-                        'professor' => optional($schedule->professor)->user->name ?? 'N/A',
+                        'professor' => $schedule->professor?->user?->first_name . ' ' . $schedule->professor?->user?->last_name ?? 'N/A',
                         'time' => substr($schedule->start_time, 0, 5) . ' - ' . substr($schedule->end_time, 0, 5),
                         'room' => $schedule->room,
                         'type' => ucfirst($schedule->type),
@@ -63,7 +67,7 @@ class DashboardController extends Controller
                 });
 
             // Upcoming Sessions
-            $upcomingSessionsList = JitsiSession::where('group_id', $student->group_id)
+            $upcomingSessionsList = JitsiSession::whereIn('group_id', $groupIds)
                 ->where('status', 'planifiée')
                 ->where('session_date', '>=', now())
                 ->with(['course', 'professor.user'])
@@ -78,12 +82,12 @@ class DashboardController extends Controller
                         'topic' => $session->title,
                         'date' => $session->session_date,
                         'time' => substr($session->start_time, 0, 5),
-                        'professor' => optional($session->professor)->user->name ?? 'N/A',
+                        'professor' => $session->professor?->user?->first_name . ' ' . $session->professor?->user?->last_name ?? 'N/A',
                     ];
                 });
 
             // Recent Grades
-            $recentGrades = Grade::where('student_id', $student->user_id)
+            $recentGrades = Grade::where('student_id', $student->id)
                 ->with(['exam.course'])
                 ->orderBy('created_at', 'desc')
                 ->limit(4)
@@ -104,33 +108,34 @@ class DashboardController extends Controller
                 });
 
             // My Courses
-            $myCourses = Course::where('group_id', $student->group_id)
+            $myCourses = Course::whereIn('group_id', $groupIds)
                 ->with(['professor.user'])
                 ->get()
                 ->map(function($course) use ($student) {
+                    // ✅ CORRECTION: Utilise start_date au lieu de day_of_week
                     $nextSchedule = Schedule::where('course_id', $course->id)
-                        ->where('day_of_week', '>=', now()->dayOfWeek)
-                        ->orderBy('day_of_week')
+                        ->where('start_date', '>=', now())
+                        ->orderBy('start_date')
                         ->orderBy('start_time')
                         ->first();
                     
                     $nextClass = $nextSchedule 
-                        ? now()->next($nextSchedule->day_of_week)->format('Y-m-d')
+                        ? $nextSchedule->start_date
                         : now()->addDays(7)->format('Y-m-d');
                     
                     return [
                         'id' => $course->id,
                         'name' => $course->name,
                         'code' => $course->code,
-                        'professor' => optional($course->professor)->user->name ?? 'N/A',
+                        'professor' => $course->professor?->user?->first_name . ' ' . $course->professor?->user?->last_name ?? 'N/A',
                         'progress' => $course->hours_total > 0 ? round(($course->hours_completed / $course->hours_total) * 100) : 0,
                         'next_class' => $nextClass,
                     ];
                 });
 
             // Recent Resources
-            $recentResources = ProfessorDocument::whereHas('course', function($query) use ($student) {
-                $query->where('group_id', $student->group_id);
+            $recentResources = ProfessorDocument::whereHas('course', function($query) use ($groupIds) {
+                $query->whereIn('group_id', $groupIds);
             })
             ->where('shared_with_students', true)
             ->with(['course'])
