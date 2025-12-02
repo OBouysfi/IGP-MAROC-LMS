@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api/auth';
+import { studentSettingsApi } from '@/lib/api/student/settings';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -33,6 +34,31 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    first_name: string;
+    last_name: string;
+    email: string;
+    avatar: string | null;
+    student?: {
+      student_code?: string;
+      group?: {
+        name?: string;
+      };
+    };
+  } | null>(null);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await studentSettingsApi.getProfile();
+      setUserProfile(response.data.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/student/dashboard' },
@@ -61,11 +87,12 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
     { id: 3, message: 'Document ajouté par Prof. Benjelloun', time: 'Il y a 3h', read: true },
   ];
 
+  const displayName = userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : 'Étudiant';
+  const displayGroup = userProfile?.student?.group?.name || '';
+
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-[#257035] text-white transition-all duration-300 flex flex-col`}>
-        {/* Logo */}
         <div className="p-4 border-b border-green-600 flex-shrink-0">
           <div className="flex items-center justify-between">
             {sidebarOpen ? (
@@ -100,7 +127,6 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </div>
         </div>
 
-        {/* Menu - Scrollable */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -122,7 +148,6 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           })}
         </nav>
 
-        {/* Bottom Actions */}
         <div className="p-4 border-t border-green-600 flex-shrink-0">
           <Link
             href="/student/settings"
@@ -141,9 +166,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
         <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
@@ -153,108 +176,92 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">
-                  {menuItems.find(item => item.path === pathname)?.name || 'Espace Étudiant'}
-                </h2>
-                <p className="text-sm text-gray-500">Bienvenue, Ahmed Benali</p>
-              </div>
             </div>
 
             <div className="flex items-center gap-4">
-              {/* Notifications */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
-                >
-                  <Bell className="w-5 h-5 text-gray-600" />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C1272D] text-white text-xs rounded-full flex items-center justify-center">
-                    {notifications.filter(n => !n.read).length}
-                  </span>
-                </button>
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg relative"
+              >
+                <Bell size={22} />
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+              </button>
 
-                {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="font-semibold text-gray-800">Notifications</h3>
-                    </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${
-                            !notif.read ? 'bg-green-50' : ''
-                          }`}
-                        >
-                          <p className="text-sm text-gray-800">{notif.message}</p>
-                          <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-3 text-center">
-                      <button className="text-sm text-[#257035] hover:underline">
-                        Voir toutes les notifications
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Profile Menu */}
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg"
                 >
-                  <div className="w-10 h-10 bg-[#257035] rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+                  <div className="w-9 h-9 bg-[#257035] rounded-full flex items-center justify-center overflow-hidden">
+                    {userProfile?.avatar ? (
+                      <img 
+                        src={userProfile.avatar} 
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={18} className="text-white" />
+                    )}
                   </div>
-                  <div className="text-left hidden md:block">
-                    <p className="text-sm font-medium text-gray-800">Ahmed Benali</p>
-                    <p className="text-xs text-gray-500">DEV-M2-A</p>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium text-gray-900">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {displayGroup}
+                    </p>
                   </div>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <ChevronDown size={16} className="text-gray-500 hidden sm:block" />
                 </button>
 
                 {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                    <Link
-                      href="/student/profile"
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <User className="w-4 h-4" />
-                      Mon Profil
-                    </Link>
-                    <Link
-                      href="/student/settings"
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Paramètres
-                    </Link>
-                    <hr className="my-1" />
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 w-full"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Déconnexion
-                    </button>
-                  </div>
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowProfileMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                      <button
+                        onClick={() => {
+                          router.push('/student/profile');
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <User size={18} />
+                        Mon Profil
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/student/settings');
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <Settings size={18} />
+                        Paramètres
+                      </button>
+                      <hr className="my-2" />
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100"
+                      >
+                        <LogOut size={18} />
+                        Déconnexion
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page Content - AVEC SCROLL */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
 
-      {/* Click outside to close menus */}
       {(showProfileMenu || showNotifications) && (
         <div
           className="fixed inset-0 z-20"
