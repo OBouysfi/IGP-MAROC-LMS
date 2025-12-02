@@ -73,14 +73,21 @@ class AttendanceController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
         $students = $query->get()->map(function($user) use ($request) {
-            // Get attendance records (absences/lates) with date filtering
-            $attendanceQuery = Attendance::where('student_id', $user->id);
+            // ✅ CORRECTION ICI: Utilise student->id au lieu de user->id
+            $studentId = $user->student?->id;
+            
+            if (!$studentId) {
+                return null; // Skip si pas de student record
+            }
+
+            // Get attendance records with date filtering
+            $attendanceQuery = Attendance::where('student_id', $studentId);
 
             if ($request->filled('date_from')) {
                 $attendanceQuery->where('date', '>=', $request->date_from);
@@ -96,11 +103,11 @@ class AttendanceController extends Controller
             $totalRetards = $attendances->where('type', 'retard')->count();
             $justifiedAbsences = $attendances->where('type', 'justifié')->count();
             
-            // Estimate total sessions (could be improved by counting actual schedules)
+            // Estimate total sessions
             $dateFrom = $request->filled('date_from') ? $request->date_from : now()->subDays(30)->format('Y-m-d');
             $dateTo = $request->filled('date_to') ? $request->date_to : now()->format('Y-m-d');
             $daysDiff = \Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo)) + 1;
-            $estimatedSessions = $daysDiff; // Assume 1 session per day
+            $estimatedSessions = $daysDiff;
             
             $attendanceRate = $estimatedSessions > 0 
                 ? ((($estimatedSessions - $totalAbsences) / $estimatedSessions) * 100) 
@@ -118,12 +125,12 @@ class AttendanceController extends Controller
                 'attendance_rate' => round($attendanceRate, 1),
                 'absences' => AttendanceResource::collection($attendances),
             ];
-        });
+        })->filter(); // ✅ Enlève les null
 
-        return response()->json(['data' => $students]);
+        return response()->json(['data' => $students->values()]);
     }
 
-    public function professorsAttendance(Request $request): JsonResponse
+   public function professorsAttendance(Request $request): JsonResponse
     {
         $query = Professor::with(['user']);
 
@@ -135,31 +142,36 @@ class AttendanceController extends Controller
             $search = $request->search;
             $query->whereHas('user', fn($q) => 
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
+                ->orWhere('last_name', 'like', "%{$search}%")
             );
         }
 
         $professors = $query->get()->map(function($professor) use ($request) {
-            // Get courses taught by this professor
-            $coursesQuery = \App\Models\Course::where('professor_id', $professor->id);
-            
-            if ($request->filled('date_from') || $request->filled('date_to')) {
-                $coursesQuery->where(function($q) use ($request) {
-                    if ($request->filled('date_from')) {
-                        $q->where('start_date', '>=', $request->date_from);
-                    }
-                    if ($request->filled('date_to')) {
-                        $q->where('end_date', '<=', $request->date_to);
-                    }
-                });
-            }
-            
-            $courses = $coursesQuery->get();
-            $totalCourses = $courses->count();
-            $activeCourses = $courses->where('status', 'active')->count();
+            // Get attendance records for professor
+            $attendanceQuery = Attendance::where('professor_id', $professor->id);
 
-            $attendanceRate = $totalCourses > 0 
-                ? (($activeCourses / $totalCourses) * 100) 
+            if ($request->filled('date_from')) {
+                $attendanceQuery->where('date', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $attendanceQuery->where('date', '<=', $request->date_to);
+            }
+
+            $attendances = $attendanceQuery->get();
+            
+            // Calculate statistics
+            $totalAbsences = $attendances->where('type', 'absent')->count();
+            $totalRetards = $attendances->where('type', 'retard')->count();
+            $justifiedAbsences = $attendances->where('type', 'justifié')->count();
+            
+            // Estimate total sessions
+            $dateFrom = $request->filled('date_from') ? $request->date_from : now()->subDays(30)->format('Y-m-d');
+            $dateTo = $request->filled('date_to') ? $request->date_to : now()->format('Y-m-d');
+            $daysDiff = \Carbon\Carbon::parse($dateFrom)->diffInDays(\Carbon\Carbon::parse($dateTo)) + 1;
+            $estimatedSessions = $daysDiff;
+            
+            $attendanceRate = $estimatedSessions > 0 
+                ? ((($estimatedSessions - $totalAbsences) / $estimatedSessions) * 100) 
                 : 100;
 
             return [
@@ -167,17 +179,11 @@ class AttendanceController extends Controller
                 'professor_name' => $professor->user->first_name . ' ' . $professor->user->last_name,
                 'professor_email' => $professor->user->email,
                 'department' => $professor->department,
-                'total_courses' => $totalCourses,
-                'active_courses' => $activeCourses,
+                'total_absences' => $totalAbsences,
+                'total_retards' => $totalRetards,
+                'justified_absences' => $justifiedAbsences,
                 'attendance_rate' => round($attendanceRate, 1),
-                'courses' => $courses->map(fn($c) => [
-                    'id' => $c->id,
-                    'name' => $c->name,
-                    'code' => $c->code,
-                    'status' => $c->status ?? 'active',
-                    'start_date' => $c->start_date,
-                    'end_date' => $c->end_date,
-                ]),
+                'absences' => AttendanceResource::collection($attendances),
             ];
         });
 

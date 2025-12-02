@@ -151,22 +151,31 @@ export default function AttendancePage() {
     }
   };
 
-  const handleAddAbsence = async (e: React.FormEvent) => {
+ const handleAddAbsence = async (e: React.FormEvent) => {
   e.preventDefault();
   
   try {
-    const data = {
-      student_id: absenceForm.attendable_id, // ✅ Changed from attendable_id
-      schedule_id: null, // Optional
-      course_name: absenceForm.course_name,
-      date: absenceForm.date,
-      start_time: absenceForm.start_time,
-      end_time: absenceForm.end_time,
-      type: absenceForm.type,
-      comment: absenceForm.comment,
-    };
-
-    console.log('Sending data:', data); // Debug log
+    const data = absenceForm.user_type === 'student' 
+      ? {
+          student_id: absenceForm.attendable_id,
+          schedule_id: null,
+          course_name: absenceForm.course_name,
+          date: absenceForm.date,
+          start_time: absenceForm.start_time,
+          end_time: absenceForm.end_time,
+          type: absenceForm.type,
+          comment: absenceForm.comment,
+        }
+      : {
+          professor_id: absenceForm.attendable_id, // ✅ Changed
+          schedule_id: null,
+          course_name: absenceForm.course_name,
+          date: absenceForm.date,
+          start_time: absenceForm.start_time,
+          end_time: absenceForm.end_time,
+          type: absenceForm.type,
+          comment: absenceForm.comment,
+        };
 
     await attendancesApi.create(data);
     
@@ -188,7 +197,6 @@ export default function AttendancePage() {
     }
   } catch (error: any) {
     console.error('Error adding absence:', error);
-    console.error('Error response:', error.response?.data); // Debug log
     Swal.fire({
       icon: 'error',
       title: 'Erreur',

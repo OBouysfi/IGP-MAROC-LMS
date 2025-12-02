@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Attendance extends Model
 {
@@ -10,6 +11,7 @@ class Attendance extends Model
     
     protected $fillable = [
         'student_id',
+        'professor_id',
         'schedule_id',
         'course_name',
         'date',
@@ -29,14 +31,18 @@ class Attendance extends Model
         'justified_at' => 'datetime',
     ];
 
-    // ✅ This should reference Student model, not User
-    public function student()
+    public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class, 'student_id');
     }
 
-    public function schedule()
+    public function professor(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Schedule::class);
+        return $this->belongsTo(Professor::class, 'professor_id');
+    }
+
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(Schedule::class);
     }
 }

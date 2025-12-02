@@ -17,6 +17,10 @@ class AttendanceRequest extends FormRequest
             $this->merge(['student_id' => $this->studentId]);
         }
         
+        if ($this->has('professorId') && !$this->has('professor_id')) {
+            $this->merge(['professor_id' => $this->professorId]);
+        }
+        
         if ($this->has('scheduleId') && !$this->has('schedule_id')) {
             $this->merge(['schedule_id' => $this->scheduleId]);
         }
@@ -37,7 +41,8 @@ class AttendanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'student_id' => ['required', 'integer', 'exists:students,id'], // ✅ Changed from users to students
+            'student_id' => ['nullable', 'integer', 'exists:students,id'],
+            'professor_id' => ['nullable', 'integer', 'exists:professors,id'],
             'schedule_id' => ['nullable', 'integer', 'exists:schedules,id'],
             'course_name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
@@ -51,11 +56,20 @@ class AttendanceRequest extends FormRequest
         ];
     }
 
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if (!$this->student_id && !$this->professor_id) {
+                $validator->errors()->add('student_id', 'Étudiant ou professeur requis.');
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [
-            'student_id.required' => 'L\'étudiant est requis.',
             'student_id.exists' => 'L\'étudiant sélectionné n\'existe pas.',
+            'professor_id.exists' => 'Le professeur sélectionné n\'existe pas.',
             'course_name.required' => 'Le nom du cours est requis.',
             'date.required' => 'La date est requise.',
             'start_time.required' => 'L\'heure de début est requise.',

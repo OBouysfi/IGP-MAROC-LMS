@@ -20,6 +20,18 @@ class AttendanceResource extends JsonResource
             'justification_file' => $this->justification_file,
             'justified_at' => $this->justified_at?->toISOString(),
             'comment' => $this->comment,
+            'student' => $this->when($this->student_id, function() {
+                return [
+                    'id' => $this->student->id,
+                    'name' => $this->student->user->first_name . ' ' . $this->student->user->last_name,
+                ];
+            }),
+            'professor' => $this->when($this->professor_id, function() {
+                return [
+                    'id' => $this->professor->id,
+                    'name' => $this->professor->user->first_name . ' ' . $this->professor->user->last_name,
+                ];
+            }),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
