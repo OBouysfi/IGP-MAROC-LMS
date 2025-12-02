@@ -27,6 +27,12 @@ class DocumentController extends Controller
             ->map(function($doc) {
                 $isNew = $doc->created_at->diffInDays(now()) <= 7;
                 
+                // Fix pour le nom du professeur
+                $professorName = 'N/A';
+                if ($doc->professor && $doc->professor->user) {
+                    $professorName = $doc->professor->user->full_name;
+                }
+                
                 return [
                     'id' => $doc->id,
                     'name' => $doc->name,
@@ -34,7 +40,7 @@ class DocumentController extends Controller
                     'size' => $this->formatFileSize($doc->file_size),
                     'course' => $doc->course->name ?? 'N/A',
                     'course_code' => $doc->course->code ?? 'N/A',
-                    'professor' => optional($doc->professor)->user->name ?? 'N/A',
+                    'professor' => $professorName,
                     'category' => $doc->category,
                     'uploaded_at' => $doc->created_at->format('Y-m-d'),
                     'downloads' => $doc->downloads,
@@ -70,8 +76,13 @@ class DocumentController extends Controller
 
             $filePath = storage_path('app/' . $document->file_path);
             
+            \Log::info('Trying to download file:', [
+                'file_path' => $filePath,
+                'exists' => file_exists($filePath)
+            ]);
+            
             if (!file_exists($filePath)) {
-                return response()->json(['message' => 'File not found'], 404);
+                return response()->json(['message' => 'File not found', 'path' => $filePath], 404);
             }
 
             return response()->download($filePath, $document->name);

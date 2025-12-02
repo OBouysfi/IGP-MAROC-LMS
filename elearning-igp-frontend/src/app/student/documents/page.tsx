@@ -34,36 +34,37 @@ export default function StudentDocumentsPage() {
     }
   };
 
-  const downloadDocument = async (docId: number, docName: string) => {
-    try {
-      const blob = await studentDocumentsApi.download(docId);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = docName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Téléchargement réussi',
-        text: 'Le document a été téléchargé',
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      
-      fetchDocuments();
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Impossible de télécharger le document',
-        confirmButtonColor: '#C1272D',
-      });
-    }
-  };
+const downloadDocument = async (docId: number, docName: string) => {
+  try {
+    const blob = await studentDocumentsApi.download(docId);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = docName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Téléchargement réussi',
+      text: 'Le document a été téléchargé',
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    
+    fetchDocuments();
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || 'Impossible de télécharger le document';
+    Swal.fire({
+      icon: 'error',
+      title: 'Fichier introuvable',
+      text: errorMessage,
+      confirmButtonColor: '#C1272D',
+    });
+  }
+};
 
   const uniqueCourses = [...new Set(documents.map(d => d.course))];
   const categories = [
@@ -312,10 +313,6 @@ export default function StudentDocumentsPage() {
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between">
-                  <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-[#0D529C] transition-colors">
-                    <Eye className="w-4 h-4" />
-                    Aperçu
-                  </button>
                   <button
                     onClick={() => downloadDocument(doc.id, doc.name)}
                     className="flex items-center gap-1 text-sm text-white bg-[#257035] px-3 py-1 rounded-lg hover:bg-green-700 transition-colors"
@@ -384,9 +381,6 @@ export default function StudentDocumentsPage() {
                       </div>
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-blue-50 hover:text-[#0D529C] transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
                       <button
                         onClick={() => downloadDocument(doc.id, doc.name)}
                         className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-[#257035] hover:bg-green-700 transition-colors ml-2"
