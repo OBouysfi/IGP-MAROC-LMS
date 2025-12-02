@@ -226,8 +226,8 @@ export default function AssistantDashboard() {
             </div>
 
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-[#C1272D] mb-4">Absences cette semaine</h3>
-              <div className="flex items-end justify-between h-48 gap-4">
+              <h3 className="text-lg font-bold text-[#C1272D] mb-[50px]">Absences cette semaine</h3>
+              <div className="flex items-end justify-between h-48 gap-4 mt-5">
                 {weeklyStats.map((day) => (
                   <div key={day.day} className="flex-1 flex flex-col items-center">
                     <div className="w-full bg-gray-100 rounded-t relative" style={{ height: '160px' }}>

@@ -19,45 +19,42 @@ class ReportController extends Controller
             $startDate = Carbon::parse($month . '-01')->startOfMonth();
             $endDate = Carbon::parse($month . '-01')->endOfMonth();
             
-            // Total absences
-            $totalAbsences = Attendance::whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'absent')
+            $totalAbsences = Attendance::whereBetween('date', [$startDate, $endDate])
+                ->where('type', 'absent')
                 ->count();
             
-            // Justified (excused)
-            $justified = Attendance::whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'excused')
+            $justified = Attendance::whereBetween('date', [$startDate, $endDate])
+                ->where('type', 'absent')
+                ->whereNotNull('justification')
                 ->count();
             
-            // Unjustified
-            $unjustified = $totalAbsences;
-            
-            // Total delays
-            $totalDelays = Attendance::whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'late')
+            $unjustified = Attendance::whereBetween('date', [$startDate, $endDate])
+                ->where('type', 'absent')
+                ->whereNull('justification')
                 ->count();
             
-            // Calculate absence rate
+            $totalDelays = Attendance::whereBetween('date', [$startDate, $endDate])
+                ->where('type', 'late')
+                ->count();
+            
             $totalSessions = Schedule::count() * Student::count();
             $absenceRate = $totalSessions > 0 ? round(($totalAbsences / $totalSessions) * 100, 1) : 0;
             
-            // Most absent day
-            $mostAbsentDay = Attendance::whereBetween('created_at', [$startDate, $endDate])
-                ->where('status', 'absent')
-                ->selectRaw('DAYNAME(created_at) as day, COUNT(*) as count')
+            $mostAbsentDay = Attendance::whereBetween('date', [$startDate, $endDate])
+                ->where('type', 'absent')
+                ->selectRaw('DAYNAME(date) as day, COUNT(*) as count')
                 ->groupBy('day')
                 ->orderBy('count', 'desc')
                 ->first();
             
-            // Group statistics
             $groupStats = Group::withCount(['students'])
                 ->get()
                 ->map(function($group) use ($startDate, $endDate) {
-                    $studentIds = $group->students->pluck('user_id');
+                    $studentIds = $group->students->pluck('id');
                     
-                    $absences = Attendance::whereBetween('created_at', [$startDate, $endDate])
+                    $absences = Attendance::whereBetween('date', [$startDate, $endDate])
                         ->whereIn('student_id', $studentIds)
-                        ->where('status', 'absent')
+                        ->where('type', 'absent')
                         ->count();
                     
                     $totalPossible = Schedule::where('group_id', $group->id)->count() * $group->students_count;
@@ -78,7 +75,7 @@ class ReportController extends Controller
                     'unjustified' => $unjustified,
                     'total_delays' => $totalDelays,
                     'absence_rate' => $absenceRate,
-                    'top_absent_course' => 'JavaScript Moderne', // Can be calculated
+                    'top_absent_course' => 'JavaScript Moderne',
                     'most_absent_day' => $mostAbsentDay ? $mostAbsentDay->day : 'N/A',
                 ],
                 'group_stats' => $groupStats,
@@ -102,9 +99,6 @@ class ReportController extends Controller
             $groupId = $request->group_id;
             $month = $request->month;
             
-            // Here you would generate the actual PDF report
-            // For now, we'll just return success
-            
             return response()->json([
                 'message' => 'Report generated successfully',
                 'filename' => "rapport_{$type}_{$month}.pdf",
@@ -118,8 +112,6 @@ class ReportController extends Controller
     public function getRecent()
     {
         try {
-            // Mock data for recent reports
-            // In production, store generated reports in database
             $reports = [
                 [
                     'id' => 1,

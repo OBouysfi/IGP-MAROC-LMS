@@ -17,29 +17,21 @@ class DashboardController extends Controller
         try {
             $today = Carbon::today();
             
-            // Total students
             $totalStudents = Student::count();
             
-            // Today's attendance stats
-            $todayAttendances = Attendance::whereHas('session', function($q) use ($today) {
-                $q->whereDate('start_time', $today);
-            })->get();
+            $todayAttendances = Attendance::whereDate('date', $today)->get();
             
-            $presentToday = $todayAttendances->where('status', 'present')->count();
-            $absentToday = $todayAttendances->where('status', 'absent')->count();
-            $lateToday = $todayAttendances->where('status', 'late')->count();
+            $presentToday = $todayAttendances->where('type', 'present')->count();
+            $absentToday = $todayAttendances->where('type', 'absent')->count();
+            $lateToday = $todayAttendances->where('type', 'late')->count();
             
-            // Pending justifications
             $pendingJustifications = AbsenceJustification::where('status', 'pending')->count();
             
-            // Month stats
             $monthStart = Carbon::now()->startOfMonth();
-            $monthAttendances = Attendance::whereHas('session', function($q) use ($monthStart) {
-                $q->where('start_time', '>=', $monthStart);
-            })->get();
+            $monthAttendances = Attendance::where('date', '>=', $monthStart)->get();
             
-            $justifiedAbsences = $monthAttendances->where('status', 'excused')->count();
-            $unjustifiedAbsences = $monthAttendances->where('status', 'absent')->count();
+            $justifiedAbsences = $monthAttendances->where('type', 'absent')->whereNotNull('justification')->count();
+            $unjustifiedAbsences = $monthAttendances->where('type', 'absent')->whereNull('justification')->count();
             
             $absenceRate = $totalStudents > 0 ? ($absentToday / $totalStudents) * 100 : 0;
             
@@ -67,24 +59,20 @@ class DashboardController extends Controller
         try {
             $today = Carbon::today();
             
-            $absences = Attendance::with(['student.user', 'student.group', 'session.schedule.course'])
-                ->whereHas('session', function($q) use ($today) {
-                    $q->whereDate('start_time', $today);
-                })
-                ->where('status', 'absent')
-                ->orWhere('status', 'excused')
+            $absences = Attendance::with(['student.user', 'student.groups', 'schedule.course'])
+                ->whereDate('date', $today)
+                ->where('type', 'absent')
                 ->get()
                 ->map(function($attendance) {
-                    $session = $attendance->session;
-                    $schedule = $session->schedule ?? null;
+                    $schedule = $attendance->schedule;
                     
                     return [
                         'id' => $attendance->id,
                         'student' => $attendance->student->user->first_name . ' ' . $attendance->student->user->last_name,
-                        'group' => $attendance->student->group->name ?? 'N/A',
-                        'course' => $schedule ? $schedule->course->name : 'N/A',
-                        'time' => $schedule ? Carbon::parse($schedule->start_time)->format('H:i') . ' - ' . Carbon::parse($schedule->end_time)->format('H:i') : 'N/A',
-                        'status' => $attendance->status === 'excused' ? 'justifiée' : 'non_justifiée',
+                        'group' => $attendance->student->groups->first()->name ?? 'N/A',
+                        'course' => $attendance->course_name ?? ($schedule ? $schedule->course->name : 'N/A'),
+                        'time' => $attendance->start_time->format('H:i') . ' - ' . $attendance->end_time->format('H:i'),
+                        'status' => $attendance->justification ? 'justifiée' : 'non_justifiée',
                     ];
                 });
             
@@ -131,24 +119,21 @@ class DashboardController extends Controller
         try {
             $monthStart = Carbon::now()->startOfMonth();
             
-            // Alternative sans withCount
-            $students = Student::with(['user', 'group'])
+            $students = Student::with(['user', 'groups'])
                 ->get()
                 ->map(function($student) use ($monthStart) {
                     $absencesCount = Attendance::where('student_id', $student->id)
-                        ->where('status', 'absent')
-                        ->whereHas('session', function($q) use ($monthStart) {
-                            $q->where('start_time', '>=', $monthStart);
-                        })
+                        ->where('type', 'absent')
+                        ->where('date', '>=', $monthStart)
                         ->count();
                     
                     return [
                         'id' => $student->id,
                         'name' => $student->user->first_name . ' ' . $student->user->last_name,
-                        'group' => $student->group->name ?? 'N/A',
+                        'group' => $student->groups->first()->name ?? 'N/A',
                         'absences' => $absencesCount,
                         'hours' => $absencesCount * 3,
-                        'absences_count' => $absencesCount, // Pour le tri
+                        'absences_count' => $absencesCount,
                     ];
                 })
                 ->filter(function($student) {
@@ -177,15 +162,11 @@ class DashboardController extends Controller
             for ($i = 0; $i < 5; $i++) {
                 $day = $weekStart->copy()->addDays($i);
                 
-                $absences = Attendance::whereHas('session', function($q) use ($day) {
-                    $q->whereDate('start_time', $day);
-                })
-                ->where('status', 'absent')
-                ->count();
+                $absences = Attendance::whereDate('date', $day)
+                    ->where('type', 'absent')
+                    ->count();
                 
-                $total = Attendance::whereHas('session', function($q) use ($day) {
-                    $q->whereDate('start_time', $day);
-                })->count();
+                $total = Attendance::whereDate('date', $day)->count();
                 
                 $rate = $total > 0 ? ($absences / $total) * 100 : 0;
                 
