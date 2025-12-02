@@ -22,8 +22,20 @@ export default function StudentSchedulePage() {
   const fetchSchedule = async () => {
     try {
       const data = await studentScheduleApi.getAll();
+      
+      // 🔍 DEBUG: Afficher les données reçues
+      console.log('📊 Données emploi du temps:', data);
+      console.log('📊 Nombre de séances:', data.length);
+      if (data.length > 0) {
+        console.log('📊 Exemple de séance:', data[0]);
+        console.log('📊 Tous les jours:', data.map(d => d.day));
+        console.log('📊 Heures de début:', data.map(d => d.start_time));
+        console.log('📊 Heures de fin:', data.map(d => d.end_time));
+      }
+      
       setSchedule(data);
     } catch (error) {
+      console.error('❌ Erreur chargement emploi du temps:', error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
@@ -84,12 +96,39 @@ export default function StudentSchedulePage() {
   };
 
   const getEventsForDayAndTime = (day: string, time: string) => {
-    return schedule.filter(event => {
+    const events = schedule.filter(event => {
       if (event.day !== day) return false;
-      const eventStart = parseInt(event.start_time.split(':')[0]);
+      
+      // Gérer différents formats de start_time
+      let eventTimeStr = event.start_time;
+      
+      // Si c'est un timestamp complet "2025-12-02 09:00:00", extraire l'heure
+      if (eventTimeStr.includes(' ')) {
+        eventTimeStr = eventTimeStr.split(' ')[1];
+      }
+      
+      // Extraire l'heure (format "09:00" ou "09:00:00")
+      const eventStart = parseInt(eventTimeStr.split(':')[0]);
       const slotTime = parseInt(time.split(':')[0]);
+      
+      // 🔍 DEBUG détaillé
+      console.log(`🔍 Comparaison ${day} ${time}:`, {
+        original: event.start_time,
+        extracted: eventTimeStr,
+        eventStartHour: eventStart,
+        slotHour: slotTime,
+        match: eventStart === slotTime
+      });
+      
       return eventStart === slotTime;
     });
+    
+    // 🔍 DEBUG: Afficher les événements trouvés
+    if (events.length > 0) {
+      console.log(`✅ Trouvé ${events.length} événement(s) pour ${day} à ${time}:`, events);
+    }
+    
+    return events;
   };
 
   const getEventHeight = (event: StudentSchedule) => {
@@ -113,8 +152,15 @@ export default function StudentSchedulePage() {
   const todayEvents = schedule.filter(event => {
     const today = new Date();
     const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-    return event.day === dayNames[today.getDay()];
+    const todayName = dayNames[today.getDay()];
+    
+    // 🔍 DEBUG
+    console.log('🗓️ Jour actuel:', todayName, '| Jour événement:', event.day);
+    
+    return event.day === todayName;
   });
+
+  console.log('📅 Événements aujourd\'hui:', todayEvents.length);
 
   const nextEvent = todayEvents.find(event => {
     const now = new Date();
@@ -134,12 +180,40 @@ export default function StudentSchedulePage() {
     );
   }
 
+  // 🔍 DEBUG: Afficher si aucune donnée
+  if (schedule.length === 0) {
+    return (
+      <StudentLayout>
+        <div className="p-8">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+            <p className="text-yellow-800 font-medium">⚠️ Aucun emploi du temps trouvé</p>
+            <p className="text-yellow-600 text-sm mt-2">Vérifiez que vous êtes assigné à un groupe.</p>
+            <button 
+              onClick={fetchSchedule}
+              className="mt-4 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-[#1d5729]"
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
+      </StudentLayout>
+    );
+  }
+
   return (
     <StudentLayout>
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#257035] mb-2">Mon Emploi du Temps</h1>
           <p className="text-gray-500">Consultez votre planning de cours hebdomadaire.</p>
+        </div>
+
+        {/* 🔍 DEBUG: Badge avec nombre de séances */}
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-blue-800 text-sm">
+            📊 <strong>{schedule.length}</strong> séance(s) chargée(s) | 
+            Jours: {[...new Set(schedule.map(s => s.day))].join(', ')}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
