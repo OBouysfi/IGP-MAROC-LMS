@@ -43,16 +43,18 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
     { name: 'Mes Documents', icon: FolderOpen, path: '/student/documents' },
     { name: 'Ressources', icon: FileText, path: '/student/resources' },
   ];
+
   const handleLogout = async () => {
-      try {
-        await authApi.logout();
-        router.push('/login');
-      } catch (error) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        router.push('/login');
-      }
-    };
+    try {
+      await authApi.logout();
+      router.push('/login');
+    } catch (error) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      router.push('/login');
+    }
+  };
+
   const notifications = [
     { id: 1, message: 'Nouvelle note disponible en React.js', time: 'Il y a 30 min', read: false },
     { id: 2, message: 'Session live dans 1 heure - Node.js', time: 'Il y a 1h', read: false },
@@ -60,11 +62,11 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-[#257035] text-white transition-all duration-300 fixed h-full z-40`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-[#257035] text-white transition-all duration-300 flex flex-col`}>
         {/* Logo */}
-        <div className="p-4 border-b border-green-600">
+        <div className="p-4 border-b border-green-600 flex-shrink-0">
           <div className="flex items-center justify-between">
             {sidebarOpen ? (
               <div className="flex items-center gap-3">
@@ -98,8 +100,8 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </div>
         </div>
 
-        {/* Menu */}
-        <nav className="p-4 space-y-2">
+        {/* Menu - Scrollable */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.path;
@@ -121,7 +123,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         </nav>
 
         {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-green-600">
+        <div className="p-4 border-t border-green-600 flex-shrink-0">
           <Link
             href="/student/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-green-100 hover:bg-green-600 transition-colors"
@@ -131,7 +133,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </Link>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-blue-100 hover:bg-red-600 transition-colors w-full mt-2"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-green-100 hover:bg-red-600 transition-colors w-full mt-2"
           >
             <LogOut className="w-5 h-5" />
             {sidebarOpen && <span>Déconnexion</span>}
@@ -140,9 +142,9 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+        <header className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               <button
@@ -246,8 +248,8 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="min-h-[calc(100vh-73px)]">
+        {/* Page Content - AVEC SCROLL */}
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
