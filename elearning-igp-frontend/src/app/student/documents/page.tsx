@@ -312,7 +312,7 @@ const downloadDocument = async (docId: number, docName: string) => {
                     </div>
                   </div>
                 </div>
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between">
+                <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
                   <button
                     onClick={() => downloadDocument(doc.id, doc.name)}
                     className="flex items-center gap-1 text-sm text-white bg-[#257035] px-3 py-1 rounded-lg hover:bg-green-700 transition-colors"
