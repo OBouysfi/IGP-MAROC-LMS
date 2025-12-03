@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\Schedule;
-use App\Models\ExamGrade;
+use App\Models\Grade;  // ✅ Utilisez Grade au lieu de ExamGrade
 use App\Models\ProfessorDocument;
 use App\Models\JitsiSession;
 use Carbon\Carbon;
@@ -21,17 +21,13 @@ class StudentCourseController extends Controller
             return response()->json(['message' => 'Student profile not found'], 404);
         }
 
-        // ✅ CORRECTION: Utilise groups au lieu de group_id
         $groupIds = $student->groups->pluck('id');
 
         $courses = Course::whereIn('group_id', $groupIds)
             ->with(['professor.user', 'group'])
             ->get()
             ->map(function($course) use ($student) {
-                // ✅ CORRECTION: Utilise 'day' au lieu de 'day_of_week'
-                $dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
                 $today = Carbon::now();
-                $todayDayName = $dayNames[$today->dayOfWeek];
 
                 $nextSchedule = Schedule::where('course_id', $course->id)
                     ->where('start_date', '>=', $today)
@@ -39,7 +35,8 @@ class StudentCourseController extends Controller
                     ->orderBy('start_time')
                     ->first();
 
-                $grades = ExamGrade::whereHas('exam', function($q) use ($course) {
+                // ✅ Utilisez Grade au lieu de ExamGrade
+                $grades = Grade::whereHas('exam', function($q) use ($course) {
                     $q->where('course_id', $course->id);
                 })->where('student_id', $student->id)->get();
 
@@ -102,7 +99,8 @@ class StudentCourseController extends Controller
             ->orderBy('start_time')
             ->first();
 
-        $grades = ExamGrade::whereHas('exam', function($q) use ($course) {
+        // ✅ Utilisez Grade au lieu de ExamGrade
+        $grades = Grade::whereHas('exam', function($q) use ($course) {
             $q->where('course_id', $course->id);
         })->where('student_id', $student->id)->get();
 

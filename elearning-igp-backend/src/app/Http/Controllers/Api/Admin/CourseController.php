@@ -12,38 +12,114 @@ use Illuminate\Support\Facades\DB;
 class CourseController extends Controller
 {
     public function index(Request $request)
-    {
-        $query = Course::with(['professor.user']);
+{
+    $query = Course::with(['professor.user', 'program', 'filiere', 'group']);
 
-        if ($request->program) {
-            $query->where('program', $request->program);
-        }
-        if ($request->filiere) {
-            $query->where('filiere', $request->filiere);
-        }
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
+    if ($request->program) {
+        $query->where('program', $request->program);
+    }
+    if ($request->filiere) {
+        $query->where('filiere', $request->filiere);
+    }
+    if ($request->status) {
+        $query->where('status', $request->status);
+    }
 
-        if ($request->search) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%")
-                ->orWhereHas('professor.user', function($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%");
-                });
+    if ($request->search) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+            ->orWhere('code', 'like', "%{$search}%")
+            ->orWhereHas('professor.user', function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
             });
+        });
+    }
+
+    $courses = $query->latest()->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => CourseResource::collection($courses)
+    ]);
+}
+
+public function show($id)
+{
+    $course = Course::with(['professor.user', 'program', 'filiere', 'group'])->findOrFail($id);
+
+    return response()->json([
+        'success' => true,
+        'data' => new CourseResource($course)
+    ]);
+}
+
+public function store(CourseRequest $request)
+{
+    try {
+        DB::beginTransaction();
+
+        $data = $request->all();
+        
+        if (empty($data['professor_id'])) {
+            $data['professor_id'] = null;
+        }
+        
+        if (empty($data['program_id'])) {
+            $data['program_id'] = null;
+        }
+        
+        if (empty($data['filiere_id'])) {
+            $data['filiere_id'] = null;
         }
 
-        $courses = $query->latest()->get();
+        $course = Course::create($data);
+
+        DB::commit();
 
         return response()->json([
             'success' => true,
-            'data' => CourseResource::collection($courses)
-        ]);
+            'message' => 'Cours créé avec succès',
+            'data' => new CourseResource($course->load(['professor.user', 'program', 'filiere', 'group']))
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Erreur création cours: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la création du cours',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
+public function update(CourseRequest $request, $id)
+{
+    try {
+        DB::beginTransaction();
+
+        $course = Course::findOrFail($id);
+        $course->update($request->all());
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cours mis à jour avec succès',
+            'data' => new CourseResource($course->load(['professor.user', 'program', 'filiere', 'group']))
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour du cours',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     public function stats()
     {
@@ -63,95 +139,33 @@ class CourseController extends Controller
         ]);
     }
 
-    public function show($id)
+
+    public function getGroups(Request $request)
     {
-        $course = Course::with('professor.user')->findOrFail($id);
+        $query = \App\Models\Group::query();
+        
+        // Filtrer par program si fourni
+        if ($request->program_id) {
+            $query->where('program_id', $request->program_id);
+        }
+        
+        // Filtrer par filiere si fourni
+        if ($request->filiere_id) {
+            $query->where('filiere_id', $request->filiere_id);
+        }
+        
+        $groups = $query->get()->map(function($group) {
+            return [
+                'id' => $group->id,
+                'name' => $group->name,
+                'code' => $group->code,
+                'level' => $group->level,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'data' => new CourseResource($course)
+            'data' => $groups
         ]);
-    }
-
-    public function store(CourseRequest $request)
-    {
-        try {
-            DB::beginTransaction();
-
-            $data = $request->all();
-            if (empty($data['professor_id'])) {
-                $data['professor_id'] = null;
-            }
-
-            $course = Course::create($data);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cours créé avec succès',
-                'data' => new CourseResource($course->load('professor.user'))
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Erreur création cours: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la création du cours',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    public function update(CourseRequest $request, $id)
-    {
-        try {
-            DB::beginTransaction();
-
-            $course = Course::findOrFail($id);
-            $course->update($request->all());
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cours mis à jour avec succès',
-                'data' => new CourseResource($course->load('professor.user'))
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour du cours',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function destroy($id)
-    {
-        try {
-            DB::beginTransaction();
-
-            $course = Course::findOrFail($id);
-            $course->delete();
-
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Cours supprimé avec succès'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression du cours',
-                'error' => $e->getMessage()
-            ], 500);
-        }
     }
 }

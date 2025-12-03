@@ -13,9 +13,18 @@ class CourseResource extends JsonResource
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
-            'program' => $this->program,
+            'program' => $this->program ? [
+                'id' => $this->program->id,
+                'name' => $this->program->name,
+            ] : null,
+            'program_id' => $this->program_id,
             'level' => $this->level,
-            'filiere' => $this->filiere,
+            'filiere' => $this->filiere ? [
+                'id' => $this->filiere->id,
+                'name' => $this->filiere->name,
+            ] : null,
+            'filiere_id' => $this->filiere_id,
+            'group_id' => $this->group_id,
             'professor' => $this->professor ? [
                 'id' => $this->professor->id,
                 'name' => $this->professor->user->first_name . ' ' . $this->professor->user->last_name,

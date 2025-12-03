@@ -1,4 +1,3 @@
-// src/components/layouts/ProfessorLayout.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { LogOut } from 'lucide-react';
 import { authApi } from '@/lib/api/auth';
+import { professorSettingsApi } from '@/lib/api/professor/settings';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -34,7 +34,26 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    first_name: string;
+    last_name: string;
+    email: string;
+    avatar: string | null;
+  } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await professorSettingsApi.getProfile();
+      setUserProfile(response.data.data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/professor/dashboard' },
@@ -62,6 +81,8 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
     { id: 2, message: '5 étudiants ont soumis leurs devoirs', time: 'Il y a 1h', read: false },
     { id: 3, message: 'Rappel: Saisie des notes avant le 20/11', time: 'Il y a 3h', read: true },
   ];
+
+  const displayName = userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : 'Professeur';
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -216,23 +237,13 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
             >
               <Menu size={24} />
             </button>
-
-            <div className="hidden md:block">
-              <h2 className="text-xl font-bold text-gray-800">
-                {menuItems.find(item => item.path === pathname)?.name || 'Espace Professeur'}
-              </h2>
-              <p className="text-sm text-gray-500">Bienvenue, Prof. Karim Benjelloun</p>
-            </div>
           </div>
 
           <div className="flex items-center gap-4">
             {/* Notifications */}
             <div className="relative">
               <button
-                onClick={() => {
-                  setShowNotifications(!showNotifications);
-                  setShowProfileMenu(false);
-                }}
+                onClick={() => setShowNotifications(!showNotifications)}
                 className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg relative"
               >
                 <Bell size={22} />
@@ -275,17 +286,22 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
             {/* Profile Menu */}
             <div className="relative">
               <button
-                onClick={() => {
-                  setShowProfileMenu(!showProfileMenu);
-                  setShowNotifications(false);
-                }}
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg"
               >
-                <div className="w-9 h-9 bg-[#0D529C] rounded-full flex items-center justify-center">
-                  <User size={18} className="text-white" />
+                <div className="w-9 h-9 bg-[#0D529C] rounded-full flex items-center justify-center overflow-hidden">
+                  {userProfile?.avatar ? (
+                    <img 
+                      src={userProfile.avatar} 
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={18} className="text-white" />
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium text-gray-900">Karim Benjelloun</p>
+                  <p className="text-sm font-medium text-gray-900">{displayName}</p>
                   <p className="text-xs text-gray-500">Professeur</p>
                 </div>
                 <ChevronDown size={16} className="text-gray-500 hidden sm:block" />
@@ -298,26 +314,30 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
                     onClick={() => setShowProfileMenu(false)}
                   />
                   <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                    <Link
-                      href="/professor/profile"
-                      onClick={() => setShowProfileMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                    <button
+                      onClick={() => {
+                        router.push('/professor/profile');
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <User size={18} />
                       Mon Profil
-                    </Link>
-                    <Link
-                      href="/professor/settings"
-                      onClick={() => setShowProfileMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
+                    </button>
+                    <button
+                      onClick={() => {
+                        router.push('/professor/settings');
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <Settings size={18} />
                       Paramètres
-                    </Link>
+                    </button>
                     <hr className="my-2" />
                     <button 
                       onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100 w-full"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-gray-100"
                     >
                       <LogOut size={18} />
                       Déconnexion

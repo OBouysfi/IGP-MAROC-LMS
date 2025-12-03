@@ -18,6 +18,7 @@ export default function CoursesPage() {
   const [professors, setProfessors] = useState<any[]>([]);
   const [programs, setPrograms] = useState<any[]>([]);
   const [filieres, setFilieres] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [stats, setStats] = useState<CourseStats>({
     total_courses: 0,
     active_courses: 0,
@@ -38,6 +39,7 @@ export default function CoursesPage() {
     level: '',
     filiere: '',
     professor_id: '',
+    group_id: '',
     students_count: '0',
     max_students: '30',
     hours_total: '0',
@@ -57,6 +59,7 @@ export default function CoursesPage() {
     level: '',
     filiere: '',
     professor_id: '',
+    group_id: '',
     students_count: '',
     max_students: '',
     hours_total: '',
@@ -88,17 +91,21 @@ export default function CoursesPage() {
   }, [searchTerm, filters]);
 
   const fetchInitialData = async () => {
-    try {
-      const [programsRes, filieresRes] = await Promise.all([
-        programsApi.getAll(),
-        filieresApi.getAll(),
-      ]);
-      setPrograms(programsRes.data.data || []);
-      setFilieres(filieresRes.data.data || []);
-    } catch (error) {
-      console.error('Erreur chargement données initiales:', error);
-    }
-  };
+  try {
+    const [programsRes, filieresRes, groupsRes] = await Promise.all([
+      programsApi.getAll(),
+      filieresApi.getAll(),
+      coursesApi.getGroups(),
+    ]);
+    
+    setPrograms(programsRes.data.data || []);
+    setFilieres(filieresRes.data.data || []);
+    setGroups(groupsRes.data.data || []);
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement données initiales:', error);
+  }
+};
 
   const fetchData = async () => {
     try {
@@ -116,7 +123,6 @@ export default function CoursesPage() {
       setCourses(Array.isArray(coursesResponse.data.data) ? coursesResponse.data.data : []);
       setStats(statsResponse.data.data || statsResponse.data);
     } catch (error) {
-      console.error('Erreur:', error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
@@ -142,17 +148,17 @@ export default function CoursesPage() {
     }
   }, [showAddModal, editCourse]);
 
-  const handleAddCourse = async (e: React.FormEvent) => {
+const handleAddCourse = async (e: React.FormEvent) => {
   e.preventDefault();
   
   try {
-    // ✅ Créer un nouvel objet sans program et filiere
     const { program, filiere, ...rest } = formData;
     
     const dataToSend = {
       ...rest,
       program_id: program ? programs.find(p => p.name === program)?.id : null,
       filiere_id: filiere ? filieres.find(f => f.name === filiere)?.id : null,
+      group_id: formData.group_id ? parseInt(formData.group_id) : null,
     };
     
     await coursesApi.create(dataToSend);
@@ -174,6 +180,7 @@ export default function CoursesPage() {
       level: '',
       filiere: '',
       professor_id: '',
+      group_id: '',
       students_count: '0',
       max_students: '30',
       hours_total: '0',
@@ -204,19 +211,20 @@ const handleEditClick = (course: Course) => {
     name: course.name,
     code: course.code,
     description: course.description || '',
-    program: typeof course.program === 'string' ? course.program : (course.program?.name || ''), // ✅ Fix
+    program: typeof course.program === 'string' ? course.program : (course.program?.name || ''),
     level: course.level || '',
-    filiere: typeof course.filiere === 'string' ? course.filiere : (course.filiere?.name || ''), // ✅ Fix
+    filiere: typeof course.filiere === 'string' ? course.filiere : (course.filiere?.name || ''),
     professor_id: course.professor?.id.toString() || '',
+    group_id: course.group_id?.toString() || '',
     students_count: course.students_count.toString(),
     max_students: course.max_students.toString(),
     hours_total: course.hours_total.toString(),
     hours_completed: course.hours_completed.toString(),
     start_date: course.start_date ? course.start_date.split('T')[0] : '',
     end_date: course.end_date ? course.end_date.split('T')[0] : '',
-    schedule: course.schedule || [],
+    schedule: Array.isArray(course.schedule) ? course.schedule : [], // ← FIX ICI
     status: course.status || 'À venir',
-    materials: course.materials || [],
+    materials: Array.isArray(course.materials) ? course.materials : [], // ← FIX ICI
     credits: course.credits.toString(),
   });
   setEditScheduleInput({ day: '', time: '', room: '' });
@@ -228,13 +236,14 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
   if (!editCourse) return;
   
   try {
-    // ✅ Créer un nouvel objet sans program et filiere
     const { program, filiere, ...rest } = editFormData;
     
     const dataToSend = {
       ...rest,
       program_id: program ? programs.find(p => p.name === program)?.id : null,
       filiere_id: filiere ? filieres.find(f => f.name === filiere)?.id : null,
+      group_id: editFormData.group_id ? parseInt(editFormData.group_id) : null,
+      // schedule: JSON.stringify(editFormData.schedule), // ← CONVERTIR EN STRING JSON
     };
     
     await coursesApi.update(editCourse.id, dataToSend);
@@ -257,7 +266,6 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
     });
   }
 };
-
   const handleDelete = async (course: Course) => {
     const result = await Swal.fire({
       title: 'Êtes-vous sûr ?',
@@ -730,6 +738,26 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Groupe *</label>
+              <select
+                required
+                value={formData.group_id}
+                onChange={(e) => {
+                  setFormData({ ...formData, group_id: e.target.value });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+              >
+                <option value="">Sélectionner un groupe</option>
+                {groups.map((group) => {
+                  return (
+                    <option key={group.id} value={group.id}>
+                      {group.name} - {group.code}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Professeur</label>
               <select
                 value={formData.professor_id}
@@ -1058,6 +1086,22 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
                 <option value="">Sélectionner</option>
                 {filieres.map((f) => (
                   <option key={f.id} value={f.name}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Groupe *</label>
+              <select
+                required
+                value={editFormData.group_id}
+                onChange={(e) => setEditFormData({ ...editFormData, group_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
+              >
+                <option value="">Sélectionner un groupe</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} - {group.code}
+                  </option>
                 ))}
               </select>
             </div>

@@ -1,4 +1,3 @@
-
 import axiosInstance from '../axios';
 
 export interface Course {
@@ -14,6 +13,7 @@ export interface Course {
     name: string;
     email: string;
   } | null;
+  group_id?: number;
   students_count: number;
   max_students: number;
   hours_total: number;
@@ -44,18 +44,12 @@ export interface CourseFilters {
 }
 
 export const coursesApi = {
-  getAll: (params?: CourseFilters) => 
-    axiosInstance.get('/admin/courses', { params }),
-  getStats: () => 
-    axiosInstance.get('/admin/courses/stats'),
-  show: (id: number) => 
-    axiosInstance.get(`/admin/courses/${id}`),
-  create: (data: any) => 
-    axiosInstance.post('/admin/courses', data),
-  update: (id: number, data: any) => 
-    axiosInstance.put(`/admin/courses/${id}`, data),
-  delete: (id: number) => 
-    axiosInstance.delete(`/admin/courses/${id}`),
-  toggleActive: (id: number) => 
-    axiosInstance.post(`/admin/courses/${id}/toggle-active`),
+  getAll: (params?: CourseFilters) => axiosInstance.get('/admin/courses', { params }),
+  getStats: () => axiosInstance.get('/admin/courses/stats'),
+  getGroups: () => axiosInstance.get('/admin/courses/groups'), // ← AJOUTÉ
+  show: (id: number) => axiosInstance.get(`/admin/courses/${id}`),
+  create: (data: any) => axiosInstance.post('/admin/courses', data),
+  update: (id: number, data: any) => axiosInstance.put(`/admin/courses/${id}`, data),
+  delete: (id: number) => axiosInstance.delete(`/admin/courses/${id}`),
+  toggleActive: (id: number) => axiosInstance.post(`/admin/courses/${id}/toggle-active`),
 };

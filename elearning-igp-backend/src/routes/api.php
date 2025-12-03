@@ -88,6 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('professors/{id}/toggle-active', [ProfessorController::class, 'toggleActive']);
         // Courses
         Route::get('courses', [CourseController::class, 'index']);
+        Route::get('courses/groups', [CourseController::class, 'getGroups']);
         Route::get('courses/stats', [CourseController::class, 'stats']);
         Route::post('courses', [CourseController::class, 'store']);
         Route::get('courses/{id}', [CourseController::class, 'show']);

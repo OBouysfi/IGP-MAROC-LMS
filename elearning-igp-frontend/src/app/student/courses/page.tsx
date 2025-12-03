@@ -297,7 +297,7 @@ export default function StudentCoursesPage() {
                 <div className="bg-blue-50 rounded-xl p-4">
                   <h4 className="font-medium text-[#0D529C] mb-2">Moyenne actuelle</h4>
                   <div className={`text-3xl font-bold ${getGradeColor(selectedCourse.grade_average)}`}>
-                    {selectedCourse.grade_average !== null ? `${selectedCourse.grade_average}/20` : 'N/A'}
+                    {selectedCourse.grade_average !== null ? `${selectedCourse.grade_average}/20` : ' - '}
                   </div>
                   <p className="text-sm text-gray-600 mt-2">Basée sur les évaluations</p>
                 </div>
