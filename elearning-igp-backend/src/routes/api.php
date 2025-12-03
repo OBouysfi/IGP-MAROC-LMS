@@ -186,6 +186,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
             // Setting - Security
             Route::get('security', [SettingsController::class, 'getSecurity']);
             Route::put('security', [SettingsController::class, 'updateSecurity']);
+            Route::post('enable-2fa-all', [SettingsController::class, 'enableTwoFactorForAll']);
+            Route::post('logout-all-users', [SettingsController::class, 'logoutAllUsers']);
              // Sessions & Logs (NOUVEAU)
             Route::get('sessions/stats', [SettingsController::class, 'getSessionsStats']);
             Route::get('sessions', [SettingsController::class, 'getSessions']);

@@ -301,6 +301,32 @@ class SettingsController extends Controller
         return response()->json(['message' => 'Paramètres de sécurité mis à jour avec succès']);
     }
 
+    public function enableTwoFactorForAll(): JsonResponse
+    {
+        $count = User::where('two_factor_enabled', false)->update([
+            'two_factor_enabled' => true,
+        ]);
+
+        return response()->json([
+            'message' => "2FA activé pour {$count} utilisateurs",
+            'count' => $count,
+        ]);
+    }
+
+    public function logoutAllUsers(): JsonResponse
+    {
+        $currentUser = auth()->user();
+        
+        // Supprimer tous les tokens SAUF l'utilisateur actuel
+        \DB::table('personal_access_tokens')
+            ->where('tokenable_id', '!=', $currentUser->id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Tous les utilisateurs ont été déconnectés',
+        ]);
+    }
+
     // ==================== SESSIONS & SECURITY LOGS ====================
 
     

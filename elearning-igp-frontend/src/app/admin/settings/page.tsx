@@ -319,6 +319,71 @@ export default function SettingsPage() {
     }
   };
 
+  const handleEnableTwoFactorForAll = async () => {
+  const result = await Swal.fire({
+    title: 'Activer 2FA pour tous',
+    text: 'Tous les utilisateurs devront utiliser 2FA à leur prochaine connexion',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#0D529C',
+    cancelButtonColor: '#6B7280',
+    confirmButtonText: 'Activer',
+    cancelButtonText: 'Annuler',
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await settingsApi.enableTwoFactorForAll();
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès',
+      text: '2FA activé pour tous les utilisateurs',
+      confirmButtonColor: '#0D529C',
+      timer: 2000,
+    });
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Erreur lors de l\'activation',
+      confirmButtonColor: '#0D529C',
+    });
+  }
+};
+
+const handleLogoutAllUsers = async () => {
+  const result = await Swal.fire({
+    title: 'Déconnecter tous les utilisateurs',
+    text: 'Tous les utilisateurs seront déconnectés immédiatement (sauf vous)',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#C1272D',
+    cancelButtonColor: '#6B7280',
+    confirmButtonText: 'Déconnecter',
+    cancelButtonText: 'Annuler',
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await settingsApi.logoutAllUsers();
+    Swal.fire({
+      icon: 'success',
+      title: 'Succès',
+      text: 'Tous les utilisateurs ont été déconnectés',
+      confirmButtonColor: '#0D529C',
+      timer: 2000,
+    });
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Erreur lors de la déconnexion',
+      confirmButtonColor: '#0D529C',
+    });
+  }
+};
   // ==================== SESSIONS ====================
   const handleDestroySession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
@@ -805,6 +870,37 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
+      <h4 className="font-bold text-gray-900 mb-4">Actions Globales de Sécurité</h4>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+          <div>
+            <p className="font-medium text-gray-900">Activer 2FA pour tous</p>
+            <p className="text-sm text-gray-500">Force l'activation du 2FA pour tous les utilisateurs</p>
+          </div>
+          <button
+            onClick={handleEnableTwoFactorForAll}
+            className="px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
+          >
+            Activer
+          </button>
+        </div>
+        
+        <div className="flex items-center justify-between p-4 bg-white rounded-lg">
+          <div>
+            <p className="font-medium text-gray-900">Déconnecter tous les appareils</p>
+            <p className="text-sm text-gray-500">Déconnecte tous les utilisateurs immédiatement</p>
+          </div>
+          <button
+            onClick={handleLogoutAllUsers}
+            className="px-4 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700"
+          >
+            Déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
               </div>
             )}
 

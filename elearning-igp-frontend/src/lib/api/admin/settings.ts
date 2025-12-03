@@ -117,6 +117,14 @@ export const settingsApi = {
   getSecurity: () => axiosInstance.get('/admin/settings/security'),
   updateSecurity: (data: SecuritySettings) => axiosInstance.put('/admin/settings/security', data),
 
+    // Locked Users
+  getLockedUsers: () => axiosInstance.get('/admin/settings/locked-users'),
+  unlockUser: (id: number) => axiosInstance.post(`/admin/settings/users/${id}/unlock`),
+
+  // Global Security Actions
+  enableTwoFactorForAll: () => axiosInstance.post('/admin/settings/enable-2fa-all'),
+  logoutAllUsers: () => axiosInstance.post('/admin/settings/logout-all-users'),
+
   // Sessions
   getSessionsStats: () => axiosInstance.get('/admin/settings/sessions/stats'),
   getSessions: () => axiosInstance.get('/admin/settings/sessions'),

@@ -13,6 +13,17 @@ class Kernel extends ConsoleKernel
         $schedule->command('config:clear')->dailyAt('03:00');
         $schedule->command('route:clear')->dailyAt('03:00');
         $schedule->command('view:clear')->dailyAt('03:00');
+        // Activer 2FA pour tous chaque lundi à 00h00
+        $schedule->command('security:enable-2fa-all')
+                ->weekly()
+                ->mondays()
+                ->at('00:00');
+        
+        // Déconnecter tous les appareils chaque dimanche à 23h00
+        $schedule->command('security:logout-all')
+                ->weekly()
+                ->sundays()
+                ->at('23:00');
     }
 
     protected function commands(): void
