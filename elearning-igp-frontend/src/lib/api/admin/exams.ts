@@ -47,8 +47,8 @@ export interface ExamStats {
   upcoming_exams: number;
   pending_grades: number;
   validated_grades: number;
-  global_average: number;
-  global_pass_rate: number;
+  global_average: number | string | null;
+  global_pass_rate: number | string | null;
 }
 
 export interface ExamFilters {

@@ -33,7 +33,11 @@ class ExamController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->whereHas('course', fn($q) => $q->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('professor.user', fn($q) => $q->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('professor.user', function($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", ["%{$search}%"]);
+                })
                   ->orWhereHas('group', fn($q) => $q->where('name', 'like', "%{$search}%"));
             });
         }

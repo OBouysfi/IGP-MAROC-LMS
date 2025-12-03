@@ -262,15 +262,6 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
         </main>
       </div>
 
-      {(showProfileMenu || showNotifications) && (
-        <div
-          className="fixed inset-0 z-20"
-          onClick={() => {
-            setShowProfileMenu(false);
-            setShowNotifications(false);
-          }}
-        />
-      )}
     </div>
   );
 }

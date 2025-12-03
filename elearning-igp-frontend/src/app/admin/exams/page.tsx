@@ -44,6 +44,10 @@ export default function ExamsPage() {
   const examTypes = ['partiel', 'final', 'rattrapage', 'controle'];
   const statuses = ['planifié', 'en_cours', 'terminé', 'notes_saisies', 'validé'];
 
+  const formatNumber = (value: any, decimals: number = 1): string => {
+    if (value === null || value === undefined) return '-';
+    return parseFloat(value).toFixed(decimals);
+  };
   useEffect(() => {
     fetchData();
     fetchFormData();
@@ -347,7 +351,9 @@ export default function ExamsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Moyenne Générale</p>
-                  <p className="text-xl font-bold text-[#0D529C]">{stats.global_average?.toFixed(1) || '-'}/20</p>
+                  <p className="text-xl font-bold text-[#0D529C]">
+                    {stats.global_average ? formatNumber(stats.global_average, 1) : '-'}/20
+                  </p>
                 </div>
               </div>
             </div>
@@ -359,7 +365,9 @@ export default function ExamsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Taux de Réussite</p>
-                  <p className="text-xl font-bold text-[#257035]">{stats.global_pass_rate?.toFixed(1) || '-'}%</p>
+                  <p className="text-xl font-bold text-[#257035]">
+                    {stats.global_pass_rate ? formatNumber(stats.global_pass_rate, 1) : '-'}%
+                  </p>
                 </div>
               </div>
             </div>
@@ -533,9 +541,9 @@ export default function ExamsPage() {
                             </div>
                           </td>
                           <td className="py-4 px-4">
-                            {exam.average !== null ? (
-                              <span className={`inline-flex px-3 py-1 text-sm font-bold rounded ${getGradeColor(exam.average)}`}>
-                                {exam.average.toFixed(1)}/20
+                              {exam.average !== null ? (
+                              <span className={`inline-flex px-3 py-1 text-sm font-bold rounded ${getGradeColor(parseFloat(exam.average.toString()))}`}>
+                                {formatNumber(exam.average, 1)}/20
                               </span>
                             ) : (
                               <span className="text-gray-400 text-sm">-</span>
@@ -544,11 +552,11 @@ export default function ExamsPage() {
                           <td className="py-4 px-4">
                             {exam.pass_rate !== null ? (
                               <span className={`inline-flex px-3 py-1 text-sm font-bold rounded ${
-                                exam.pass_rate >= 80 ? 'text-[#257035] bg-green-50' : 
-                                exam.pass_rate >= 60 ? 'text-orange-600 bg-orange-50' : 
+                                parseFloat(exam.pass_rate.toString()) >= 80 ? 'text-[#257035] bg-green-50' : 
+                                parseFloat(exam.pass_rate.toString()) >= 60 ? 'text-orange-600 bg-orange-50' : 
                                 'text-[#C1272D] bg-red-50'
                               }`}>
-                                {exam.pass_rate.toFixed(0)}%
+                                {formatNumber(exam.pass_rate, 0)}%
                               </span>
                             ) : (
                               <span className="text-gray-400 text-sm">-</span>
@@ -591,37 +599,40 @@ export default function ExamsPage() {
 
             {activeTab === 'grades' && (
               <div className="space-y-6">
-                {filiereStats.map((filiere) => (
-                  <div key={filiere.filiere} className="bg-gray-50 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-[#0D529C]">{filiere.filiere}</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-[#0D529C]">
-                          {filiere.avg_grade ? parseFloat(filiere.avg_grade).toFixed(1) : '-'}
-                        </p>
-                        <p className="text-xs text-gray-500">Moyenne Générale</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-[#257035]">
-                          {filiere.avg_pass_rate ? parseFloat(filiere.avg_pass_rate).toFixed(0) : '-'}%
-                        </p>
-                        <p className="text-xs text-gray-500">Taux de Réussite</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-orange-500">
-                          {filiere.total_exams}
-                        </p>
-                        <p className="text-xs text-gray-500">Examens</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 text-center">
-                        <p className="text-2xl font-bold text-purple-500">-</p>
-                        <p className="text-xs text-gray-500">Étudiants</p>
-                      </div>
-                    </div>
+                {filiereStats.length === 0 ? (
+                  <div className="bg-gray-50 rounded-xl p-12 text-center">
+                    <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">Aucune donnée disponible</p>
                   </div>
-                ))}
+                ) : (
+                  filiereStats.map((filiere) => (
+                    <div key={filiere.id} className="bg-gray-50 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold text-[#0D529C]">{filiere.name}</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-lg p-4 text-center">
+                          <p className="text-2xl font-bold text-[#0D529C]">
+                            {formatNumber(filiere.avg_grade, 1)}
+                          </p>
+                          <p className="text-xs text-gray-500">Moyenne Générale</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 text-center">
+                          <p className="text-2xl font-bold text-[#257035]">
+                            {formatNumber(filiere.avg_pass_rate, 0)}%
+                          </p>
+                          <p className="text-xs text-gray-500">Taux de Réussite</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 text-center">
+                          <p className="text-2xl font-bold text-orange-500">
+                            {filiere.total_exams}
+                          </p>
+                          <p className="text-xs text-gray-500">Examens</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -877,19 +888,19 @@ export default function ExamsPage() {
                   <h3 className="text-lg font-bold text-[#0D529C] mb-4">Statistiques des Résultats</h3>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="bg-white rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-[#0D529C]">{selectedExam.average?.toFixed(1)}</p>
+                      <p className="text-2xl font-bold text-[#0D529C]">{formatNumber(selectedExam.average, 1)}</p>
                       <p className="text-xs text-gray-500">Moyenne</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-[#257035]">{selectedExam.max_grade}</p>
+                      <p className="text-2xl font-bold text-[#257035]">{formatNumber(selectedExam.max_grade, 1)}</p>
                       <p className="text-xs text-gray-500">Note Max</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-[#C1272D]">{selectedExam.min_grade}</p>
+                      <p className="text-2xl font-bold text-[#C1272D]">{formatNumber(selectedExam.min_grade, 1)}</p>
                       <p className="text-xs text-gray-500">Note Min</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-purple-500">{selectedExam.pass_rate?.toFixed(0)}%</p>
+                      <p className="text-2xl font-bold text-purple-500">{formatNumber(selectedExam.pass_rate, 0)}%</p>
                       <p className="text-xs text-gray-500">Réussite</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 text-center">
@@ -919,19 +930,19 @@ export default function ExamsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedExam.grades.map((grade, index) => (
+                        {selectedExam.grades.map((gradeItem: any, index: number) => (
                           <tr key={index} className="border-t border-gray-100">
-                            <td className="py-2 px-3 text-sm font-medium">{grade.student}</td>
+                            <td className="py-2 px-3 text-sm font-medium">{gradeItem.student}</td>
                             <td className="py-2 px-3 text-center">
-                              <span className={`inline-flex px-3 py-1 text-sm font-bold rounded ${getGradeColor(grade.grade)}`}>
-                                {grade.grade.toFixed(1)}/20
+                              <span className={`inline-flex px-3 py-1 text-sm font-bold rounded ${getGradeColor(parseFloat(gradeItem.grade))}`}>
+                                {formatNumber(gradeItem.grade, 1)}/20
                               </span>
                             </td>
                             <td className="py-2 px-3 text-center">
                               <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                grade.status === 'validé' ? 'bg-[#257035] text-white' : 'bg-orange-500 text-white'
+                                gradeItem.status === 'validé' ? 'bg-[#257035] text-white' : 'bg-orange-500 text-white'
                               }`}>
-                                {grade.status}
+                                {gradeItem.status}
                               </span>
                             </td>
                           </tr>

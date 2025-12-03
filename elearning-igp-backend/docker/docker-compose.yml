@@ -18,6 +18,9 @@ services:
       - ./configs/laravel.env
     networks:
       - igp_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ../src:/var/www/html:rw
       - vendor:/var/www/html/vendor
