@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  jitsi-web:
+    image: jitsi/web:stable-9258
+    container_name: igp_jitsi_web
+    ports:
+      - "8000:80"
+    env_file:
+      - .env.jitsi
+    networks:
+      - igp_network
+
+  jitsi-prosody:
+    image: jitsi/prosody:stable-9258
+    container_name: igp_jitsi_prosody
+    env_file:
+      - .env.jitsi
+    networks:
+      - igp_network
+
+  jitsi-jicofo:
+    image: jitsi/jicofo:stable-9258
+    container_name: igp_jitsi_jicofo
+    env_file:
+      - .env.jitsi
+    networks:
+      - igp_network
+
+  jitsi-jvb:
+    image: jitsi/jvb:stable-9258
+    container_name: igp_jitsi_jvb
+    ports:
+      - "10000:10000/udp"
+    env_file:
+      - .env.jitsi
+    networks:
+      - igp_network
+
+networks:
+  igp_network:
+    external: true

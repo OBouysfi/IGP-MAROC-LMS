@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api\Professor;
 use App\Http\Controllers\Controller;
 use App\Models\JitsiSession;
 use App\Models\Course;
-use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SessionController extends Controller
 {
@@ -23,7 +23,6 @@ class SessionController extends Controller
         $query = JitsiSession::with(['course', 'group'])
             ->where('professor_id', $professor->id);
 
-        // Apply filters
         if ($request->has('course')) {
             $courseName = $request->course;
             $query->whereHas('course', function ($q) use ($courseName) {
@@ -43,7 +42,6 @@ class SessionController extends Controller
                 $registeredParticipants = $session->participants()->where('registered', true)->count();
                 $joinedParticipants = $session->participants()->where('joined', true)->count();
 
-                // Auto-register all students from the group
                 if ($registeredParticipants === 0 && $totalStudents > 0) {
                     $students = $session->group->students;
                     foreach ($students as $student) {
@@ -100,6 +98,9 @@ class SessionController extends Controller
             'chat_enabled' => 'boolean',
         ]);
 
+        $roomName = 'igp' . strtolower(Str::random(32)); // ← Tout en minuscules, pas de tiret au début
+
+
         $session = JitsiSession::create([
             'professor_id' => $professor->id,
             'course_id' => $request->course_id,
@@ -110,6 +111,7 @@ class SessionController extends Controller
             'start_time' => $request->start_time,
             'duration' => $request->duration,
             'max_participants' => $request->max_participants,
+            'room_url' => $roomName,
             'recording_enabled' => $request->recording_enabled ?? true,
             'chat_enabled' => $request->chat_enabled ?? true,
         ]);
@@ -156,23 +158,19 @@ class SessionController extends Controller
         }
 
         $courses = Course::where('professor_id', $professor->id)
+            ->with('group')
             ->get()
             ->map(function ($course) {
-                $groups = \App\Models\Group::select('id', 'name')
-                    ->get()
-                    ->map(function($group) {
-                        return [
-                            'id' => $group->id,
-                            'name' => $group->name
-                        ];
-                    })
-                    ->toArray();
-
                 return [
                     'id' => $course->id,
                     'name' => $course->name,
                     'code' => $course->code,
-                    'groups' => $groups,
+                    'groups' => $course->group ? [
+                        [
+                            'id' => $course->group->id,
+                            'name' => $course->group->name
+                        ]
+                    ] : [],
                 ];
             });
 
@@ -189,12 +187,32 @@ class SessionController extends Controller
 
         $session->update(['status' => 'en_cours']);
 
+        $professorName = $request->user()->professor->first_name . ' ' . $request->user()->professor->last_name;
+        $joinUrl = "http://localhost:8000/{$session->room_url}#userInfo.displayName=\"{$professorName}\"";
+
         return response()->json([
             'message' => 'Session démarrée',
-            'data' => $session
+            'data' => $session,
+            'join_url' => $joinUrl
         ]);
     }
 
+ // SessionController.php
+public function getJoinUrl(Request $request, $id): JsonResponse
+{
+    $session = JitsiSession::findOrFail($id);
+
+    if ($session->professor_id !== $request->user()->professor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $professorName = $request->user()->professor->first_name . ' ' . $request->user()->professor->last_name;
+    
+    // ✅ Retour à localhost:8000 - PAS d'authentification nécessaire !
+    $joinUrl = "http://localhost:8000/{$session->room_url}#config.prejoinPageEnabled=false&userInfo.displayName=\"" . urlencode($professorName) . "\"";
+
+    return response()->json(['join_url' => $joinUrl]);
+}
     public function endSession(Request $request, $id): JsonResponse
     {
         $session = JitsiSession::findOrFail($id);

@@ -693,9 +693,20 @@ export default function ProfessorSessionsPage() {
                 Annuler
               </button>
               <button
-                onClick={() => {
-                  window.open(showJoinModal.room_url, '_blank');
-                  setShowJoinModal(null);
+                onClick={async () => {
+                  try {
+                    const response = await professorSessionsApi.getJoinUrl(showJoinModal.id);
+                    console.log('Response:', response.data); // ← Ajoute ce log
+                    window.open(response.data.join_url, '_blank');
+                    setShowJoinModal(null);
+                  } catch (error) {
+                    Swal.fire({
+                      icon: 'error',
+                      title: 'Erreur',
+                      text: 'Impossible de rejoindre la session',
+                      confirmButtonColor: '#0D529C',
+                    });
+                  }
                 }}
                 className="flex items-center gap-2 px-6 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
               >

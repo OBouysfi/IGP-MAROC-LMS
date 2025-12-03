@@ -200,10 +200,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 
-
-
-
-
  // Professor routes
 
 Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
@@ -227,6 +223,7 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::post('grades/{examId}/save', [App\Http\Controllers\Api\Professor\GradeController::class, 'saveGrades']);
     Route::post('grades/{examId}/submit', [App\Http\Controllers\Api\Professor\GradeController::class, 'submitGrades']);
     // Session live
+    Route::get('sessions/{id}/join', [App\Http\Controllers\Api\Professor\SessionController::class, 'getJoinUrl']);
     Route::get('sessions/stats', [App\Http\Controllers\Api\Professor\SessionController::class, 'stats']);
     Route::get('sessions/my-courses', [App\Http\Controllers\Api\Professor\SessionController::class, 'myCourses']);
     Route::get('sessions', [App\Http\Controllers\Api\Professor\SessionController::class, 'index']);
@@ -255,9 +252,6 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::put('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updatePreferences']);
     Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Professor\SettingsController::class, 'toggle2FA']);
 });
-
-
-
 
 
 // Student routes

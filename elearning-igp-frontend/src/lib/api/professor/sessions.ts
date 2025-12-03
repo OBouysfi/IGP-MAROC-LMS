@@ -31,7 +31,7 @@ export interface CourseOption {
   id: number;
   name: string;
   code: string;
-  groups: string[];
+  groups: { id: number; name: string }[];
 }
 
 export interface CreateSessionInput {
@@ -61,6 +61,9 @@ export const professorSessionsApi = {
   
   startSession: (id: number) => 
     axiosInstance.post(`/professor/sessions/${id}/start`),
+  
+  getJoinUrl: (id: number) => 
+    axiosInstance.get<{ join_url: string }>(`/professor/sessions/${id}/join`),
   
   endSession: (id: number) => 
     axiosInstance.post(`/professor/sessions/${id}/end`),
