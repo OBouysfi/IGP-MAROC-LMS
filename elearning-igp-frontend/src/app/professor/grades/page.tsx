@@ -21,36 +21,30 @@ export default function ProfessorGradesPage() {
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+  fetchData();
+}, [filterCourse, filterStatus]);
 
-  useEffect(() => {
-    fetchExams();
-  }, [filterCourse, filterStatus]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [examsRes, statsRes, coursesRes] = await Promise.all([
-        professorGradesApi.getExams(),
-        professorGradesApi.getStats(),
-        professorGradesApi.getMyCourses(),
-      ]);
-      setExams(examsRes.data.data);
-      setStats(statsRes.data.data);
-      setMyCourses(coursesRes.data.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Erreur lors du chargement des données',
-        confirmButtonColor: '#0D529C',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const params: any = {};
+    if (filterCourse) params.course = filterCourse;
+    if (filterStatus) params.status = filterStatus;
+    
+    const [examsRes, statsRes, coursesRes] = await Promise.all([
+      professorGradesApi.getExams(params),
+      professorGradesApi.getStats(),
+      professorGradesApi.getMyCourses(),
+    ]);
+    setExams(examsRes.data.data);
+    setStats(statsRes.data.data);
+    setMyCourses(coursesRes.data.data);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchExams = async () => {
     try {
