@@ -35,7 +35,7 @@ class GroupResource extends JsonResource
                     'id' => $course->id,
                     'name' => $course->name,
                     'professor' => $course->professor?->user->first_name . ' ' . $course->professor?->user->last_name ?? 'Non assigné',
-                    'hours_week' => $course->pivot->hours_week,
+                    'hours_week' => $course->pivot?->hours_week ?? 0,
                 ]);
             }),
             'students_count' => $this->whenCounted('students'),

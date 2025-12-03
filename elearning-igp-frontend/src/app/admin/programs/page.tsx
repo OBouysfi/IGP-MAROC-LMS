@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { programsApi, filieresApi, Program, Filiere, ProgramStats, FiliereStats } from '@/lib/api/admin/programs';
-import { GraduationCap, BookOpen, Layers, DollarSign, Plus, Search, Edit2, Trash2, Eye, X, Users, Calendar, Clock } from 'lucide-react';
+import { GraduationCap, BookOpen, Layers, DollarSign, Plus, Search, Edit2,SquarePen, Trash2, Eye, X, Users, Calendar, Clock } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
 
@@ -503,7 +503,7 @@ export default function ProgramsPage() {
                         onClick={() => openEditFiliereModal(filiere)}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <SquarePen className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteFiliere(filiere)}
@@ -600,7 +600,7 @@ export default function ProgramsPage() {
                         onClick={() => openEditProgramModal(program)}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <SquarePen className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteProgram(program)}

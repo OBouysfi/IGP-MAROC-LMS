@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { groupsApi, Group, GroupStats } from '@/lib/api/admin/groups';
-import { Plus, Edit2, Trash2, Search, Filter, Eye, X, Users, BookOpen, Calendar, GraduationCap, User } from 'lucide-react';
+import { Plus ,SquarePen, Trash2, Search, Filter, Eye, X, Users, BookOpen, Calendar, GraduationCap, User } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
 import { programsApi, filieresApi } from '@/lib/api/admin/programs';
@@ -414,7 +414,7 @@ export default function GroupsPage() {
                           onClick={() => openEditModal(group)}
                           className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-yellow-500 hover:text-white transition-colors ml-1"
                         >
-                          <Edit2 className="w-4 h-4" />
+                        <SquarePen className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(group)}

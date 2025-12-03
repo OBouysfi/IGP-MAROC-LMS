@@ -27,7 +27,7 @@ class ExamResource extends JsonResource
             'type' => $this->type,
             'date' => $this->date ? $this->date->format('Y-m-d') : null,
             'time' => $this->time ? $this->time->format('H:i') : null,
-            'duration' => $this->duration,
+            'duration' => $this->formatDuration($this->duration_minutes), // ← FIX ICI
             'room' => $this->room,
             'coefficient' => $this->coefficient,
             'status' => $this->status,
@@ -51,6 +51,7 @@ class ExamResource extends JsonResource
             }),
         ];
     }
+    
     private function formatDuration(int $minutes): string
     {
         $hours = floor($minutes / 60);
