@@ -166,6 +166,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('payrolls/pay-multiple', [PayrollController::class, 'confirmMultiplePayments']);
         Route::get('payrolls/history', [PayrollController::class, 'history']);
         Route::get('payrolls/departments', [PayrollController::class, 'getDepartments']);
+        Route::get('attendance/professor/{id}', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'professorAttendance']);
+        Route::post('attendance/validate', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'validateAttendance']);
+        Route::post('attendance/mark-absent', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'markAbsent']);
+        Route::get('attendance/stats', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'stats']);
          // Setting -  General
         Route::prefix('settings')->group(function () {
             // Setting - General
@@ -235,6 +239,7 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     // Emploi du Temps
     Route::get('schedule/stats', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'stats']);
     Route::get('schedule', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'index']);
+    Route::get('schedule/today', [App\Http\Controllers\Api\Professor\ScheduleController::class,  'today']);
     // Documents
     Route::get('documents/stats', [App\Http\Controllers\Api\Professor\DocumentController::class, 'stats']);
     Route::get('documents/my-courses', [App\Http\Controllers\Api\Professor\DocumentController::class, 'myCourses']);
@@ -253,6 +258,10 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::get('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'getPreferences']);
     Route::put('settings/preferences', [App\Http\Controllers\Api\Professor\SettingsController::class, 'updatePreferences']);
     Route::post('settings/2fa/toggle', [App\Http\Controllers\Api\Professor\SettingsController::class, 'toggle2FA']);
+
+    Route::post('attendance/clock-in', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'clockIn']);
+    Route::post('attendance/{id}/clock-out', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'clockOut']);
+    Route::get('attendance/my-attendance', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'myAttendance']);
 });
 
 

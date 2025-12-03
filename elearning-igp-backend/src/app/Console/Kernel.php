@@ -24,6 +24,11 @@ class Kernel extends ConsoleKernel
                 ->weekly()
                 ->sundays()
                 ->at('23:00');
+
+        $schedule->command('attendance:mark-absent')
+            ->dailyAt('23:00')
+            ->timezone('Africa/Casablanca')
+            ->appendOutputTo(storage_path('logs/attendance-auto.log'));
     }
 
     protected function commands(): void

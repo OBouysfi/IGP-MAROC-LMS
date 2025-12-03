@@ -177,25 +177,77 @@ class SessionController extends Controller
         return response()->json(['data' => $courses]);
     }
 
-    public function startSession(Request $request, $id): JsonResponse
-    {
-        $session = JitsiSession::findOrFail($id);
+  public function startSession(Request $request, $id): JsonResponse
+{
+    $session = JitsiSession::findOrFail($id);
 
-        if ($session->professor_id !== $request->user()->professor->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $session->update(['status' => 'en_cours']);
-
-        $professorName = $request->user()->professor->first_name . ' ' . $request->user()->professor->last_name;
-        $joinUrl = "http://localhost:8000/{$session->room_url}#userInfo.displayName=\"{$professorName}\"";
-
-        return response()->json([
-            'message' => 'Session démarrée',
-            'data' => $session,
-            'join_url' => $joinUrl
-        ]);
+    if ($session->professor_id !== $request->user()->professor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
     }
+
+    $session->update([
+        'status' => 'en_cours',
+        'started_at' => now(),
+    ]);
+
+    // ✅ Créer log de présence automatiquement VALIDÉ
+    \App\Models\AttendanceLog::create([
+        'professor_id' => $session->professor_id,
+        'course_id' => $session->course_id,
+        'group_id' => $session->group_id,
+        'date' => $session->session_date,
+        'clock_in' => now()->format('H:i'),
+        'hours_scheduled' => $session->duration / 60,
+        'type' => 'session_live',
+        'location' => 'En ligne',
+        'status' => 'present',
+        'validated' => true,          // ← AJOUTE
+        'validated_by' => 1,          // ← AJOUTE (ou $request->user()->id)
+        'validated_at' => now(),      // ← AJOUTE
+    ]);
+
+    $professorName = $request->user()->professor->first_name . ' ' . $request->user()->professor->last_name;
+    $joinUrl = "http://localhost:8000/{$session->room_url}#userInfo.displayName=\"{$professorName}\"";
+
+    return response()->json([
+        'message' => 'Session démarrée',
+        'data' => $session,
+        'join_url' => $joinUrl
+    ]);
+}
+
+public function endSession(Request $request, $id): JsonResponse
+{
+    $session = JitsiSession::findOrFail($id);
+
+    if ($session->professor_id !== $request->user()->professor->id) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    $session->update([
+        'status' => 'terminée',
+        'ended_at' => now(), // ← Ajoute aussi cette colonne si elle n'existe pas
+    ]);
+
+    // ✅ AJOUTER ICI: Mettre à jour log de présence
+    $log = \App\Models\AttendanceLog::where('professor_id', $session->professor_id)
+        ->where('date', $session->session_date)
+        ->where('course_id', $session->course_id)
+        ->whereNull('clock_out')
+        ->latest()
+        ->first();
+
+    if ($log) {
+        $log->update(['clock_out' => now()->format('H:i')]);
+        $log->calculateHours();
+        $log->determineStatus();
+    }
+
+    return response()->json([
+        'message' => 'Session terminée',
+        'data' => $session
+    ]);
+}
 
  // SessionController.php
 public function getJoinUrl(Request $request, $id): JsonResponse
@@ -213,19 +265,4 @@ public function getJoinUrl(Request $request, $id): JsonResponse
 
     return response()->json(['join_url' => $joinUrl]);
 }
-    public function endSession(Request $request, $id): JsonResponse
-    {
-        $session = JitsiSession::findOrFail($id);
-
-        if ($session->professor_id !== $request->user()->professor->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $session->update(['status' => 'terminée']);
-
-        return response()->json([
-            'message' => 'Session terminée',
-            'data' => $session
-        ]);
-    }
 }

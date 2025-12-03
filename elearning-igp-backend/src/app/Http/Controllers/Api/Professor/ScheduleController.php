@@ -183,4 +183,17 @@ class ScheduleController extends Controller
             ]
         ]);
     }
+
+    public function today(Request $request): JsonResponse
+    {
+        $professor = $request->user()->professor;
+        
+        $schedules = Schedule::with(['course', 'group'])
+            ->where('professor_id', $professor->id)
+            ->where('day', now()->dayOfWeek)
+            ->get();
+        
+        return response()->json(['data' => $schedules]);
+    }
+
 }

@@ -96,61 +96,36 @@ class PayrollController extends Controller
                     continue;
                 }
 
-                // ✅ CORRECTION: Utiliser start_date au lieu de start_time
-                $schedules = Schedule::where('professor_id', $professor->id)
-                    ->whereYear('start_date', $year)
-                    ->whereMonth('start_date', $month)
+                // ✅ NOUVEAU: Utiliser AttendanceLog (heures réelles validées)
+                $logs = \App\Models\AttendanceLog::where('professor_id', $professor->id)
+                    ->where('validated', true) // Seulement les heures validées
+                    ->whereYear('date', $year)
+                    ->whereMonth('date', $month)
                     ->with(['course', 'group'])
                     ->get();
-                
-                Log::info("📅 Prof #{$professor->id}: {$schedules->count()} schedules trouvés");
+
+                Log::info("📊 Prof #{$professor->id}: {$logs->count()} présences validées");
 
                 $totalHours = 0;
                 $courseDetails = [];
 
-                foreach ($schedules as $schedule) {
-                    // Parse les heures (format H:i)
-                    $startTime = \Carbon\Carbon::parse($schedule->start_time);
-                    $endTime = \Carbon\Carbon::parse($schedule->end_time);
-                    
-                    // Calculer la différence en heures
-                    $hours = $endTime->diffInHours($startTime, true);
-                    
-                    // Si c'est 0, essayer en minutes et diviser par 60
-                    if ($hours == 0) {
-                        $minutes = $endTime->diffInMinutes($startTime);
-                        $hours = $minutes / 60;
-                    }
-                    
-                    $totalHours += $hours;
+                foreach ($logs as $log) {
+                    $totalHours += $log->hours_worked; // Heures réelles
 
-                    $courseKey = ($schedule->course_id ?? 0) . '-' . ($schedule->group_id ?? 0);
+                    $courseKey = ($log->course_id ?? 0) . '-' . ($log->group_id ?? 0);
                     
                     if (!isset($courseDetails[$courseKey])) {
                         $courseDetails[$courseKey] = [
-                            'course_id' => $schedule->course_id,
-                            'course_name' => $schedule->course->name ?? 'Cours',
-                            'group_name' => $schedule->group->name ?? 'Groupe',
+                            'course_id' => $log->course_id,
+                            'course_name' => $log->course->name ?? 'Cours',
+                            'group_name' => $log->group->name ?? 'Groupe',
                             'hours' => 0,
                         ];
                     }
                     
-                    $courseDetails[$courseKey]['hours'] += $hours;
+                    $courseDetails[$courseKey]['hours'] += $log->hours_worked;
                     
-                    Log::info("  ⏰ Schedule #{$schedule->id}: {$schedule->start_time} → {$schedule->end_time} = {$hours}h");
-                }
-
-                // 🔄 FALLBACK: Si pas de schedules, utiliser total_hours_month
-                if ($totalHours == 0 && $professor->total_hours_month > 0) {
-                    $totalHours = $professor->total_hours_month;
-                    Log::info("💼 Utilisation heures profil: {$totalHours}h");
-                    
-                    $courseDetails['default'] = [
-                        'course_id' => null,
-                        'course_name' => 'Enseignement mensuel',
-                        'group_name' => 'Multiple',
-                        'hours' => $totalHours,
-                    ];
+                    Log::info("  ⏰ Log #{$log->id}: {$log->clock_in} → {$log->clock_out} = {$log->hours_worked}h");
                 }
 
                 // 💰 Calcul salaire
@@ -158,6 +133,13 @@ class PayrollController extends Controller
                 $netSalary = $grossSalary;
 
                 Log::info("💵 Total: {$totalHours}h × {$professor->hourly_rate} MAD = {$netSalary} MAD");
+
+                // Si aucune heure, skip (prof n'a pas travaillé ce mois)
+                if ($totalHours == 0) {
+                    Log::info("⚠️ Prof #{$professor->id}: 0 heures, skip");
+                    $skippedCount++;
+                    continue;
+                }
 
                 // ✅ Créer la fiche de paie
                 $payroll = Payroll::create([
@@ -205,7 +187,6 @@ class PayrollController extends Controller
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }
-
     public function update(Request $request, $id): JsonResponse
     {
         $payroll = Payroll::findOrFail($id);

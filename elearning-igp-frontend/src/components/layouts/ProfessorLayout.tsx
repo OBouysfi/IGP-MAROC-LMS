@@ -19,6 +19,7 @@ import {
   Bell,
   Menu,
   X,
+  Clock,
   User,
   Settings,
   ChevronDown
@@ -62,6 +63,7 @@ export default function ProfessorLayout({ children }: ProfessorLayoutProps) {
     { name: 'Saisie des Notes', icon: ClipboardList, path: '/professor/grades' },
     { name: 'Sessions Live', icon: Video, path: '/professor/sessions' },
     { name: 'Emploi du Temps', icon: Calendar, path: '/professor/schedule' },
+    { name: 'Pointage', icon: Clock, path: '/professor/attendance' },
     { name: 'Mes Documents', icon: FileText, path: '/professor/documents' },
   ];
 

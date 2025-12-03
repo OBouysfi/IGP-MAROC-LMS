@@ -23,12 +23,16 @@ class JitsiSession extends Model
         'room_url',
         'recording_enabled',
         'chat_enabled',
+        'started_at',  // ← AJOUTE
+        'ended_at',    // ← AJOUTE
     ];
 
     protected $casts = [
         'session_date' => 'date',
         'recording_enabled' => 'boolean',
         'chat_enabled' => 'boolean',
+        'started_at' => 'datetime',  // ← AJOUTE
+        'ended_at' => 'datetime',    // ← AJOUTE
     ];
 
     protected static function boot()
