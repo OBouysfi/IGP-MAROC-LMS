@@ -170,6 +170,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('attendance/validate', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'validateAttendance']);
         Route::post('attendance/mark-absent', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'markAbsent']);
         Route::get('attendance/stats', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'stats']);
+        // Admin - Validation pointages professeurs
+    Route::prefix('professor-attendance')->group(function () {
+        Route::get('stats', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'stats']);
+        Route::get('/', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'index']);
+        Route::get('professor/{id}', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'professorAttendance']);
+        Route::post('validate', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'validateAttendance']);
+        Route::post('{id}/reject', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'rejectAttendance']);
+        Route::post('mark-absent', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'markAbsent']);
+        Route::get('professors', [\App\Http\Controllers\Api\Admin\AttendanceManagementController::class, 'getProfessors']);
+    });
          // Setting -  General
         Route::prefix('settings')->group(function () {
             // Setting - General
@@ -262,6 +272,7 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::post('attendance/clock-in', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'clockIn']);
     Route::post('attendance/{id}/clock-out', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'clockOut']);
     Route::get('attendance/my-attendance', [\App\Http\Controllers\Api\Professor\AttendanceController::class, 'myAttendance']);
+    
 });
 
 
