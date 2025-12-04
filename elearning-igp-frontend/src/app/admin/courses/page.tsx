@@ -580,10 +580,10 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
                       <td className="py-4 px-4">
                           <div className="flex flex-col gap-1">
                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white w-fit">
-                              {course.program?.name || course.program || '-'}
+                              {typeof course.program === 'object' ? course.program.name : course.program || '-'}
                             </span>
                             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white w-fit">
-                              {course.filiere?.name || course.filiere || '-'}
+                              {typeof course.filiere === 'object' ? course.filiere.name : course.filiere || '-'}
                             </span>
                           </div>
                         </td>
