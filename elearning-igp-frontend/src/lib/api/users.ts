@@ -7,6 +7,7 @@ export interface User {
   email: string;
   is_active: boolean;
   roles: Array<{ name: string }>;
+  created_at: string;
 }
 
 export const usersApi = {
