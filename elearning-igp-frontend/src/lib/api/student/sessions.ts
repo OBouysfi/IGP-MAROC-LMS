@@ -12,6 +12,7 @@ export interface StudentSession {
   duration: string;
   status: 'planifiée' | 'en_cours' | 'terminée' | 'annulée';
   room_url: string;
+  join_url?: string;
   participants_count: number;
   max_participants: number;
   recording_available: boolean;
@@ -25,7 +26,7 @@ export const studentSessionsApi = {
     return response.data;
   },
 
-  join: async (sessionId: number): Promise<{ message: string; room_url: string }> => {
+  join: async (sessionId: number): Promise<{ message: string; room_url: string; join_url: string }> => {
     const response = await apiClient.post(`/student/sessions/${sessionId}/join`);
     return response.data;
   },

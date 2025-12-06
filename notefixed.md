@@ -358,3 +358,24 @@ cd /home/igp/elearning-igp-backend/docker
 
 -------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------
+
+# Rebuild et restart le frontend
+cd /home/igp/elearning-igp-frontend
+docker stop igp_frontend
+docker rm igp_frontend
+docker build -t igp-frontend .
+docker run -d -p 3001:3000 --name igp_frontend --network docker_igp_network --env-file .env.local igp-frontend
+
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
+
+## SMTP
+
+cd /home/igp/elearning-igp-backend/src
+
+# Corriger les permissions
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+
+# Vérifier
+ls -la storage/

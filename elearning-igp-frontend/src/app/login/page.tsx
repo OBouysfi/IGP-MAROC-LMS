@@ -143,7 +143,7 @@ const handleLogin = async (e: React.FormEvent) => {
               options={[
                 { value: 'student', label: 'Étudiant' },
                 { value: 'professor', label: 'Professeur' },
-                { value: 'assistant', label: 'Assistant' },
+                // { value: 'assistant', label: 'Assistant' },
               ]}
             />
 

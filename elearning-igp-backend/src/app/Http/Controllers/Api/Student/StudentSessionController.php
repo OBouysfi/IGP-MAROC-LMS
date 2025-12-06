@@ -49,6 +49,7 @@ class StudentSessionController extends Controller
                         'recording_available' => false,
                         'recording_url' => null,
                         'is_registered' => $participant ? $participant->registered : false,
+                        'join_url' => env('JITSI_MEET_URL', 'https://meet.igp-maroc.com') . '/' . $session->room_url,
                     ];
                 });
 
@@ -92,9 +93,15 @@ class StudentSessionController extends Controller
                 'joined_at' => now(),
             ]);
 
+            // ✅ AJOUTER ICI : Générer l'URL complète Jitsi
+            $studentName = $request->user()->first_name . ' ' . $request->user()->last_name;
+            $jitsiUrl = env('JITSI_MEET_URL', 'https://meet.igp-maroc.com');
+            $joinUrl = "{$jitsiUrl}/{$session->room_url}#config.prejoinPageEnabled=false&userInfo.displayName=\"" . urlencode($studentName) . "\"";
+
             return response()->json([
                 'message' => 'Joined session successfully',
                 'room_url' => $session->room_url,
+                'join_url' => $joinUrl,  // ✅ Ajouter cette ligne
             ]);
         } catch (\Exception $e) {
             \Log::error('Student join session error: ' . $e->getMessage());

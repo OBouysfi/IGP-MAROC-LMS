@@ -37,7 +37,7 @@ export default function StudentSessionsPage() {
   const joinSession = async (sessionId: number) => {
     try {
       const response = await studentSessionsApi.join(sessionId);
-      window.open(response.room_url, '_blank');
+      window.open(response.join_url, '_blank');
       setShowJoinModal(null);
       fetchSessions();
     } catch (error) {
