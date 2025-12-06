@@ -1,11 +1,9 @@
-<?php
+<?php 
 
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Professor;
-use App\Models\Student;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
@@ -18,10 +16,10 @@ class AdminUserSeeder extends Seeder
         $studentRole = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'web']);
         $assistantRole = Role::firstOrCreate(['name' => 'assistant', 'guard_name' => 'web']);
 
-        // Admin
+        // --- Main Super Admin (Othman)
         $admin = User::create([
-            'first_name' => 'IGP',
-            'last_name' => 'Maroc',
+            'first_name' => 'Othman',
+            'last_name' => 'Be',
             'email' => 'bouysfi.othman@gmail.com',
             'password' => Hash::make('123456789'),
             'phone' => '+212637208455',
@@ -30,52 +28,57 @@ class AdminUserSeeder extends Seeder
         ]);
         $admin->roles()->attach($adminRole->id);
 
-        // Professor
-        $professorUser = User::create([
-            'first_name' => 'Othman',
-            'last_name' => 'Professor',
-            'email' => 'obouysfi@gmail.com',
-            'password' => Hash::make('123456789'),
-            'phone' => '+212637208455',
-            'is_active' => true,
-            'email_verified_at' => now(),
-        ]);
-        $professorUser->roles()->attach($professorRole->id);
-        
-        Professor::create([
-            'user_id' => $professorUser->id,
-            'department' => 'Informatique',
-            'specialization' => 'Développement Web',
-            'hourly_rate' => 150,
-        ]);
+        // --- Additional Super Admins ---
+        $superAdmins = [
+            [
+                'first_name' => 'Tilila',
+                'last_name' => 'Admin',
+                'email' => 'tilila@igp-maroc.com',
+                'phone' => '+212600000001',
+            ],
+            [
+                'first_name' => 'Leila',
+                'last_name' => 'Admin',
+                'email' => 'leila@igp-maroc.com',
+                'phone' => '+212600000002',
+            ],
+            [
+                'first_name' => 'Admin',
+                'last_name' => 'Three',
+                'email' => 'admin3@igp-maroc.com',
+                'phone' => '+212600000003',
+            ],
+        ];
 
-        // Student
-        $studentUser = User::create([
-            'first_name' => 'Othman',
-            'last_name' => 'Student',
-            'email' => 'bouysfideveloper@gmail.com',
-            'password' => Hash::make('123456789'),
-            'phone' => '+212637208455',
-            'is_active' => true,
-            'email_verified_at' => now(),
-        ]);
-        $studentUser->roles()->attach($studentRole->id);
-        
-        Student::create([
-            'user_id' => $studentUser->id,
-            'gender' => 'Homme',
-        ]);
+        foreach ($superAdmins as $adminData) {
+            $user = User::create([
+                'first_name' => $adminData['first_name'],
+                'last_name' => $adminData['last_name'],
+                'email' => $adminData['email'],
+                'password' => Hash::make('123456789'),
+                'phone' => $adminData['phone'],
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]);
+            $user->roles()->attach($adminRole->id);
+        }
 
-        // Assistant
-        $assistant = User::create([
-            'first_name' => 'Othman',
-            'last_name' => 'Assistant',
-            'email' => 'assistant@igp.edu',
-            'password' => Hash::make('123456789'),
-            'phone' => '+212637208455',
-            'is_active' => true,
-            'email_verified_at' => now(),
-        ]);
-        $assistant->roles()->attach($assistantRole->id);
+        // ------------------------------------------
+        // Les autres seeders restent COMMENTÉS
+        // ------------------------------------------
+
+        // // Professor
+        // $professorUser = User::create([...]);
+        // $professorUser->roles()->attach($professorRole->id);
+        // Professor::create([...]);
+
+        // // Student
+        // $studentUser = User::create([...]);
+        // $studentUser->roles()->attach($studentRole->id);
+        // Student::create([...]);
+
+        // // Assistant
+        // $assistant = User::create([...]);
+        // $assistant->roles()->attach($assistantRole->id);
     }
 }
