@@ -31,7 +31,11 @@ class SettingsController extends Controller
                     'role' => 'Assistante Administrative',
                     'bio' => $assistant->bio ?? '',
                     'linkedin' => $assistant->linkedin ?? '',
-                    'avatar' => $user->avatar ? url('storage/' . $user->avatar) : null,
+                    // 'avatar' => $user->avatar ? url('storage/' . $user->avatar) : null,
+                    'avatar' => $user->avatar 
+                    ? url('storage/' . $user->avatar) 
+                    : url('images/default-avatar.png'),
+
                 ],
             ]);
         } catch (\Exception $e) {

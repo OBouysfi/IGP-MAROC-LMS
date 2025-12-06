@@ -11,6 +11,7 @@ class Student extends Model
 
     protected $fillable = [
         'user_id',
+        'group_id',
         'student_code',
         'gender',
         'birth_date',
@@ -51,21 +52,14 @@ class Student extends Model
         return $this->belongsTo(Program::class);
     }
 
+    public function group()
+    {
+        return $this->belongsTo(Group::class, 'group_id');
+    }
+
     public function groups()
     {
         return $this->belongsToMany(Group::class, 'group_student');
-    }
-
-    // Helper method to get the primary/first group
-    public function group()
-    {
-        return $this->groups()->first();
-    }
-
-    // Alternative: Define as an attribute accessor
-    public function getGroupAttribute()
-    {
-        return $this->groups()->first();
     }
 
     public function attendances()

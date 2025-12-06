@@ -98,6 +98,14 @@ class StudentController extends Controller
 
             $user->assignRole('student');
 
+            // Déterminer le group_id principal
+            $groupId = null;
+            if ($request->group_id) {
+                $groupId = $request->group_id;
+            } elseif ($request->group_ids && is_array($request->group_ids) && count($request->group_ids) > 0) {
+                $groupId = $request->group_ids[0]; // Premier groupe
+            }
+
             $student = Student::create([
                 'user_id' => $user->id,
                 'gender' => $request->gender,
@@ -107,13 +115,17 @@ class StudentController extends Controller
                 'enrolled_date' => $request->enrolled_date ?? now(),
                 'filiere_id' => $request->filiere_id,
                 'program_id' => $request->program_id,
+                'group_id' => $groupId, // ← IMPORTANT: Stocker le group_id
                 'level' => $request->level,
                 'inscription_amount' => $request->inscription_amount ?? 0,
                 'monthly_amount' => $request->monthly_amount ?? 0,
             ]);
 
+            // Synchroniser aussi dans la table pivot
             if ($request->group_ids) {
                 $student->groups()->sync($request->group_ids);
+            } elseif ($groupId) {
+                $student->groups()->sync([$groupId]);
             }
 
             DB::commit();
@@ -121,11 +133,12 @@ class StudentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Étudiant créé avec succès',
-                'data' => new StudentResource($student->load(['user', 'filiere', 'program', 'groups']))
+                'data' => new StudentResource($student->load(['user', 'filiere', 'program', 'group', 'groups']))
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Student creation error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la création de l\'étudiant',
