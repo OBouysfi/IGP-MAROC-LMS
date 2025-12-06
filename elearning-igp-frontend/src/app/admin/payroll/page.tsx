@@ -5,9 +5,11 @@ import { payrollsApi, ProfessorPayroll, PayrollStats, PaymentHistory } from '@/l
 import { DollarSign, Clock, Users, CheckCircle, Search, Filter, Eye, Download, X, Calendar, FileText, CreditCard, TrendingUp, Printer } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import Swal from 'sweetalert2';
-import html2pdf from 'html2pdf.js';
+// import html2pdf from 'html2pdf.js';
 import Image from "next/image";
 
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
 export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +26,7 @@ export default function PayrollPage() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const months = ['Janvier', 'FÃ©vrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'AoÃ»t', 'Septembre', 'Octobre', 'Novembre', 'DÃ©cembre'];
   const [selectedMonth, setSelectedMonth] = useState(months[new Date().getMonth()]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
@@ -42,11 +44,11 @@ export default function PayrollPage() {
   });
 
   const contractTypes = ['CDI', 'CDD', 'Vacataire'];
-  const paymentStatuses = ['payé', 'en_attente', 'en_cours'];
+  const paymentStatuses = ['payÃ©', 'en_attente', 'en_cours'];
   const paymentMethods = [
     { value: 'virement', label: 'Virement Bancaire' },
-    { value: 'cheque', label: 'Chèque' },
-    { value: 'especes', label: 'Espèces' },
+    { value: 'cheque', label: 'ChÃ¨que' },
+    { value: 'especes', label: 'EspÃ¨ces' },
   ];
 
   useEffect(() => {
@@ -115,29 +117,33 @@ export default function PayrollPage() {
 
 
   const downloadPDF = () => {
-    const receipt = document.getElementById("receipt");
-    if (!receipt) return;
-
-    const options = {
-      margin: 10,
-      filename: `${paymentToConfirm?.payment_reference || 'recu'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    };
-
-    html2pdf().from(receipt).set(options).save();
-  };
-
+  if (typeof window !== 'undefined') {
+    import('html2pdf.js').then((module) => {
+      const html2pdf = module.default;
+      const receipt = document.getElementById("receipt");
+      if (!receipt) return;
+      
+      const options = {
+        margin: 10,
+        filename: `${paymentToConfirm?.payment_reference || 'recu'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      };
+      
+      html2pdf().from(receipt).set(options).save();
+    });
+  }
+};
   const handleGeneratePayrolls = async () => {
     const result = await Swal.fire({
-      title: 'Générer les fiches de paie',
-      text: `Voulez-vous générer les fiches de paie pour ${selectedMonth} ${selectedYear} ?`,
+      title: 'GÃ©nÃ©rer les fiches de paie',
+      text: `Voulez-vous gÃ©nÃ©rer les fiches de paie pour ${selectedMonth} ${selectedYear} ?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#0D529C',
       cancelButtonColor: '#6B7280',
-      confirmButtonText: 'Générer',
+      confirmButtonText: 'GÃ©nÃ©rer',
       cancelButtonText: 'Annuler',
     });
 
@@ -147,8 +153,8 @@ export default function PayrollPage() {
       await payrollsApi.generate(getMonthNumber(selectedMonth), parseInt(selectedYear));
       Swal.fire({
         icon: 'success',
-        title: 'Succès',
-        text: 'Fiches de paie générées avec succès',
+        title: 'SuccÃ¨s',
+        text: 'Fiches de paie gÃ©nÃ©rÃ©es avec succÃ¨s',
         confirmButtonColor: '#0D529C',
         timer: 2000,
       });
@@ -158,7 +164,7 @@ export default function PayrollPage() {
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
-        text: error.response?.data?.message || 'Impossible de générer les fiches',
+        text: error.response?.data?.message || 'Impossible de gÃ©nÃ©rer les fiches',
         confirmButtonColor: '#0D529C',
       });
     }
@@ -183,8 +189,8 @@ export default function PayrollPage() {
       
       Swal.fire({
         icon: 'success',
-        title: 'Succès',
-        text: 'Paiement confirmé avec succès',
+        title: 'SuccÃ¨s',
+        text: 'Paiement confirmÃ© avec succÃ¨s',
         confirmButtonColor: '#0D529C',
         timer: 2000,
       });
@@ -228,8 +234,8 @@ export default function PayrollPage() {
       
       Swal.fire({
         icon: 'success',
-        title: 'Succès',
-        text: `${selectedForPayment.length} paiements confirmés`,
+        title: 'SuccÃ¨s',
+        text: `${selectedForPayment.length} paiements confirmÃ©s`,
         confirmButtonColor: '#0D529C',
         timer: 2000,
       });
@@ -275,7 +281,7 @@ export default function PayrollPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'payé': return 'bg-[#257035] text-white';
+      case 'payÃ©': return 'bg-[#257035] text-white';
       case 'en_attente': return 'bg-orange-500 text-white';
       case 'en_cours': return 'bg-[#0D529C] text-white';
       default: return 'bg-gray-500 text-white';
@@ -284,7 +290,7 @@ export default function PayrollPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'payé': return 'Payé';
+      case 'payÃ©': return 'PayÃ©';
       case 'en_attente': return 'En attente';
       case 'en_cours': return 'En cours';
       default: return status;
@@ -301,7 +307,7 @@ export default function PayrollPage() {
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Paie des Professeurs</h1>
-          <p className="text-gray-500">Gérez les paiements et les fiches de paie des enseignants.</p>
+          <p className="text-gray-500">GÃ©rez les paiements et les fiches de paie des enseignants.</p>
         </div>
 
         {/* Stats Grid */}
@@ -313,7 +319,7 @@ export default function PayrollPage() {
                   <DollarSign className="w-5 h-5 text-[#0D529C]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Total à Payer</p>
+                  <p className="text-xs text-gray-500">Total Ã  Payer</p>
                   <p className="text-lg font-bold text-[#0D529C]">{(stats.total_to_pay / 1000).toFixed(0)}K MAD</p>
                 </div>
               </div>
@@ -349,7 +355,7 @@ export default function PayrollPage() {
                   <CheckCircle className="w-5 h-5 text-[#257035]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Payés</p>
+                  <p className="text-xs text-gray-500">PayÃ©s</p>
                   <p className="text-lg font-bold text-[#257035]">{stats.paid_count}</p>
                 </div>
               </div>
@@ -430,7 +436,7 @@ export default function PayrollPage() {
                       className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <FileText className="w-4 h-4" />
-                      Générer Fiches
+                      GÃ©nÃ©rer Fiches
                     </button>
                     {selectedForPayment.length > 0 && (
                       <button
@@ -438,7 +444,7 @@ export default function PayrollPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors"
                       >
                         <CheckCircle className="w-4 h-4" />
-                        Payer Sélectionnés ({selectedForPayment.length})
+                        Payer SÃ©lectionnÃ©s ({selectedForPayment.length})
                       </button>
                     )}
                     <button className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors">
@@ -453,8 +459,8 @@ export default function PayrollPage() {
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-orange-800">{selectedForPayment.length} professeur(s) sélectionné(s)</p>
-                        <p className="text-sm text-orange-600">Total à payer: <span className="font-bold">{selectedTotal.toLocaleString()} MAD</span></p>
+                        <p className="font-medium text-orange-800">{selectedForPayment.length} professeur(s) sÃ©lectionnÃ©(s)</p>
+                        <p className="text-sm text-orange-600">Total Ã  payer: <span className="font-bold">{selectedTotal.toLocaleString()} MAD</span></p>
                       </div>
                       <button
                         onClick={() => setSelectedForPayment([])}
@@ -472,7 +478,7 @@ export default function PayrollPage() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                       type="text"
-                      placeholder="Rechercher par nom, département..."
+                      placeholder="Rechercher par nom, dÃ©partement..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
@@ -493,20 +499,20 @@ export default function PayrollPage() {
                 {showFilters && (
                   <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-medium text-gray-700">Filtres avancés</h3>
+                      <h3 className="font-medium text-gray-700">Filtres avancÃ©s</h3>
                       <button onClick={resetFilters} className="text-sm text-[#C1272D] hover:underline">
-                        Réinitialiser
+                        RÃ©initialiser
                       </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Département</label>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">DÃ©partement</label>
                         <select
                           value={filters.department}
                           onChange={(e) => setFilters({ ...filters, department: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                         >
-                          <option value="">Tous les départements</option>
+                          <option value="">Tous les dÃ©partements</option>
                           {departments.map((d) => (
                             <option key={d} value={d}>{d}</option>
                           ))}
@@ -556,10 +562,10 @@ export default function PayrollPage() {
                           />
                         </th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Professeur</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Département</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">DÃ©partement</th>
                         <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Heures</th>
                         <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Taux/h</th>
-                        <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Net à Payer</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Net Ã  Payer</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
                       </tr>
@@ -606,15 +612,15 @@ export default function PayrollPage() {
                             <button
                               onClick={() => setSelectedPayroll(payroll)}
                               className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#C1272D] hover:text-white transition-colors"
-                              title="Voir détails"
+                              title="Voir dÃ©tails"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {payroll.payment_status === 'payé' && (
+                            {payroll.payment_status === 'payÃ©' && (
                               <button
                                 onClick={() => generateReceipt(payroll)}
                                 className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#0D529C] hover:text-white transition-colors ml-1"
-                                title="Générer reçu"
+                                title="GÃ©nÃ©rer reÃ§u"
                               >
                                 <Printer className="w-4 h-4" />
                               </button>
@@ -623,7 +629,7 @@ export default function PayrollPage() {
                               <button
                                 onClick={() => openPaymentModal(payroll)}
                                 className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#257035] hover:text-white transition-colors ml-1"
-                                title="Marquer comme payé"
+                                title="Marquer comme payÃ©"
                               >
                                 <CheckCircle className="w-4 h-4" />
                               </button>
@@ -647,11 +653,11 @@ export default function PayrollPage() {
                       <p className="text-2xl font-bold">{payrolls.reduce((sum, p) => sum + p.gross_salary, 0).toLocaleString()} MAD</p>
                     </div>
                     <div>
-                      <p className="text-blue-200 text-sm">Total Net à Payer</p>
+                      <p className="text-blue-200 text-sm">Total Net Ã  Payer</p>
                       <p className="text-2xl font-bold">{payrolls.reduce((sum, p) => sum + p.net_salary, 0).toLocaleString()} MAD</p>
                     </div>
                     <div>
-                      <p className="text-blue-200 text-sm">Reste à Payer</p>
+                      <p className="text-blue-200 text-sm">Reste Ã  Payer</p>
                       <p className="text-2xl font-bold">{unpaidPayrolls.reduce((sum, p) => sum + p.net_salary, 0).toLocaleString()} MAD</p>
                     </div>
                   </div>
@@ -673,9 +679,9 @@ export default function PayrollPage() {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Référence</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">RÃ©fÃ©rence</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Professeur</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Période</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">PÃ©riode</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Montant</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Date Paiement</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">Actions</th>
@@ -744,7 +750,7 @@ export default function PayrollPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Référence de Paiement *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">RÃ©fÃ©rence de Paiement *</label>
                 <input
                   type="text"
                   required
@@ -755,7 +761,7 @@ export default function PayrollPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Méthode de Paiement *</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">MÃ©thode de Paiement *</label>
                 <select
                   required
                   value={paymentForm.payment_method}
@@ -804,14 +810,14 @@ export default function PayrollPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[#0D529C]">Reçu de Paiement</h2>
+                <h2 className="text-xl font-bold text-[#0D529C]">ReÃ§u de Paiement</h2>
                 <div className="flex gap-2">
                   <button 
                     onClick={downloadPDF}
                     className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
                   >
                     <Download className="w-4 h-4" />
-                    Télécharger PDF
+                    TÃ©lÃ©charger PDF
                   </button>
                   <button onClick={() => setShowReceiptModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                     <X className="w-5 h-5" />
@@ -838,19 +844,19 @@ export default function PayrollPage() {
                     <h1 className="text-2xl font-bold text-[#0D529C]">IGP Maroc</h1>
                     <p className="text-sm text-gray-600">Institut de Gestion et de Perfectionnement</p>
                     <p className="text-xs text-gray-500">123 Boulevard Mohammed V, Casablanca</p>
-                    <p className="text-xs text-gray-500">Tél: +212 5 22 12 34 56 | Email: contact@igp.edu</p>
+                    <p className="text-xs text-gray-500">TÃ©l: +212 5 22 12 34 56 | Email: contact@igp.edu</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-xl font-bold text-gray-800">REÇU DE PAIEMENT</h2>
-                  <p className="text-sm text-gray-600">N°: {paymentToConfirm.payment_reference || paymentForm.payment_reference}</p>
+                  <h2 className="text-xl font-bold text-gray-800">REÃ‡U DE PAIEMENT</h2>
+                  <p className="text-sm text-gray-600">NÂ°: {paymentToConfirm.payment_reference || paymentForm.payment_reference}</p>
                   <p className="text-sm text-gray-600">Date: {new Date(paymentToConfirm.payment_date || paymentForm.payment_date).toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
 
               {/* Beneficiary Info */}
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
-                <h3 className="font-bold text-gray-800 mb-4">BÉNÉFICIAIRE</h3>
+                <h3 className="font-bold text-gray-800 mb-4">BÃ‰NÃ‰FICIAIRE</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Nom Complet</p>
@@ -861,7 +867,7 @@ export default function PayrollPage() {
                     <p className="font-medium">{paymentToConfirm.professor_email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Département</p>
+                    <p className="text-sm text-gray-500">DÃ©partement</p>
                     <p className="font-medium">{paymentToConfirm.department}</p>
                   </div>
                   <div>
@@ -873,12 +879,12 @@ export default function PayrollPage() {
 
               {/* Payment Details */}
               <div className="mb-6">
-                <h3 className="font-bold text-gray-800 mb-4">DÉTAILS DU PAIEMENT - {selectedMonth} {selectedYear}</h3>
+                <h3 className="font-bold text-gray-800 mb-4">DÃ‰TAILS DU PAIEMENT - {selectedMonth} {selectedYear}</h3>
                 <table className="w-full border border-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="text-left py-2 px-4 border-b text-sm">Description</th>
-                      <th className="text-center py-2 px-4 border-b text-sm">Quantité</th>
+                      <th className="text-center py-2 px-4 border-b text-sm">QuantitÃ©</th>
                       <th className="text-right py-2 px-4 border-b text-sm">Taux</th>
                       <th className="text-right py-2 px-4 border-b text-sm">Montant</th>
                     </tr>
@@ -907,18 +913,18 @@ export default function PayrollPage() {
                       <td className="py-3 px-4 text-right font-bold">{paymentToConfirm.hours_worked}h</td>
                     </tr>
                     <tr className="bg-[#0D529C] text-white">
-                      <td colSpan={3} className="py-3 px-4 text-right font-bold">MONTANT NET À PAYER</td>
+                      <td colSpan={3} className="py-3 px-4 text-right font-bold">MONTANT NET Ã€ PAYER</td>
                       <td className="py-3 px-4 text-right font-bold text-lg">{paymentToConfirm.net_salary.toLocaleString()} MAD</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
 
-              {/* Payment Method - ✅ CORRECTION ICI */}
+              {/* Payment Method - âœ… CORRECTION ICI */}
               <div className="bg-green-50 rounded-lg p-4 mb-6">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Méthode de Paiement</p>
+                    <p className="text-sm text-gray-500">MÃ©thode de Paiement</p>
                     <p className="font-medium capitalize">
                       {paymentToConfirm.payment_method 
                         ? paymentMethods.find(m => m.value === paymentToConfirm.payment_method)?.label 
@@ -930,7 +936,7 @@ export default function PayrollPage() {
                     <p className="font-medium">{paymentToConfirm.bank_info || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Référence</p>
+                    <p className="text-sm text-gray-500">RÃ©fÃ©rence</p>
                     <p className="font-medium font-mono">
                       {paymentToConfirm.payment_reference || paymentForm.payment_reference}
                     </p>
@@ -941,7 +947,7 @@ export default function PayrollPage() {
               {/* Signature */}
               <div className="flex justify-between items-end mt-12">
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Reçu par:</p>
+                  <p className="text-sm text-gray-500 mb-2">ReÃ§u par:</p>
                   <div className="border-t border-gray-400 w-48 pt-2">
                     <p className="text-sm font-medium">{paymentToConfirm.professor_name}</p>
                     <p className="text-xs text-gray-500">Signature</p>
@@ -956,7 +962,7 @@ export default function PayrollPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 mb-2">Émis par:</p>
+                  <p className="text-sm text-gray-500 mb-2">Ã‰mis par:</p>
                   <div className="border-t border-gray-400 w-48 pt-2">
                     <p className="text-sm font-medium">Direction Administrative</p>
                     <p className="text-xs text-gray-500">Signature & Cachet</p>
@@ -966,7 +972,7 @@ export default function PayrollPage() {
 
               {/* Footer */}
               <div className="mt-12 pt-6 border-t border-gray-200 text-center">
-                <p className="text-xs text-gray-500">Ce document est un reçu officiel de paiement émis par IGP Maroc.</p>
+                <p className="text-xs text-gray-500">Ce document est un reÃ§u officiel de paiement Ã©mis par IGP Maroc.</p>
                 <p className="text-xs text-gray-500">Pour toute question, contactez: paie@igp.edu | +212 5 22 12 34 56</p>
               </div>
             </div>
@@ -993,7 +999,7 @@ export default function PayrollPage() {
                 <h3 className="text-lg font-bold text-[#0D529C] mb-4">Fiche de Paie - {selectedMonth} {selectedYear}</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b">
-                    <span>Heures Travaillées</span>
+                    <span>Heures TravaillÃ©es</span>
                     <span className="font-medium">{selectedPayroll.hours_worked}h</span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
@@ -1011,14 +1017,14 @@ export default function PayrollPage() {
                     </div>
                   )}
                   <div className="flex justify-between py-3 bg-[#257035] text-white rounded-lg px-4">
-                    <span className="font-bold">NET À PAYER</span>
+                    <span className="font-bold">NET Ã€ PAYER</span>
                     <span className="font-bold text-xl">{selectedPayroll.net_salary.toLocaleString()} MAD</span>
                   </div>
                 </div>
               </div>
 
               <div className="bg-blue-50 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-[#0D529C] mb-4">Détail des Cours</h3>
+                <h3 className="text-lg font-bold text-[#0D529C] mb-4">DÃ©tail des Cours</h3>
                 <table className="w-full bg-white rounded-lg overflow-hidden">
                   <thead className="bg-gray-100">
                     <tr>
@@ -1042,7 +1048,7 @@ export default function PayrollPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                {selectedPayroll.payment_status === 'payé' && (
+                {selectedPayroll.payment_status === 'payÃ©' && (
                   <button
                     onClick={() => {
                       setPaymentToConfirm(selectedPayroll);
@@ -1052,7 +1058,7 @@ export default function PayrollPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700"
                   >
                     <Printer className="w-4 h-4" />
-                    Générer Reçu
+                    GÃ©nÃ©rer ReÃ§u
                   </button>
                 )}
                 {selectedPayroll.payment_status === 'en_attente' && (
@@ -1065,7 +1071,7 @@ export default function PayrollPage() {
                     className="flex items-center gap-2 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Marquer comme Payé
+                    Marquer comme PayÃ©
                   </button>
                 )}
               </div>
