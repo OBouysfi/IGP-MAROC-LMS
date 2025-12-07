@@ -42,12 +42,6 @@ class AdminUserSeeder extends Seeder
                 'email' => 'leila@igp-maroc.com',
                 'phone' => '+212600000002',
             ],
-            [
-                'first_name' => 'Admin',
-                'last_name' => 'Three',
-                'email' => 'admin3@igp-maroc.com',
-                'phone' => '+212600000003',
-            ],
         ];
 
         foreach ($superAdmins as $adminData) {
