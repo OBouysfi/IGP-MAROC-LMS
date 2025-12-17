@@ -54,7 +54,10 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
   const fetchUserProfile = async () => {
     try {
       const response = await studentSettingsApi.getProfile();
-      setUserProfile(response.data.data);
+      setUserProfile({
+        ...response.data.data,
+        avatar: response.data.data.avatar || null
+      });
     } catch (error) {
       console.error('Error fetching profile:', error);
     }

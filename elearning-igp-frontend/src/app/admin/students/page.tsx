@@ -95,9 +95,11 @@ export default function StudentsPage() {
     const [studentsResponse, statsResponse, programsRes, filieresRes, groupsRes] = await Promise.all([
       studentsApi.getAll({
         search: searchTerm,
-        filiere_id: filters.filiere_id,
+        // filiere_id: filters.filiere_id,
+        filiere: filters.filiere_id,
         nationality: filters.nationality,
-        program_id: filters.program_id,
+        // program_id: filters.program_id,
+        program: filters.program_id,
         status: filters.status,
       }),
       studentsApi.getStats(),
@@ -128,9 +130,9 @@ export default function StudentsPage() {
     try {
       const response = await studentsApi.getAll({
         search: searchTerm,
-        filiere_id: filters.filiere_id,
+        filiere: filters.filiere_id,
         nationality: filters.nationality,
-        program_id: filters.program_id,
+        program: filters.program_id,
         status: filters.status,
       });
       
@@ -183,10 +185,10 @@ export default function StudentsPage() {
       birth_date: student.birth_date ? student.birth_date.split('T')[0] : '',
       nationality: student.nationality || '',
       address: student.address || '',
-      filiere_id: student.filiere_id?.toString() || '',
-      program_id: student.program_id?.toString() || '',
+      filiere_id: '',
+      program_id: '',
       level: student.level || '',
-      group_ids: student.group_ids || [],
+      group_ids: [],
       inscription_amount: student.inscription_amount.toString(),
       monthly_amount: student.monthly_amount.toString(),
     });
@@ -483,12 +485,14 @@ export default function StudentsPage() {
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.email}</td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
-                            {student.filiere?.name || '-'}
+                            {/* {student.filiere?.name || '-'} */}
+                            {student.filiere || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
-                            {student.program?.name || '-'}
+                            {/* {student.program?.name || '-'} */}
+                            {student.program || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center">
@@ -1065,13 +1069,15 @@ export default function StudentsPage() {
                   <div>
                     <p className="text-sm text-gray-500">Filière</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white mt-1">
-                      {selectedStudent.filiere?.name || '-'}
+                      {/* {selectedStudent.filiere?.name || '-'} */}
+                      {selectedStudent.filiere || '-'}
                     </span>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Programme</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white mt-1">
-                      {selectedStudent.program?.name || '-'}
+                      {/* {selectedStudent.program?.name || '-'} */}
+                      {selectedStudent.program || '-'}
                     </span>
                   </div>
                   <div>
@@ -1080,17 +1086,7 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Groupe</p>
-                    {selectedStudent.groups && selectedStudent.groups.length > 0 ? (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedStudent.groups.map((group: any) => (
-                          <span key={group.id} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white">
-                            {group.name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="font-medium">-</p>
-                    )}
+                    <p className="font-medium">{selectedStudent.group || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Statut Étudiant</p>

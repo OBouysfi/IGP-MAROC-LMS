@@ -35,7 +35,7 @@ const handleLogin = async (e: React.FormEvent) => {
     const response = await authApi.login({
       email: formData.email,
       password: formData.password,
-      role: formData.role as 'student' | 'professor' | 'assistant',
+      // role: formData.role as 'student' | 'professor' | 'assistant',
     });
 
     // ========== SI 2FA EST REQUIS ==========
@@ -46,11 +46,11 @@ const handleLogin = async (e: React.FormEvent) => {
 
     // ========== SI PAS DE 2FA → CONNEXION DIRECTE ==========
     // Stocker le token et les infos user
-    localStorage.setItem('token', response.token);
+    localStorage.setItem('token', response.token || '');
     localStorage.setItem('user', JSON.stringify(response.user));
 
     // Rediriger selon le rôle
-    const role = response.user.role;
+  const role = response.user?.role;
     if (role === 'admin') {
       router.push('/admin/dashboard');
     } else if (role === 'professor') {

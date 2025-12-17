@@ -21,7 +21,7 @@ export default function GroupsPage() {
   const [filieres, setFilieres] = useState<any[]>([]);
   const levels = ['1ère année', '2ème année', '3ème année', 'Master 1', 'Master 2'];
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: '',
     code: '',
     program_id: '',
@@ -172,7 +172,8 @@ export default function GroupsPage() {
       code: group.code,
       // program_id: group.program_id?.toString() || '',
       program_id: group.program?.toString() || '',
-      filiere_id: group.filiere_id?.toString() || '',
+      // filiere_id: group.filiere_id?.toString() || '',
+      filiere_id: group.filiere?.toString() || '',
       level: group.level,
       max_students: group.max_students,
       delegate: group.delegate || '',

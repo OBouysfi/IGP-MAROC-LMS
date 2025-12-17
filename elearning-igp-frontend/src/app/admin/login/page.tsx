@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
         router.push(`${ROUTES.VERIFY_2FA}?email=${encodeURIComponent(formData.email)}&redirect=admin`);
       } else {
         // Si 2FA désactivé, connexion directe
-        localStorage.setItem('auth_token', response.token);
+        localStorage.setItem('auth_token', response.token || '');
         localStorage.setItem('user', JSON.stringify(response.user));
         router.push('/admin/dashboard');
       }

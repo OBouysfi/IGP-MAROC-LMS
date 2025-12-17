@@ -126,9 +126,9 @@ export default function PayrollPage() {
       const options = {
         margin: 10,
         filename: `${paymentToConfirm?.payment_reference || 'recu'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
       };
       
       html2pdf().from(receipt).set(options).save();
@@ -616,7 +616,7 @@ export default function PayrollPage() {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
-                            {payroll.payment_status === 'payÃ©' && (
+                              {payroll.payment_status === 'payé' && (
                               <button
                                 onClick={() => generateReceipt(payroll)}
                                 className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-black hover:bg-[#0D529C] hover:text-white transition-colors ml-1"
@@ -1048,7 +1048,7 @@ export default function PayrollPage() {
               </div>
 
               <div className="flex justify-end gap-2">
-                {selectedPayroll.payment_status === 'payÃ©' && (
+                {selectedPayroll.payment_status === 'payé' && (
                   <button
                     onClick={() => {
                       setPaymentToConfirm(selectedPayroll);

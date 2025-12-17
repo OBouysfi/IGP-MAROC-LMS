@@ -136,6 +136,6 @@ export const settingsApi = {
   getLoginAttempts: () => axiosInstance.get('/admin/settings/login-attempts'),
 
   // Locked Users
-  getLockedUsers: () => axiosInstance.get('/admin/settings/locked-users'),
-  unlockUser: (id: number) => axiosInstance.post(`/admin/settings/users/${id}/unlock`),
+  // getLoginLogs: () => axiosInstance.get('/admin/settings/login-logs'),
+  // getLoginAttempts: () => axiosInstance.get('/admin/settings/login-attempts'),
 };
