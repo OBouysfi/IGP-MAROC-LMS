@@ -485,14 +485,12 @@ export default function StudentsPage() {
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.email}</td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
-                            {/* {student.filiere?.name || '-'} */}
-                            {student.filiere || '-'}
+                            {typeof student.filiere === 'object' ? student.filiere?.name : student.filiere || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
-                            {/* {student.program?.name || '-'} */}
-                            {student.program || '-'}
+                            {typeof student.program === 'object' ? student.program?.name : student.program || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center">
@@ -1069,8 +1067,7 @@ export default function StudentsPage() {
                   <div>
                     <p className="text-sm text-gray-500">Filière</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white mt-1">
-                      {/* {selectedStudent.filiere?.name || '-'} */}
-                      {selectedStudent.filiere || '-'}
+                      {typeof selectedStudent.filiere === 'object' ? selectedStudent.filiere?.name : selectedStudent.filiere || '-'}
                     </span>
                   </div>
                   <div>
