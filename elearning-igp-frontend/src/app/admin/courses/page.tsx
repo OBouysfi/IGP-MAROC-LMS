@@ -222,10 +222,10 @@ const handleEditClick = (course: Course) => {
     hours_completed: course.hours_completed.toString(),
     start_date: course.start_date ? course.start_date.split('T')[0] : '',
     end_date: course.end_date ? course.end_date.split('T')[0] : '',
-    schedule: Array.isArray(course.schedule) ? course.schedule : [], // ← FIX ICI
+    schedule: Array.isArray(course.schedule) ? course.schedule : [],
     status: course.status || 'À venir',
-    materials: Array.isArray(course.materials) ? course.materials : [], // ← FIX ICI
-    credits: course.credits.toString(),
+    materials: Array.isArray(course.materials) ? course.materials : [],
+    credits: course.credits?.toString() || '0', // Added null check
   });
   setEditScheduleInput({ day: '', time: '', room: '' });
   setEditMaterialInput('');
@@ -575,18 +575,18 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-gray-600 text-sm">
-                        {course.professor ? course.professor.name : '-'}
+                        {course.professor?.name || '-'}
                       </td>
                       <td className="py-4 px-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white w-fit">
-                              {typeof course.program === 'object' ? course.program.name : course.program || '-'}
-                            </span>
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white w-fit">
-                              {typeof course.filiere === 'object' ? course.filiere.name : course.filiere || '-'}
-                            </span>
-                          </div>
-                        </td>
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white w-fit">
+                            {typeof course.program === 'object' ? course.program?.name : course.program || '-'}
+                          </span>
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white w-fit">
+                            {typeof course.filiere === 'object' ? course.filiere?.name : course.filiere || '-'}
+                          </span>
+                        </div>
+                      </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-gray-400" />
@@ -597,12 +597,12 @@ const handleUpdateCourse = async (e: React.FormEvent) => {
                         <div className="w-full">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-500">{course.hours_completed}h/{course.hours_total}h</span>
-                            <span className="text-xs font-medium">{course.completion_rate}%</span>
+                            <span className="text-xs font-medium">{course.completion_rate || 0}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className="bg-[#257035] h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${course.completion_rate}%` }}
+                              style={{ width: `${course.completion_rate || 0}%` }}
                             />
                           </div>
                         </div>
