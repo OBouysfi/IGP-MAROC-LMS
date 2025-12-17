@@ -13,6 +13,7 @@ export interface Document {
 
 export interface StudentDossier {
   id: number;
+  student_id: number;
   student_name: string;
   student_email: string;
   program: string;

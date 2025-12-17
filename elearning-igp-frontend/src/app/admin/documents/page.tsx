@@ -728,7 +728,7 @@ export default function DocumentsPage() {
                 >
                   <option value={0}>Sélectionner un étudiant</option>
                   {dossiers.map((d) => (
-                    <option key={d.id} value={d.student_id}>{d.student_name} - {d.group}</option>
+                    <option key={d.id} value={d.id}>{d.student_name} - {d.group}</option>
                   ))}
                 </select>
               </div>
