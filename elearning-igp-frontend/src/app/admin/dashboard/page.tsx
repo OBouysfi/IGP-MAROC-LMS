@@ -66,7 +66,7 @@ export default function DashboardPage() {
     <AdminLayout>
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Tableau de Bord Admin</h1>
+        <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Tableau de Bord Admin test</h1>
         <p className="text-gray-500">Bienvenue ! Voici un aperçu de votre système.</p>
       </div>
 
