@@ -170,7 +170,8 @@ export default function GroupsPage() {
     setFormData({
       name: group.name,
       code: group.code,
-      program_id: group.program_id?.toString() || '',
+      // program_id: group.program_id?.toString() || '',
+      program_id: group.program?.toString() || '',
       filiere_id: group.filiere_id?.toString() || '',
       level: group.level,
       max_students: group.max_students,
