@@ -483,12 +483,12 @@ export default function StudentsPage() {
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.email}</td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
-                            {typeof student.filiere === 'object' ? student.filiere?.name : student.filiere || '-'}
+                            {student.filiere?.name || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
-                            {typeof student.program === 'object' ? student.program?.name : student.program || '-'}
+                            {student.program?.name || '-'}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center">
@@ -1062,13 +1062,13 @@ export default function StudentsPage() {
                   <div>
                     <p className="text-sm text-gray-500">Filière</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white mt-1">
-                      {typeof selectedStudent.filiere === 'object' ? selectedStudent.filiere?.name : selectedStudent.filiere || '-'}
+                      {selectedStudent.filiere?.name || '-'}
                     </span>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Programme</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white mt-1">
-                      {typeof selectedStudent.program === 'object' ? selectedStudent.program?.name : selectedStudent.program || '-'}
+                      {selectedStudent.program?.name || '-'}
                     </span>
                   </div>
                   <div>
@@ -1077,7 +1077,7 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Groupe</p>
-                    <p className="font-medium">{typeof selectedStudent.group === 'object' ? selectedStudent.group?.name : selectedStudent.group || '-'}</p>
+                    <p className="font-medium">{selectedStudent.group?.name || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Statut Étudiant</p>
