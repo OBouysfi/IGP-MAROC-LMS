@@ -497,7 +497,7 @@ export default function ProfessorsPage() {
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom Complet</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Téléphone</th>
+                    {/* <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Téléphone</th> */}
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Département</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Contrat</th>
@@ -514,7 +514,7 @@ export default function ProfessorsPage() {
                         <td className="py-4 px-4 font-medium text-gray-900 text-sm">
                           {professor.user.first_name} {professor.user.last_name}
                         </td>
-                        <td className="py-4 px-4 text-gray-600 text-sm">{professor.user.phone || '-'}</td>
+                        {/* <td className="py-4 px-4 text-gray-600 text-sm">{professor.user.phone || '-'}</td> */}
                         <td className="py-4 px-4 text-gray-600 text-sm">{professor.user.email}</td>
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">
