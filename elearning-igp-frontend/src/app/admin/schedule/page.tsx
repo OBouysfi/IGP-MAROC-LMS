@@ -20,13 +20,24 @@ export default function SchedulePage() {
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null);
   const [selectedProfessor, setSelectedProfessor] = useState<number | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>('');
-  const [currentWeek, setCurrentWeek] = useState('11-15 Nov 2024');
-  
+  const [currentWeek, setCurrentWeek] = useState(() => {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 5);
+    
+    const formatDate = (date: Date) => {
+      return `${date.getDate()} ${date.toLocaleDateString('fr-FR', { month: 'short' })} ${date.getFullYear()}`;
+    };
+    
+    return `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+  });  
   const [showModal, setShowModal] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleSlot | null>(null);
 
   const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-  const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+  const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00','19:00','20:00','21:00','22:00'];
 
   const [formData, setFormData] = useState({
     course_id: 0,
@@ -46,8 +57,28 @@ export default function SchedulePage() {
   }, []);
 
   useEffect(() => {
-    fetchSchedules();
-  }, [viewType, selectedGroup, selectedProfessor, selectedRoom]);
+    if (!loading && (selectedGroup || selectedProfessor || selectedRoom)) {
+      fetchSchedules();
+    }
+  }, [viewType, selectedGroup, selectedProfessor, selectedRoom, currentWeek]);
+
+  const getWeekDates = () => {
+    const [start] = currentWeek.split(' - ');
+    const parts = start.split(' ');
+    const day = parseInt(parts[0]);
+    const months: any = { 'jan.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11 };
+    const month = months[parts[1]];
+    const year = parseInt(parts[2]);
+    
+    const startDate = new Date(year, month, day);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 5);
+    
+    return {
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0]
+    };
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -65,15 +96,25 @@ export default function SchedulePage() {
       setCourses(coursesRes.data.data);
       setStats(statsRes.data);
       
+      let defaultGroup = null;
+      let defaultProf = null;
+      let defaultRoom = '';
+      
       if (groupsRes.data.data.length > 0) {
-        setSelectedGroup(groupsRes.data.data[0].id);
+        defaultGroup = groupsRes.data.data[0].id;
+        setSelectedGroup(defaultGroup);
       }
       if (professorsRes.data.data.length > 0) {
-        setSelectedProfessor(professorsRes.data.data[0].id);
+        defaultProf = professorsRes.data.data[0].id;
+        setSelectedProfessor(defaultProf);
       }
       if (roomsRes.data.data.length > 0) {
-        setSelectedRoom(roomsRes.data.data[0]);
+        defaultRoom = roomsRes.data.data[0];
+        setSelectedRoom(defaultRoom);
       }
+      
+      await fetchSchedulesWithFilters(viewType, defaultGroup, defaultProf, defaultRoom);
+      
     } catch (error) {
       console.error('Error fetching initial data:', error);
       Swal.fire({
@@ -85,33 +126,67 @@ export default function SchedulePage() {
     }
   };
 
-  const fetchSchedules = async () => {
+  const fetchSchedulesWithFilters = async (
+    view: 'group' | 'professor' | 'room',
+    groupId: number | null,
+    profId: number | null,
+    room: string
+  ) => {
     try {
       setLoading(true);
       const filters: any = {};
       
-      if (viewType === 'group' && selectedGroup) {
-        filters.group_id = selectedGroup;
-      } else if (viewType === 'professor' && selectedProfessor) {
-        filters.professor_id = selectedProfessor;
-      } else if (viewType === 'room' && selectedRoom) {
-        filters.room = selectedRoom;
+      if (view === 'group' && groupId) {
+        filters.group_id = groupId;
+      } else if (view === 'professor' && profId) {
+        filters.professor_id = profId;
+      } else if (view === 'room' && room) {
+        filters.room = room;
       }
       
+      const weekDates = getWeekDates();
+      filters.start_date = weekDates.start;
+      filters.end_date = weekDates.end;
+      
       const response = await schedulesApi.getAll(filters);
-      setSchedules(response.data.data);
+      setSchedules(response.data.data || []);
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      setSchedules([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchSchedules = () => {
+    fetchSchedulesWithFilters(viewType, selectedGroup, selectedProfessor, selectedRoom);
+  };
+
+  const changeWeek = (direction: 'prev' | 'next') => {
+    const [start] = currentWeek.split(' - ');
+    const parts = start.split(' ');
+    const day = parseInt(parts[0]);
+    const months: any = { 'jan.': 0, 'févr.': 1, 'mars': 2, 'avr.': 3, 'mai': 4, 'juin': 5, 'juil.': 6, 'août': 7, 'sept.': 8, 'oct.': 9, 'nov.': 10, 'déc.': 11 };
+    const month = months[parts[1]];
+    const year = parseInt(parts[2]);
+    
+    const currentDate = new Date(year, month, day);
+    currentDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+    
+    const endDate = new Date(currentDate);
+    endDate.setDate(currentDate.getDate() + 5);
+    
+    const formatDate = (date: Date) => {
+      return `${date.getDate()} ${date.toLocaleDateString('fr-FR', { month: 'short' })} ${date.getFullYear()}`;
+    };
+    
+    setCurrentWeek(`${formatDate(currentDate)} - ${formatDate(endDate)}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      // Check conflicts
       const conflictCheck = await schedulesApi.checkConflicts({
         ...formData,
         schedule_id: selectedSchedule?.id
@@ -282,10 +357,8 @@ export default function SchedulePage() {
           <p className="text-gray-500">Consultez et gérez les plannings des cours.</p>
         </div>
 
-        {/* Controls */}
         <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* View Type Selector */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setViewType('group')}
@@ -316,7 +389,6 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            {/* Filters */}
             <div className="flex items-center gap-4">
               {viewType === 'group' && groups.length > 0 && (
                 <select
@@ -362,22 +434,20 @@ export default function SchedulePage() {
             </div>
           </div>
 
-          {/* Week Navigation */}
           <div className="flex items-center justify-center gap-4 mt-6">
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={() => changeWeek('prev')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-[#0D529C]" />
               <span className="font-medium text-gray-700">{currentWeek}</span>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <button onClick={() => changeWeek('next')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Schedule Grid */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -477,7 +547,6 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="bg-white rounded-lg p-4 shadow-sm mt-6">
           <h3 className="font-medium text-gray-700 mb-3">Légende</h3>
           <div className="flex flex-wrap items-center gap-6">
@@ -500,7 +569,6 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
             <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -540,7 +608,6 @@ export default function SchedulePage() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
