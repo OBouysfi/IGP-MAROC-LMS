@@ -75,6 +75,8 @@ export default function ProfessorsPage() {
     'PME / Entrepreneuriat',
     'E-Business',
     'Management Stratégique et Économique',
+    'Communication Anglais',
+    'Communication Français'
   ];
   
   const nationalities = [
