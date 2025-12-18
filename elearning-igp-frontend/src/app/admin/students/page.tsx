@@ -464,7 +464,7 @@ export default function StudentsPage() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Nom Complet</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Téléphone</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Email</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Filière</th>
+                    {/* <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Filière</th> */}
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Programme</th>
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Statut</th>
                     <th className="text-center py-3 px-4 text-sm font-medium text-gray-500">Activer/désactiver</th>
@@ -481,11 +481,11 @@ export default function StudentsPage() {
                         </td>
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.phone || '-'}</td>
                         <td className="py-4 px-4 text-gray-600 text-sm">{student.user.email}</td>
-                        <td className="py-4 px-4">
+                        {/* <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-purple-500 text-white">
                             {student.filiere?.name || '-'}
                           </span>
-                        </td>
+                        </td> */}
                         <td className="py-4 px-4">
                           <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white">
                             {student.program?.name || '-'}
