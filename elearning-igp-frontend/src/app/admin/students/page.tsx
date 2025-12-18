@@ -88,43 +88,41 @@ export default function StudentsPage() {
     if (!loading) fetchStudents();
   }, [searchTerm, filters]);
 
- const fetchInitialData = async () => {
-  try {
-    setLoading(true);
-    
-    const [studentsResponse, statsResponse, programsRes, filieresRes, groupsRes] = await Promise.all([
-      studentsApi.getAll({
-        search: searchTerm,
-        // filiere_id: filters.filiere_id,
-        filiere: filters.filiere_id,
-        nationality: filters.nationality,
-        // program_id: filters.program_id,
-        program: filters.program_id,
-        status: filters.status,
-      }),
-      studentsApi.getStats(),
-      programsApi.getAll(),
-      filieresApi.getAll(),
-      groupsApi.getAll(),
-    ]);
-    
-    setStudents(studentsResponse.data.data || studentsResponse.data || []);
-    setStats(statsResponse.data.data || statsResponse.data);
-    setPrograms(programsRes.data.data || []);
-    setFilieres(filieresRes.data.data || []);
-    setGroups(groupsRes.data.data || []); // ✅ Change ici
-    
-  } catch (error) {
-    console.error('Erreur:', error);
-    Swal.fire({
-      icon: 'error',
-      title: 'Erreur',
-      text: 'Impossible de charger les données',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      
+      const [studentsResponse, statsResponse, programsRes, filieresRes, groupsRes] = await Promise.all([
+        studentsApi.getAll({
+          search: searchTerm,
+          filiere: filters.filiere_id,
+          nationality: filters.nationality,
+          program: filters.program_id,
+          status: filters.status,
+        }),
+        studentsApi.getStats(),
+        programsApi.getAll(),
+        filieresApi.getAll(),
+        groupsApi.getAll(),
+      ]);
+      
+      setStudents(studentsResponse.data.data || studentsResponse.data || []);
+      setStats(statsResponse.data.data || statsResponse.data);
+      setPrograms(programsRes.data.data || []);
+      setFilieres(filieresRes.data.data || []);
+      setGroups(groupsRes.data.data || []);
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: 'Impossible de charger les données',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchStudents = async () => {
     try {
@@ -402,7 +400,7 @@ export default function StudentsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Toutes les filières</option>
-                    {filieres.map((f) => (
+                    {filieres?.filter(f => f && f.id && f.name).map((f) => (
                       <option key={f.id} value={f.id}>{f.name}</option>
                     ))}
                   </select>
@@ -428,7 +426,7 @@ export default function StudentsPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                   >
                     <option value="">Tous les programmes</option>
-                    {programs.map((p) => (
+                    {programs?.filter(p => p && p.id && p.name).map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
@@ -551,7 +549,6 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Add Modal - Continue dans le prochain message car trop long */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -679,7 +676,7 @@ export default function StudentsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
-                      {filieres.map((f) => (
+                      {filieres?.filter(f => f && f.id && f.name).map((f) => (
                         <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
@@ -692,7 +689,7 @@ export default function StudentsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
-                      {programs.map((p) => (
+                      {programs?.filter(p => p && p.id && p.name).map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
@@ -770,7 +767,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Edit Student Modal */}
       {editStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -881,7 +877,7 @@ export default function StudentsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
-                      {filieres.map((f) => (
+                      {filieres?.filter(f => f && f.id && f.name).map((f) => (
                         <option key={f.id} value={f.id}>{f.name}</option>
                       ))}
                     </select>
@@ -894,7 +890,7 @@ export default function StudentsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0D529C] focus:border-transparent"
                     >
                       <option value="">Sélectionner</option>
-                      {programs.map((p) => (
+                      {programs?.filter(p => p && p.id && p.name).map((p) => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
                     </select>
@@ -972,7 +968,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Student Detail Modal */}
       {selectedStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -1073,8 +1068,7 @@ export default function StudentsPage() {
                   <div>
                     <p className="text-sm text-gray-500">Programme</p>
                     <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-[#0D529C] text-white mt-1">
-                      {/* {selectedStudent.program?.name || '-'} */}
-                      {selectedStudent.program || '-'}
+                      {typeof selectedStudent.program === 'object' ? selectedStudent.program?.name : selectedStudent.program || '-'}
                     </span>
                   </div>
                   <div>
@@ -1083,7 +1077,7 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Groupe</p>
-                    <p className="font-medium">{selectedStudent.group || '-'}</p>
+                    <p className="font-medium">{typeof selectedStudent.group === 'object' ? selectedStudent.group?.name : selectedStudent.group || '-'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Statut Étudiant</p>
@@ -1120,8 +1114,8 @@ export default function StudentsPage() {
                     <p className="text-sm text-gray-500">Documents Fournis</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {selectedStudent.documents && selectedStudent.documents.length > 0 ? (
-                        selectedStudent.documents.map((doc: string) => (
-                          <span key={doc} className="inline-flex px-2 py-1 text-xs bg-gray-200 rounded">
+                        selectedStudent.documents.map((doc: string, idx: number) => (
+                          <span key={idx} className="inline-flex px-2 py-1 text-xs bg-gray-200 rounded">
                             {doc}
                           </span>
                         ))
