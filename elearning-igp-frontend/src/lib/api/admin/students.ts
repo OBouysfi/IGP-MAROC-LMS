@@ -9,10 +9,10 @@ export interface Student {
   nationality: string | null;
   address: string | null;
   enrolled_date: string | null;
-  filiere: string | null;
-  program: string | null;
+  filiere: { id: number; name: string } | null;
+  program: { id: number; name: string } | null;
+  group: { id: number; name: string } | null;
   level: string | null;
-  group: string | null;
   dossier_status: string;
   documents: string[] | null;
   admin_comments: string | null;
