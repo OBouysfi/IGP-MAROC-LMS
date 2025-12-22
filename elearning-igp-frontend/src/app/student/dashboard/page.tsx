@@ -128,18 +128,6 @@ export default function StudentDashboard() {
 
           <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-[#C1272D]" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Travaux en attente</p>
-                <p className="text-xl font-bold text-[#C1272D]">{stats.pending_assignments}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-teal-500" />
               </div>
