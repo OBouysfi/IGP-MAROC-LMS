@@ -20,21 +20,38 @@ export default function StudentSchedulePage() {
   }, []);
 
   const fetchSchedule = async () => {
-    try {
-      const data = await studentScheduleApi.getAll();
-      setSchedule(data);
-    } catch (error) {
-      console.error('❌ Erreur chargement emploi du temps:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Erreur',
-        text: 'Impossible de charger l\'emploi du temps',
-        confirmButtonColor: '#C1272D',
-      });
-    } finally {
-      setLoading(false);
+  try {
+    const response = await studentScheduleApi.getAll();
+    
+    let scheduleData;
+    
+    if (Array.isArray(response)) {
+      scheduleData = response;
+    } else if (response.data && Array.isArray(response.data)) {
+      scheduleData = response.data;
+    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      // Si c'est { data: { data: [...] } }
+      scheduleData = response.data.data;
+    } else {
+      console.error('❌ Structure de réponse inconnue:', response);
+      scheduleData = [];
     }
-  };
+    
+    console.log('✅ Schedule final (tableau):', scheduleData);
+    setSchedule(scheduleData);
+    
+  } catch (error) {
+    console.error('❌ Erreur chargement emploi du temps:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Erreur',
+      text: 'Impossible de charger l\'emploi du temps',
+      confirmButtonColor: '#C1272D',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getWeekDates = (weekOffset: number) => {
     const today = new Date();
@@ -163,12 +180,6 @@ export default function StudentSchedulePage() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
             <p className="text-yellow-800 font-medium">⚠️ Aucun emploi du temps trouvé</p>
             <p className="text-yellow-600 text-sm mt-2">Vérifiez que vous êtes assigné à un groupe.</p>
-            <button 
-              onClick={fetchSchedule}
-              className="mt-4 px-4 py-2 bg-[#257035] text-white rounded-lg hover:bg-[#1d5729]"
-            >
-              Réessayer
-            </button>
           </div>
         </div>
       </StudentLayout>
