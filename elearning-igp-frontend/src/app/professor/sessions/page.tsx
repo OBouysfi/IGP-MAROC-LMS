@@ -32,12 +32,14 @@ export default function ProfessorSessionsPage() {
     chat_enabled: true,
   });
 
-  useEffect(() => {
+useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    fetchSessions();
+    if (!loading) {
+      fetchSessions();
+    }
   }, [filterCourse, filterStatus]);
 
   const fetchData = async () => {
@@ -48,15 +50,15 @@ export default function ProfessorSessionsPage() {
         professorSessionsApi.getStats(),
         professorSessionsApi.getMyCourses(),
       ]);
-      setSessions(sessionsRes.data.data);
-      setStats(statsRes.data.data);
-      setMyCourses(coursesRes.data.data);
-    } catch (error) {
+      setSessions(sessionsRes.data.data || []);
+      setStats(statsRes.data.data || null);
+      setMyCourses(coursesRes.data.data || []);
+    } catch (error: any) {
       console.error('Error fetching data:', error);
       Swal.fire({
         icon: 'error',
         title: 'Erreur',
-        text: 'Erreur lors du chargement des données',
+        text: error.response?.data?.message || 'Erreur lors du chargement des données',
         confirmButtonColor: '#0D529C',
       });
     } finally {
@@ -70,12 +72,17 @@ export default function ProfessorSessionsPage() {
         course: filterCourse, 
         status: filterStatus 
       });
-      setSessions(sessionsRes.data.data);
-    } catch (error) {
+      setSessions(sessionsRes.data.data || []);
+    } catch (error: any) {
       console.error('Error fetching sessions:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors du chargement des sessions',
+        confirmButtonColor: '#0D529C',
+      });
     }
   };
-
   const handleCreateSession = async () => {
     if (!newSession.title || !newSession.course_id || !newSession.session_date || !newSession.start_time) {
       Swal.fire({
