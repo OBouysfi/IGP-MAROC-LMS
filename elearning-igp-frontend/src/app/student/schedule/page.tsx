@@ -23,21 +23,24 @@ export default function StudentSchedulePage() {
   try {
     const response = await studentScheduleApi.getAll();
     
-    let scheduleData;
+    let scheduleData: StudentSchedule[] = [];
     
     if (Array.isArray(response)) {
+      // Si c'est directement un tableau
       scheduleData = response;
-    } else if (response.data && Array.isArray(response.data)) {
-      scheduleData = response.data;
-    } else if (response.data?.data && Array.isArray(response.data.data)) {
-      // Si c'est { data: { data: [...] } }
-      scheduleData = response.data.data;
-    } else {
-      console.error('❌ Structure de réponse inconnue:', response);
-      scheduleData = [];
+    } else if (response && typeof response === 'object' && 'data' in response) {
+      // Si c'est un objet avec une propriété 'data'
+      const responseData = (response as any).data;
+      
+      if (Array.isArray(responseData)) {
+        // Si c'est { data: [...] }
+        scheduleData = responseData;
+      } else if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+        // Si c'est { data: { data: [...] } }
+        scheduleData = Array.isArray(responseData.data) ? responseData.data : [];
+      }
     }
     
-    console.log('✅ Schedule final (tableau):', scheduleData);
     setSchedule(scheduleData);
     
   } catch (error) {
