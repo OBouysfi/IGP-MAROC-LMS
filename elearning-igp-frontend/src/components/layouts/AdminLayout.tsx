@@ -42,7 +42,7 @@ const menuItems = [
   { name: 'Planning', icon: Calendar, path: '/admin/schedule' },
   { name: 'Examens', icon: FileText, path: '/admin/exams' },
   { name: 'Absences', icon: UserX, path: '/admin/attendance' },
-  { name: 'Validation Pointages', icon: CheckCircle, path: '/admin/professor-attendance' },
+  // { name: 'Validation Pointages', icon: CheckCircle, path: '/admin/professor-attendance' },
   { name: 'Documents', icon: FolderOpen, path: '/admin/documents' },
   { name: 'Paie', icon: DollarSign, path: '/admin/payroll' },
   // { name: 'Support', icon: MessageSquare, path: '/admin/support' },
