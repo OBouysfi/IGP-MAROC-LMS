@@ -626,12 +626,12 @@ useEffect(() => {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    value={showSessionDetail.room_url}
+                    value={`https://meet.igp-maroc.com/${showSessionDetail.room_url}#config.prejoinPageEnabled=false`}
                     readOnly
                     className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
                   />
                   <button
-                    onClick={() => copyToClipboard(showSessionDetail.room_url)}
+                    onClick={() => copyToClipboard(`https://meet.igp-maroc.com/${showSessionDetail.room_url}#config.prejoinPageEnabled=false`)}
                     className="flex items-center gap-2 px-4 py-2 bg-[#0D529C] text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     {copiedLink ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
