@@ -246,6 +246,7 @@ Route::middleware(['auth:sanctum'])->prefix('professor')->group(function () {
     Route::post('sessions', [App\Http\Controllers\Api\Professor\SessionController::class, 'store']);
     Route::post('sessions/{id}/start', [App\Http\Controllers\Api\Professor\SessionController::class, 'startSession']);
     Route::post('sessions/{id}/end', [App\Http\Controllers\Api\Professor\SessionController::class, 'endSession']);
+    Route::delete('/sessions/{id}', [App\Http\Controllers\Api\Professor\SessionController::class, 'destroy']);
     // Emploi du Temps
     Route::get('schedule/stats', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'stats']);
     Route::get('schedule', [App\Http\Controllers\Api\Professor\ScheduleController::class, 'index']);
@@ -292,6 +293,7 @@ Route::middleware(['auth:sanctum'])->prefix('student')->group(function () {
     // Session live
     Route::get('/sessions', [StudentSessionController::class, 'index']);
     Route::post('/sessions/{id}/join', [StudentSessionController::class, 'join']);
+
     // Mon Emploi du Temps
     Route::get('/schedule', [StudentScheduleController::class, 'index']);
     // Document

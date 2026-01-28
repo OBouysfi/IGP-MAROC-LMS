@@ -143,6 +143,39 @@ useEffect(() => {
     }
   };
 
+ const handleDeleteSession = async (session: Session) => {
+  const result = await Swal.fire({
+    title: 'Confirmer la suppression',
+    text: `Voulez-vous vraiment supprimer "${session.title}" ?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#C1272D',
+    cancelButtonColor: '#6B7280',
+    confirmButtonText: 'Oui, supprimer',
+    cancelButtonText: 'Annuler',
+  });
+
+  if (result.isConfirmed) {
+    try {
+      await professorSessionsApi.deleteSession(session.id);
+      Swal.fire({
+        icon: 'success',
+        title: 'Supprimée',
+        text: 'Session supprimée avec succès',
+        confirmButtonColor: '#0D529C',
+        timer: 2000,
+      });
+      fetchData();
+    } catch (error: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Erreur',
+        text: error.response?.data?.message || 'Erreur lors de la suppression',
+        confirmButtonColor: '#0D529C',
+      });
+    }
+  }
+};
   const startSession = async (session: Session) => {
     try {
       await professorSessionsApi.startSession(session.id);
@@ -369,6 +402,16 @@ useEffect(() => {
               </div>
 
               <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+                {/* 1. Bouton Supprimer (poubelle rouge) */}
+                <button
+                  onClick={() => handleDeleteSession(session)}
+                  className="flex items-center justify-center px-3 py-2 bg-[#C1272D] text-white rounded-lg hover:bg-red-700 transition-colors"
+                  title="Supprimer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* 2. Bouton Détails */}
                 <button
                   onClick={() => setShowSessionDetail(session)}
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm"
@@ -376,6 +419,8 @@ useEffect(() => {
                   <Eye className="w-4 h-4" />
                   Détails
                 </button>
+
+                {/* 3. Boutons d'action selon le statut */}
                 {session.status === 'planifiée' && (
                   <button
                     onClick={() => startSession(session)}
@@ -385,21 +430,20 @@ useEffect(() => {
                     Démarrer
                   </button>
                 )}
+                
                 {session.status === 'en_cours' && (
-                  <button
-                    onClick={() => setShowJoinModal(session)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors text-sm animate-pulse"
-                  >
-                    <Video className="w-4 h-4" />
-                    Rejoindre
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowJoinModal(session)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      <Video className="w-4 h-4" />
+                      Rejoindre
+                    </button>
+                    
+                  </>
                 )}
-                {session.status === 'terminée' && (
-                  <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm">
-                    <CheckCircle className="w-4 h-4" />
-                    Terminée
-                  </button>
-                )}
+                
               </div>
             </div>
           ))}

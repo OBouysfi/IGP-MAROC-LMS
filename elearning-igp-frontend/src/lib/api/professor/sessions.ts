@@ -67,4 +67,7 @@ export const professorSessionsApi = {
   
   endSession: (id: number) => 
     axiosInstance.post(`/professor/sessions/${id}/end`),
+
+  deleteSession: (id: number) => 
+    axiosInstance.delete(`/professor/sessions/${id}`),
 };
