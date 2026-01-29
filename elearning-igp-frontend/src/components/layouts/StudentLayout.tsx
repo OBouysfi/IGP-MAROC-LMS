@@ -65,7 +65,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
 
   const menuItems = [
     { name: 'Tableau de bord', icon: LayoutDashboard, path: '/student/dashboard' },
-    { name: 'Mes Cours', icon: BookOpen, path: '/student/courses' },
+    // { name: 'Mes Cours', icon: BookOpen, path: '/student/courses' },
     { name: 'Mes Notes', icon: ClipboardList, path: '/student/grades' },
     { name: 'Sessions Live', icon: Video, path: '/student/sessions' },
     { name: 'Emploi du Temps', icon: Calendar, path: '/student/schedule' },

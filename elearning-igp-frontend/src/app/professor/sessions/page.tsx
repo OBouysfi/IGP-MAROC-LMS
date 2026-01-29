@@ -229,7 +229,7 @@ useEffect(() => {
       <div className="p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-[#0D529C] mb-2">Sessions Live</h1>
-          <p className="text-gray-500">Planifiez et gérez vos sessions de cours en ligne avec Jitsi Meet.</p>
+          <p className="text-gray-500">Planifiez et gérez vos sessions de cours en ligne avec Live Meet.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -731,7 +731,7 @@ useEffect(() => {
 
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                 <p className="text-sm text-orange-700">
-                  <strong>Note:</strong> Vous serez redirigé vers Jitsi Meet dans un nouvel onglet.
+                  <strong>Note:</strong> Vous serez redirigé vers Live Meet dans un nouvel onglet.
                 </p>
               </div>
             </div>

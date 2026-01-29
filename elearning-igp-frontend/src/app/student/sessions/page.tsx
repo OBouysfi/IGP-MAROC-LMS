@@ -229,14 +229,11 @@ export default function StudentSessionsPage() {
                 <div className="p-4 space-y-4">
                   <p className="text-sm text-gray-600 line-clamp-2">{session.description}</p>
 
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-gray-500" />
-                    </div>
-                    <span className="text-sm text-gray-700">{session.professor}</span>
-                  </div>
-
                   <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                       <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-700">{session.professor}</span>
+                    </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">
@@ -247,12 +244,12 @@ export default function StudentSessionsPage() {
                       <Clock className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">{session.start_time}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    {/* <div className="flex items-center gap-2 text-sm">
                       <Users className="w-4 h-4 text-gray-400" />
                       <span className="text-gray-600">
                         {session.participants_count}/{session.max_participants} participants
                       </span>
-                    </div>
+                    </div> */}
                   </div>
 
                   {session.status === 'planifiée' && daysUntil > 0 && (
@@ -325,12 +322,12 @@ export default function StudentSessionsPage() {
                     </>
                   )}
 
-                  <button
+                  {/* <button
                     onClick={() => setShowSessionDetail(session)}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                   >
                     Voir les détails
-                  </button>
+                  </button> */}
                 </div>
               </div>
             );
@@ -377,7 +374,7 @@ export default function StudentSessionsPage() {
 
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                 <p className="text-sm text-orange-700">
-                  <strong>Note:</strong> Vous serez redirigé vers Jitsi Meet dans un nouvel onglet.
+                  <strong>Note:</strong> Vous serez redirigé vers Live ( Meet ) dans un nouvel onglet.
                 </p>
               </div>
             </div>
@@ -393,7 +390,7 @@ export default function StudentSessionsPage() {
                 className="flex items-center gap-2 px-6 py-2 bg-[#257035] text-white rounded-lg hover:bg-green-700"
               >
                 <ExternalLink className="w-4 h-4" />
-                Ouvrir Jitsi Meet
+                Ouvrir live
               </button>
             </div>
           </div>

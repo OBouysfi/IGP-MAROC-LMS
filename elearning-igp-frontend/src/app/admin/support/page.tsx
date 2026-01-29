@@ -114,7 +114,7 @@ export default function SupportPage() {
     {
       id: 4,
       subject: 'Besoin d\'accès Jitsi Meet',
-      message: 'Je suis nouveau professeur et je n\'ai pas encore reçu mes accès pour créer des sessions Jitsi Meet avec mes étudiants.',
+      message: 'Je suis nouveau professeur et je n\'ai pas encore reçu mes accès pour créer des sessions Live ( Meet )  avec mes étudiants.',
       user_name: 'Karim Benjelloun',
       user_email: 'k.benjelloun@igp.edu',
       user_role: 'Professeur',

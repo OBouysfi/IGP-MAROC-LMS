@@ -37,7 +37,9 @@ class StudentSessionController extends Controller
                         'title' => $session->title,
                         'course' => $session->course->name ?? 'N/A',
                         'course_code' => $session->course->code ?? 'N/A',
-                        'professor' => optional($session->professor)->user->name ?? 'N/A',
+                        'professor' => $session->professor && $session->professor->user 
+                        ? $session->professor->user->first_name . ' ' . $session->professor->user->last_name 
+                        : 'N/A',
                         'description' => $session->description ?? '',
                         'date' => $session->session_date,
                         'start_time' => substr($session->start_time, 0, 5),

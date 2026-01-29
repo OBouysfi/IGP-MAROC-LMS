@@ -135,18 +135,6 @@ const handleLogin = async (e: React.FormEvent) => {
               required
             />
 
-            <Select
-              name="role"
-              label="Sélectionner le rôle"
-              value={formData.role}
-              onChange={handleChange}
-              options={[
-                { value: 'student', label: 'Étudiant' },
-                { value: 'professor', label: 'Professeur' },
-                // { value: 'assistant', label: 'Assistant' },
-              ]}
-            />
-
             <Button 
               type="submit" 
               isLoading={isLoading}
